@@ -1,4 +1,4 @@
-
+// Contact view
 import React, { useState, useEffect } from 'react';
 import { Lead, Interaction, Document, KnowledgeBaseArticle } from '../types';
 import { generateEmailDraft } from '../services/geminiService';
