@@ -177,7 +177,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ tenant, onUpdateTena
                                 className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-4 py-2.5 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                 placeholder="acct_..."
                             />
-                            <p className="text-[10px] text-gray-500 mt-1">Found in your Stripe Dashboard under Settings > Account details.</p>
+                            <p className="text-[10px] text-gray-500 mt-1">{Found in your Stripe Dashboard under Settings > Account details.}</p>
                         </div>
 
                         <div>
@@ -191,7 +191,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ tenant, onUpdateTena
                                 className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-4 py-2.5 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                 placeholder="pk_test_..."
                             />
-                            <p className="text-[10px] text-gray-500 mt-1">Found in Developers > API keys.</p>
+                            <p className="text-[10px] text-gray-500 mt-1">{Found in Developers > API keys.}</p>
                         </div>
 
                         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 p-4 rounded-lg flex gap-3">
