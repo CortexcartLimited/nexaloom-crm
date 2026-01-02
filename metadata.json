@@ -1,0 +1,5 @@
+{
+  "name": "Nexaloom CRM",
+  "description": "A multi-tenant, AI-powered CRM with lead management, contact tracking, and robust authentication simulation.",
+  "requestFramePermissions": []
+}
