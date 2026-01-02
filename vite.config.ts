@@ -15,7 +15,10 @@ export default defineConfig(({ mode }) => {
       port: 3006,
       host: '0.0.0.0',
     },
-
+    content: [
+      "./index.html",
+      "./*.{js,ts,jsx,tsx}",
+    ],
     build: {
       rollupOptions: {
         // This stops the "white screen" by preventing Node.js code from entering the browser
