@@ -18,6 +18,7 @@ import { UserManagementView } from './components/UserManagementView';
 import { DialerPanel } from './components/DialerPanel';
 import { AuthState, Lead, LeadStatus, Product, Discount, Document, DocumentVersion, Interaction, Task, Tenant, Ticket, DemoAccount, Proposal, KnowledgeBaseArticle, User } from './types';
 import { Hexagon, Bell, X, ArrowRight } from 'lucide-react';
+import { db } from './services/mysql';
 import './index.css';
 
 const App: React.FC = () => {
@@ -86,17 +87,19 @@ const App: React.FC = () => {
       
       setAuth({ user, tenant, isAuthenticated: true });
       
-      const fetchedLeads = await db.getLeads(tenant.id);
-      const fetchedProducts = await db.getProducts(tenant.id);
-      const fetchedDiscounts = await db.getDiscounts(tenant.id);
-      const fetchedDocuments = await db.getDocuments(tenant.id, user.id);
-      const fetchedInteractions = await db.getAllInteractions(tenant.id);
-      const fetchedTasks = await db.getTasks(tenant.id);
-      const fetchedTickets = await db.getTickets(tenant.id);
-      const fetchedDemos = await db.getDemoAccounts(tenant.id);
-      const fetchedProposals = await db.getProposals(tenant.id);
-      const fetchedArticles = await db.getArticles(tenant.id);
-      const fetchedUsers = await db.getUsers(tenant.id);
+      const [fetchedLeads, fetchedProducts, fetchedDiscounts, fetchedDocuments, fetchedInteractions, fetchedTasks, fetchedTickets, fetchedDemos, fetchedProposals, fetchedArticles, fetchedUsers] = await Promise.all([
+        db.getLeads(tenant.id),
+        db.getProducts(tenant.id),
+        db.getDiscounts(tenant.id),
+        db.getDocuments(tenant.id, user.id),
+        db.getAllInteractions(tenant.id),
+        db.getTasks(tenant.id),
+        db.getTickets(tenant.id),
+        db.getDemoAccounts(tenant.id),
+        db.getProposals(tenant.id),
+        db.getArticles(tenant.id),
+        db.getUsers(tenant.id)
+      ]);
       
       setLeads(fetchedLeads);
       setProducts(fetchedProducts);

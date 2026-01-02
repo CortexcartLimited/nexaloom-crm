@@ -4,10 +4,10 @@ import { Tenant, User, Lead, Interaction, UserRole, LeadStatus, Product, Discoun
 import { PROPOSED_SQL_SCHEMA } from '../constants';
 
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'password',
-  database: process.env.DB_DATABASE || 'nexaloom',
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_DATABASE,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
@@ -76,7 +76,7 @@ class MySqlDatabase {
     const connection = await pool.getConnection();
     try {
       const [rows] = await connection.execute('SELECT * FROM interactions WHERE lead_id = ? ORDER BY occurred_at DESC', [leadId]);
-      return rows as Interaction[];
+      return (rows as any[]).map(row => ({ ...row, metadata: JSON.parse(row.metadata) }));
     } finally {
       connection.release();
     }
