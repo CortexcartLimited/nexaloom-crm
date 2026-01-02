@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Lead, Interaction, Document, KnowledgeBaseArticle } from '../types';
 import { generateEmailDraft } from '../services/geminiService';
 import { Phone, Mail, Building, Calendar, User as UserIcon, X, MessageSquare, Clock, MapPin, Upload, FileSpreadsheet, ArrowRight, CheckCircle, AlertCircle, ArrowLeft, Plus, Inbox, LayoutGrid, List, MoreHorizontal, Send, Wand2, Paperclip, File, Search, ClipboardList, Save, History, BookOpen } from 'lucide-react';
-
+import {db} from '@/services/mysql';
 interface ContactsViewProps {
   contacts: Lead[];
   documents?: Document[];
