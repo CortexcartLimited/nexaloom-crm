@@ -16,7 +16,25 @@ export default defineConfig(({ mode }) => {
         react(),
         tailwindcss()
       ],
-      
+      build: {
+        rollupOptions: {
+          // 1. Manually ignore the backend libraries causing the white screen
+          external: [
+            'mysql2', 
+            'mysql2/promise', 
+            'events', 
+            'process', 
+            'net', 
+            'tls', 
+            'crypto', 
+            'stream', 
+            'util', 
+            'zlib',
+            'url',
+            'timers'
+          ],
+        },
+      },
       server: {
         port: 3006,
         host: '0.0.0.0',
