@@ -16,7 +16,6 @@ import { TicketsView } from './components/TicketsView';
 import { DemoAccountsView } from './components/DemoAccountsView';
 import { UserManagementView } from './components/UserManagementView';
 import { DialerPanel } from './components/DialerPanel';
-import { db } from './services/mockDatabase';
 import { AuthState, Lead, LeadStatus, Product, Discount, Document, DocumentVersion, Interaction, Task, Tenant, Ticket, DemoAccount, Proposal, KnowledgeBaseArticle, User } from './types';
 import { Hexagon, Bell, X, ArrowRight } from 'lucide-react';
 
