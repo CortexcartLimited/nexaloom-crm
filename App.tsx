@@ -18,7 +18,6 @@ import { UserManagementView } from './components/UserManagementView';
 import { DialerPanel } from './components/DialerPanel';
 import { AuthState, Lead, LeadStatus, Product, Discount, Document, DocumentVersion, Interaction, Task, Tenant, Ticket, DemoAccount, Proposal, KnowledgeBaseArticle, User } from './types';
 import { Hexagon, Bell, X, ArrowRight } from 'lucide-react';
-import { db } from './services/mysql';
 import './index.css';
 
 const App: React.FC = () => {
