@@ -21,8 +21,6 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   onAddLeads, 
   onUpdateLead,
   onAddInteraction,
-  documents = [], 
-  articles = [], 
   onOpenDialer,
   user,
   documents = [], 
