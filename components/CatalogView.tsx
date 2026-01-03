@@ -381,24 +381,37 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
 
   const handleDiscountSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // 1. Validation: If it's a contract, ensure we have a term
+    const isContract = discountForm.type === DiscountType.CONTRACT;
+    const finalTerm = isContract ? (discountForm.contractTerm || 12) : null;
+
     const payload = {
       name: discountForm.name,
       code: discountForm.code,
       type: discountForm.type,
-      value: parseFloat(discountForm.value),
-      contractTerm: discountForm.type === DiscountType.CONTRACT ? discountForm.contractTerm : undefined,
+      value: parseFloat(discountForm.value) || 0,
+      contractTerm: finalTerm,
       isManagerOnly: discountForm.type === DiscountType.CUSTOM,
       applicableProductIds: discountForm.applicableProductIds.length === 0 ? ['ALL'] : discountForm.applicableProductIds,
-      expiresAt: discountForm.expiresAt ? new Date(discountForm.expiresAt).toISOString() : undefined
+      expiresAt: discountForm.expiresAt ? new Date(discountForm.expiresAt).toISOString() : null
     };
 
-    if (editingDiscountId) {
+    try {
+      if (editingDiscountId) {
         await onEditDiscount(editingDiscountId, payload);
-    } else {
+      } else {
         await onAddDiscount(payload);
+      }
+      
+      // Clear form and close modal on success
+      setIsModalOpen(false);
+      setDiscountForm({ name: '', code: '', type: DiscountType.PERCENTAGE, value: '', applicableProductIds: [], expiresAt: '' });
+      setEditingDiscountId(null);
+    } catch (err) {
+      console.error("Failed to save discount:", err);
+      alert("Error saving discount. Please check if all fields are filled correctly.");
     }
-    
-    setIsModalOpen(false);
   };
 
   const toggleProductSelection = (prodId: string) => {
