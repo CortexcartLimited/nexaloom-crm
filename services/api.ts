@@ -22,7 +22,6 @@ export const api = {
     });
     return response.ok;
   },
-};
   getLeads: async (tenantId: string) => {
     const response = await fetch(`${API_BASE}/leads?tenantId=${tenantId}`);
     if (!response.ok) return [];
