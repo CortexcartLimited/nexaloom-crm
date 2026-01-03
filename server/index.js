@@ -212,21 +212,6 @@ app.get('/api/interactions', async (req, res) => {
     }
 });
 
-app.post('/api/interactions', async (req, res) => {
-    const { tenantId, leadId, userId, type, notes } = req.body;
-    const id = uuidv4();
-    const date = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    try {
-        await pool.query(
-            'INSERT INTO interactions (id, tenantId, leadId, userId, type, notes, date) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [id, tenantId, leadId, userId, type, notes, date]
-        );
-        res.status(201).json({ id, date, ...req.body });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
