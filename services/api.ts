@@ -13,15 +13,7 @@ export const api = {
     });
     return response.ok;
   },
-
-  createInteraction: async (interaction: any) => {
-    const response = await fetch(`${API_BASE}/interactions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(interaction),
-    });
-    return response.ok;
-  },
+  
   getLeads: async (tenantId: string) => {
     const response = await fetch(`${API_BASE}/leads?tenantId=${tenantId}`);
     if (!response.ok) return [];
