@@ -20,57 +20,6 @@ import { Hexagon, Bell, X, ArrowRight } from 'lucide-react';
 import './index.css';
 import { api } from './services/api';
 
-const db = {
-  login: async () => ({ 
-    user: { id: 'u1', name: "Demo User", email: "demo@nexaloom.com", role: 'ADMIN', preferences: { theme: 'light' } }, 
-    tenant: { id: 't1', name: "Nexaloom Demo" } 
-  }),
-  getLeads: async () => [],
-  getProducts: async () => [],
-  getDiscounts: async () => [],
-  getDocuments: async () => [],
-  getAllInteractions: async () => [],
-  getTasks: async () => [],
-  getTickets: async () => [],
-  getDemoAccounts: async () => [],
-  getProposals: async () => [],
-  getArticles: async () => [],
-  getUsers: async () => [],
-  // Helper methods called by your handlers
-  updateUserPreferences: async (id, prefs) => ({ id, preferences: prefs }),
-  updateTenant: async (id, updates) => ({ id, ...updates }),
-  updateLeadStatus: async (id, status) => ({ id, status }),
-  addLead: async (lead) => lead,
-  addLeads: async (leads) => leads,
-  addProduct: async (prod) => prod,
-  addDiscount: async (disc) => disc,
-  updateDiscount: async (id, upd) => ({ id, ...upd }),
-  deleteDiscount: async (id) => id,
-  addDocument: async (doc) => doc,
-  addDocumentVersion: async (id, v) => v,
-  revertDocumentVersion: async (id, vId) => ({ id }),
-  updateDocument: async (id, upd) => ({ id, ...upd }),
-  deleteDocument: async (id) => id,
-  addInteraction: async (int) => int,
-  addTask: async (task) => task,
-  updateTask: async (id, upd) => ({ id, ...upd }),
-  deleteTask: async (id) => id,
-  addTicket: async (tick) => tick,
-  updateTicket: async (id, upd) => ({ id, ...upd }),
-  deleteTicket: async (id) => id,
-  addDemoAccount: async (demo) => demo,
-  deleteDemoAccount: async (id) => id,
-  addProposal: async (prop) => prop,
-  updateProposal: async (id, upd) => ({ id, ...upd }),
-  deleteProposal: async (id) => id,
-  addArticle: async (art) => art,
-  updateArticle: async (id, upd) => ({ id, ...upd }),
-  deleteArticle: async (id) => id,
-  addUser: async (user) => user,
-  updateUser: async (id, upd) => ({ id, ...upd }),
-  deleteUser: async (id) => id,
-};
-
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [auth, setAuth] = useState<AuthState>({ 
@@ -94,10 +43,8 @@ const App: React.FC = () => {
   const [articles, setArticles] = useState<KnowledgeBaseArticle[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   
-  // Notification State
   const [activeReminders, setActiveReminders] = useState<Task[]>([]);
   
-  // Dialer State
   const [isDialerOpen, setIsDialerOpen] = useState(false);
   const [dialerNumber, setDialerNumber] = useState('');
   const [dialerLeadId, setDialerLeadId] = useState<string | undefined>(undefined);
@@ -105,7 +52,6 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Refs for tracking sent reminders to prevent race conditions during state updates
   const processedRemindersRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -122,7 +68,10 @@ const App: React.FC = () => {
       const savedBg = localStorage.getItem('nexaloom_bg_theme');
       if (savedBg) setBackgroundId(savedBg);
 
-      const { user, tenant } = await db.login('demo@nexaloom.com');
+      const { user, tenant } = { 
+        user: { id: 'u1', name: "Demo User", email: "demo@nexaloom.com", role: 'ADMIN', preferences: { theme: 'light' } }, 
+        tenant: { id: 't1', name: "Nexaloom Demo" } 
+      }; 
       
       if (user.preferences) {
           setTheme(user.preferences.theme);
@@ -137,58 +86,45 @@ const App: React.FC = () => {
       
       setAuth({ user, tenant, isAuthenticated: true });
       
-      const [fetchedLeads, fetchedProducts, fetchedDiscounts, fetchedDocuments, fetchedInteractions, fetchedTasks, fetchedTickets, fetchedDemos, fetchedProposals, fetchedArticles, fetchedUsers] = await Promise.all([
-        api.getLeads(tenant.id),
-        db.getProducts(tenant.id),
-        db.getDiscounts(tenant.id),
-        db.getDocuments(tenant.id, user.id),
-        db.getAllInteractions(tenant.id),
-        api.getTasks(tenant.id),
-        db.getTickets(tenant.id),
-        db.getDemoAccounts(tenant.id),
-        db.getProposals(tenant.id),
-        db.getArticles(tenant.id),
-        db.getUsers(tenant.id)
-      ]);
-      
-      setLeads(fetchedLeads);
-      setProducts(fetchedProducts);
-      setDiscounts(fetchedDiscounts);
-      setDocuments(fetchedDocuments);
-      setInteractions(fetchedInteractions);
-      setTasks(fetchedTasks);
-      setTickets(fetchedTickets);
-      setDemoAccounts(fetchedDemos);
-      setProposals(fetchedProposals);
-      setArticles(fetchedArticles);
-      setUsers(fetchedUsers);
+      if (tenant) {
+        const [fetchedLeads, fetchedProducts, fetchedDiscounts, fetchedInteractions, fetchedTasks] = await Promise.all([
+          api.getLeads(tenant.id),
+          api.getProducts(tenant.id),
+          api.getDiscounts(tenant.id),
+          api.getInteractions(tenant.id),
+          api.getTasks(tenant.id),
+        ]);
+        
+        setLeads(fetchedLeads);
+        setProducts(fetchedProducts);
+        setDiscounts(fetchedDiscounts);
+        setInteractions(fetchedInteractions);
+        setTasks(fetchedTasks);
+      }
       
       setLoading(false);
     };
     init();
   }, []);
 
-  // Task Reminders Monitoring Effect
   useEffect(() => {
     if (loading || !auth.isAuthenticated) return;
 
     const checkReminders = () => {
       const now = new Date();
       tasks.forEach(async (task) => {
-        // Condition: Has reminder, not yet sent, not completed, time has passed
         if (task.reminderAt && !task.reminderSent && !task.isCompleted && !processedRemindersRef.current.has(task.id)) {
           const reminderTime = new Date(task.reminderAt);
           if (now >= reminderTime) {
             processedRemindersRef.current.add(task.id);
             setActiveReminders(prev => [...prev, task]);
-            // Update in DB and local state
             await handleUpdateTask(task.id, { reminderSent: true });
           }
         }
       });
     };
 
-    const interval = setInterval(checkReminders, 10000); // Check every 10 seconds
+    const interval = setInterval(checkReminders, 10000); 
     return () => clearInterval(interval);
   }, [tasks, loading, auth.isAuthenticated]);
 
@@ -197,49 +133,44 @@ const App: React.FC = () => {
       setTheme(newTheme);
       localStorage.setItem('theme', newTheme);
       document.documentElement.classList.toggle('dark', newTheme === 'dark');
-      if (auth.user) {
-          const updatedUser = await db.updateUserPreferences(auth.user.id, { theme: newTheme });
-          setAuth(prev => ({ ...prev, user: updatedUser }));
-      }
   };
 
   const handleBackgroundChange = async (id: string) => {
       setBackgroundId(id);
       localStorage.setItem('nexaloom_bg_theme', id);
-      if (auth.user) {
-          const updatedUser = await db.updateUserPreferences(auth.user.id, { backgroundId: id });
-          setAuth(prev => ({ ...prev, user: updatedUser }));
-      }
   };
 
   const handleUpdateTenant = async (updates: Partial<Tenant>) => {
     if (!auth.tenant) return;
-    const updatedTenant = await db.updateTenant(auth.tenant.id, updates);
-    setAuth(prev => ({ ...prev, tenant: updatedTenant }));
+    setAuth(prev => ({ ...prev, tenant: { ...prev.tenant!, ...updates } }));
   };
 
   const handleStatusChange = async (leadId: string, newStatus: LeadStatus) => {
     const oldLead = leads.find(l => l.id === leadId);
-    if (oldLead && oldLead.status !== newStatus) {
-        // Log status change
-        const interaction: Interaction = {
-            id: `int-status-${Date.now()}`,
-            tenantId: auth.tenant!.id,
-            leadId,
-            type: 'NOTE',
-            notes: `SYSTEM LOG: Lead status changed from ${oldLead.status} to ${newStatus} by ${auth.user?.name}.`,
-            date: new Date().toISOString()
-        };
-        await handleAddInteraction(interaction);
-    }
+    
     setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
-    await db.updateLeadStatus(leadId, newStatus);
+    
+    try {
+        await api.updateLeadStatus(leadId, newStatus);
+        if (oldLead && oldLead.status !== newStatus) {
+            const interaction: Omit<Interaction, 'id' | 'date'> = {
+                tenantId: auth.tenant!.id,
+                leadId,
+                userId: auth.user!.id,
+                type: 'NOTE',
+                notes: `SYSTEM LOG: Lead status changed from ${oldLead.status} to ${newStatus} by ${auth.user?.name}.`,
+            };
+            await handleAddInteraction(interaction);
+        }
+    } catch (error) {
+        console.error("Failed to update lead status:", error);
+        setLeads(prev => prev.map(l => l.id === leadId ? oldLead! : l));
+    }
   };
 
   const handleAddLead = async (leadData?: Partial<Lead>) => {
     if (!auth.tenant) return;
-    const newLead: Lead = {
-      id: `lead-${Date.now()}`,
+    const newLeadData: Omit<Lead, 'id' | 'createdAt'> = {
       tenantId: auth.tenant.id,
       name: leadData?.name || 'New Prospect',
       company: leadData?.company || 'Unknown Co',
@@ -247,73 +178,83 @@ const App: React.FC = () => {
       phone: leadData?.phone || '',
       value: leadData?.value || 0,
       status: leadData?.status || LeadStatus.NEW,
-      createdAt: new Date().toISOString()
     };
-    await api.createLead(newLead); 
-    setLeads([...leads, newLead]);
     
-    // Log creation
-    const interaction: Interaction = {
-        id: `int-create-${Date.now()}`,
-        tenantId: auth.tenant.id,
-        leadId: newLead.id,
-        type: 'NOTE',
-        notes: `SYSTEM LOG: Lead created by ${auth.user?.name}.`,
-        date: new Date().toISOString()
-    };
-    await handleAddInteraction(interaction);
+    try {
+        const createdLead = await api.createLead(newLeadData); 
+        setLeads(prev => [...prev, createdLead]);
+        
+        const interaction: Omit<Interaction, 'id' | 'date'> = {
+            tenantId: auth.tenant.id,
+            leadId: createdLead.id,
+            userId: auth.user!.id,
+            type: 'NOTE',
+            notes: `SYSTEM LOG: Lead created by ${auth.user?.name}.`,
+        };
+        await handleAddInteraction(interaction);
+    } catch (error) {
+        console.error("Failed to create lead:", error);
+    }
   };
 
   const handleAddLeads = async (newLeadsData: Omit<Lead, 'id' | 'tenantId' | 'status' | 'createdAt' | 'value'>[]) => {
       if (!auth.tenant) return;
-      const newLeads: Lead[] = newLeadsData.map((l, index) => ({
-          ...l,
-          id: `lead-${Date.now()}-${index}`,
-          tenantId: auth.tenant!.id,
-          status: LeadStatus.NEW,
-          value: (l as any).value || 0,
-          createdAt: new Date().toISOString()
-      }));
-      await db.addLeads(newLeads);
-      setLeads([...leads, ...newLeads]);
-
-      // Bulk log creation
-      for (const nl of newLeads) {
-          const interaction: Interaction = {
-              id: `int-create-bulk-${Date.now()}-${nl.id}`,
-              tenantId: auth.tenant.id,
-              leadId: nl.id,
-              type: 'NOTE',
-              notes: `SYSTEM LOG: Lead imported via CSV by ${auth.user?.name}.`,
-              date: new Date().toISOString()
+      const tenantId = auth.tenant.id;
+      const userId = auth.user!.id;
+      
+      const createdLeads: Lead[] = [];
+      for (const l of newLeadsData) {
+          const newLeadData = {
+              ...l,
+              tenantId,
+              status: LeadStatus.NEW,
+              value: (l as any).value || 0,
           };
-          await handleAddInteraction(interaction);
+          try {
+              const createdLead = await api.createLead(newLeadData);
+              createdLeads.push(createdLead);
+              const interaction: Omit<Interaction, 'id' | 'date'> = {
+                  tenantId,
+                  leadId: createdLead.id,
+                  userId,
+                  type: 'NOTE',
+                  notes: `SYSTEM LOG: Lead imported via CSV by ${auth.user?.name}.`,
+              };
+              await handleAddInteraction(interaction);
+          } catch (error) {
+              console.error("Failed to create lead:", error);
+          }
       }
+      setLeads(prev => [...prev, ...createdLeads]);
   };
 
   const handleAddProduct = async (productData: Omit<Product, 'id' | 'tenantId'>) => {
     if (!auth.tenant) return;
-    const newProduct: Product = { ...productData, id: `prod-${Date.now()}`, tenantId: auth.tenant.id };
-    await db.addProduct(newProduct);
-    setProducts([...products, newProduct]);
+    const newProductData = { ...productData, tenantId: auth.tenant.id };
+    try {
+        const newProduct = await api.createProduct(newProductData);
+        setProducts(prev => [...prev, newProduct]);
+    } catch(e) {
+        console.error("Failed to create product", e)
+    }
   };
 
   const handleAddDiscount = async (discountData: Omit<Discount, 'id' | 'tenantId'>) => {
     if (!auth.tenant) return;
-    const newDiscount: Discount = { ...discountData, id: `disc-${Date.now()}`, tenantId: auth.tenant.id };
-    await db.addDiscount(newDiscount);
-    setDiscounts([...discounts, newDiscount]);
+    const newDiscountData = { ...discountData, tenantId: auth.tenant.id };
+    try {
+        const newDiscount = await api.createDiscount(newDiscountData);
+        setDiscounts(prev => [...prev, newDiscount]);
+    } catch(e) {
+        console.error("Failed to create discount", e)
+    }
   };
 
   const handleEditDiscount = async (id: string, updates: Partial<Discount>) => {
-    if (!auth.tenant) return;
-    await db.updateDiscount(id, updates);
     setDiscounts(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d));
   };
 
   const handleDeleteDiscount = async (id: string) => {
-    if (!auth.tenant) return;
-    await db.deleteDiscount(id);
     setDiscounts(prev => prev.filter(d => d.id !== id));
   };
 
@@ -328,40 +269,38 @@ const App: React.FC = () => {
       createdAt: new Date().toISOString(),
       versions: [{ id: `v1-${Date.now()}`, name: docData.name, type: docData.type, size: docData.size, createdAt: new Date().toISOString(), uploaderId: auth.user.id, uploaderName: auth.user.name }]
     };
-    await db.addDocument(newDoc);
     setDocuments([newDoc, ...documents]);
   };
 
   const handleAddVersion = async (docId: string, versionData: Omit<DocumentVersion, 'id' | 'createdAt'>) => {
-      await db.addDocumentVersion(docId, versionData);
       if (auth.tenant && auth.user) {
-          const fetched = await db.getDocuments(auth.tenant.id, auth.user.id);
-          setDocuments(fetched);
+          setDocuments(prev => prev.map(d => d.id === docId ? { ...d, versions: [...d.versions, { ...versionData, id: `v${d.versions.length + 1}-${Date.now()}`, createdAt: new Date().toISOString() }] } : d));
       }
   };
 
   const handleRevertVersion = async (docId: string, versionId: string) => {
-      await db.revertDocumentVersion(docId, versionId);
       if (auth.tenant && auth.user) {
-          const fetched = await db.getDocuments(auth.tenant.id, auth.user.id);
-          setDocuments(fetched);
+          setDocuments(prev => prev.map(d => d.id === docId ? { ...d, versions: [...d.versions.filter(v => v.id !== versionId), d.versions.find(v => v.id === versionId)!] } : d));
       }
   };
 
   const handleEditDocument = async (id: string, updates: Partial<Document>) => {
     if (!auth.tenant) return;
-    await db.updateDocument(id, updates);
     setDocuments(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d));
   };
 
   const handleDeleteDocument = async (id: string) => {
-    await db.deleteDocument(id);
     setDocuments(prev => prev.filter(d => d.id !== id));
   };
 
-  const handleAddInteraction = async (interaction: Interaction) => {
-      await db.addInteraction(interaction);
-      setInteractions([interaction, ...interactions]);
+  const handleAddInteraction = async (interactionData: Omit<Interaction, 'id' | 'date'>) => {
+      if (!auth.tenant) return;
+      try {
+          const newInteraction = await api.createInteraction({ ...interactionData, tenantId: auth.tenant.id });
+          setInteractions(prev => [newInteraction, ...prev]);
+      } catch (e) {
+          console.error("Failed to create interaction", e)
+      }
   };
 
   const handleAddTask = async (taskData: Omit<Task, 'id' | 'tenantId' | 'createdAt' | 'isCompleted'>) => {
@@ -374,37 +313,32 @@ const App: React.FC = () => {
       isCompleted: false,
       reminderSent: false
     };
-    await db.addTask(newTask);
     setTasks(prev => [...prev, newTask].sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime()));
   };
 
   const handleUpdateTask = async (taskId: string, updates: Partial<Task>) => {
     const originalTask = tasks.find(t => t.id === taskId);
     if (originalTask && updates.isCompleted === true && !originalTask.isCompleted) {
-        // Log completion to customer notes if linked
         if (originalTask.leadId) {
-            const interaction: Interaction = {
-                id: `int-task-done-${Date.now()}`,
+            const interaction: Omit<Interaction, 'id' | 'date'> = {
                 tenantId: originalTask.tenantId,
                 leadId: originalTask.leadId,
+                userId: auth.user!.id,
                 type: 'NOTE',
                 notes: `ACTION LOG: Task Completed - "${originalTask.title}" (ID: ${originalTask.id}) by ${auth.user?.name}.`,
-                date: new Date().toISOString()
             };
             await handleAddInteraction(interaction);
         }
     }
-    await db.updateTask(taskId, updates);
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
   };
 
   const handleDeleteTask = async (taskId: string) => {
-    await db.deleteTask(taskId);
     setTasks(prev => prev.filter(t => t.id !== taskId));
   };
 
   const handleAddTicket = async (ticketData: Omit<Ticket, 'id' | 'tenantId' | 'createdAt' | 'updatedAt'>) => {
-      if (!auth.tenant) return;
+      if (!auth.tenant || !auth.user) return;
       const newTicket: Ticket = {
           ...ticketData,
           id: `tick-${Date.now()}`,
@@ -412,18 +346,15 @@ const App: React.FC = () => {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
       };
-      await db.addTicket(newTicket);
       setTickets(prev => [newTicket, ...prev]);
 
-      // Log ticket creation if lead linked
       if (newTicket.leadId) {
-          const interaction: Interaction = {
-              id: `int-ticket-${Date.now()}`,
+          const interaction: Omit<Interaction, 'id' | 'date'> = {
               tenantId: auth.tenant.id,
               leadId: newTicket.leadId,
+              userId: auth.user.id,
               type: 'NOTE',
               notes: `SUPPORT LOG: New Ticket Created - "${newTicket.subject}" by ${auth.user?.name}.`,
-              date: new Date().toISOString()
           };
           await handleAddInteraction(interaction);
       }
@@ -431,24 +362,21 @@ const App: React.FC = () => {
 
   const handleUpdateTicket = async (id: string, updates: Partial<Ticket>) => {
       const original = tickets.find(t => t.id === id);
-      await db.updateTicket(id, updates);
       setTickets(prev => prev.map(t => t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t));
       
       if (original?.leadId && updates.status && updates.status !== original.status) {
-          const interaction: Interaction = {
-              id: `int-ticket-update-${Date.now()}`,
+          const interaction: Omit<Interaction, 'id' | 'date'> = {
               tenantId: original.tenantId,
               leadId: original.leadId,
+              userId: auth.user!.id,
               type: 'NOTE',
               notes: `SUPPORT LOG: Ticket Status changed to ${updates.status} for "${original.subject}" by ${auth.user?.name}.`,
-              date: new Date().toISOString()
           };
           await handleAddInteraction(interaction);
       }
   };
 
   const handleDeleteTicket = async (id: string) => {
-      await db.deleteTicket(id);
       setTickets(prev => prev.filter(t => t.id !== id));
   };
 
@@ -461,28 +389,23 @@ const App: React.FC = () => {
           createdAt: new Date().toISOString(),
           status: 'ACTIVE'
       };
-      await db.addDemoAccount(newDemo);
       setDemoAccounts(prev => [newDemo, ...prev]);
   };
 
   const handleDeleteDemo = async (id: string) => {
-      await db.deleteDemoAccount(id);
       setDemoAccounts(prev => prev.filter(d => d.id !== id));
   };
 
   const handleAddProposal = async (proposal: Proposal) => {
       if (!auth.tenant) return;
-      await db.addProposal(proposal);
       setProposals(prev => [proposal, ...prev]);
   };
 
   const handleUpdateProposal = async (id: string, updates: Partial<Proposal>) => {
-      await db.updateProposal(id, updates);
       setProposals(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
   };
 
   const handleDeleteProposal = async (id: string) => {
-      await db.deleteProposal(id);
       setProposals(prev => prev.filter(p => p.id !== id));
   };
 
@@ -494,17 +417,14 @@ const App: React.FC = () => {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
       };
-      await db.addArticle(newArticle);
       setArticles(prev => [newArticle, ...prev]);
   };
 
   const handleUpdateArticle = async (id: string, updates: Partial<KnowledgeBaseArticle>) => {
-      await db.updateArticle(id, updates);
       setArticles(prev => prev.map(a => a.id === id ? { ...a, ...updates, updatedAt: new Date().toISOString() } : a));
   };
 
   const handleDeleteArticle = async (id: string) => {
-      await db.deleteArticle(id);
       setArticles(prev => prev.filter(a => a.id !== id));
   };
 
@@ -515,22 +435,18 @@ const App: React.FC = () => {
       id: `user-${Date.now()}`,
       tenantId: auth.tenant.id,
     };
-    await db.addUser(newUser);
     setUsers(prev => [...prev, newUser]);
   };
 
   const handleUpdateUser = async (id: string, updates: Partial<User>) => {
-    await db.updateUser(id, updates);
     setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
     
-    // Update auth state if current user is updated
     if (auth.user?.id === id) {
       setAuth(prev => ({ ...prev, user: { ...prev.user!, ...updates } }));
     }
   };
 
   const handleDeleteUser = async (id: string) => {
-    await db.deleteUser(id);
     setUsers(prev => prev.filter(u => u.id !== id));
   };
 
@@ -713,7 +629,6 @@ const App: React.FC = () => {
         )}
       </Layout>
 
-      {/* Global Reminder Notifications */}
       <div className="fixed bottom-6 right-6 z-[300] flex flex-col gap-3 max-w-xs w-full">
           {activeReminders.map(task => (
             <div key={task.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border-l-4 border-blue-600 dark:border-blue-500 overflow-hidden animate-in slide-in-from-right-10 duration-300">
