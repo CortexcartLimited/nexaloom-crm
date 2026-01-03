@@ -299,16 +299,6 @@ const App: React.FC = () => {
     setDocuments(prev => prev.filter(d => d.id !== id));
   };
 
-  const handleAddInteraction = async (interactionData: Omit<Interaction, 'id' | 'date'>) => {
-      if (!auth.tenant) return;
-      try {
-          const newInteraction = await api.createInteraction({ ...interactionData, tenantId: auth.tenant.id });
-          setInteractions(prev => [newInteraction, ...prev]);
-      } catch (e) {
-          console.error("Failed to create interaction", e)
-      }
-  };
-
   const handleAddTask = async (taskData: Omit<Task, 'id' | 'tenantId' | 'createdAt' | 'isCompleted'>) => {
     if (!auth.tenant) return;
     const newTask: Task = {
