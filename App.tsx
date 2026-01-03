@@ -546,12 +546,13 @@ const App: React.FC = () => {
         )}
         {activeTab === 'contacts' && (
           <ContactsView 
-            contacts={filteredLeads} 
-            onAddLeads={handleAddLeads} 
-            documents={documents}
-            articles={articles}
-            onOpenDialer={handleOpenDialer}
-          />
+          contacts={leads}
+          interactions={interactions}
+          onUpdateLead={handleUpdateLead}
+          onAddInteraction={handleAddInteraction}
+          onOpenDialer={handleOpenDialer}
+          user={user}
+        />
         )}
         {activeTab === 'catalog' && (
           <CatalogView 
