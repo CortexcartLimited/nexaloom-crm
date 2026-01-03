@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
@@ -19,6 +18,58 @@ import { DialerPanel } from './components/DialerPanel';
 import { AuthState, Lead, LeadStatus, Product, Discount, Document, DocumentVersion, Interaction, Task, Tenant, Ticket, DemoAccount, Proposal, KnowledgeBaseArticle, User } from './types';
 import { Hexagon, Bell, X, ArrowRight } from 'lucide-react';
 import './index.css';
+import { api } from './services/api';
+
+const db = {
+  login: async () => ({ 
+    user: { id: 'u1', name: "Demo User", email: "demo@nexaloom.com", role: 'ADMIN', preferences: { theme: 'light' } }, 
+    tenant: { id: 't1', name: "Nexaloom Demo" } 
+  }),
+  getLeads: async () => [],
+  getProducts: async () => [],
+  getDiscounts: async () => [],
+  getDocuments: async () => [],
+  getAllInteractions: async () => [],
+  getTasks: async () => [],
+  getTickets: async () => [],
+  getDemoAccounts: async () => [],
+  getProposals: async () => [],
+  getArticles: async () => [],
+  getUsers: async () => [],
+  // Helper methods called by your handlers
+  updateUserPreferences: async (id, prefs) => ({ id, preferences: prefs }),
+  updateTenant: async (id, updates) => ({ id, ...updates }),
+  updateLeadStatus: async (id, status) => ({ id, status }),
+  addLead: async (lead) => lead,
+  addLeads: async (leads) => leads,
+  addProduct: async (prod) => prod,
+  addDiscount: async (disc) => disc,
+  updateDiscount: async (id, upd) => ({ id, ...upd }),
+  deleteDiscount: async (id) => id,
+  addDocument: async (doc) => doc,
+  addDocumentVersion: async (id, v) => v,
+  revertDocumentVersion: async (id, vId) => ({ id }),
+  updateDocument: async (id, upd) => ({ id, ...upd }),
+  deleteDocument: async (id) => id,
+  addInteraction: async (int) => int,
+  addTask: async (task) => task,
+  updateTask: async (id, upd) => ({ id, ...upd }),
+  deleteTask: async (id) => id,
+  addTicket: async (tick) => tick,
+  updateTicket: async (id, upd) => ({ id, ...upd }),
+  deleteTicket: async (id) => id,
+  addDemoAccount: async (demo) => demo,
+  deleteDemoAccount: async (id) => id,
+  addProposal: async (prop) => prop,
+  updateProposal: async (id, upd) => ({ id, ...upd }),
+  deleteProposal: async (id) => id,
+  addArticle: async (art) => art,
+  updateArticle: async (id, upd) => ({ id, ...upd }),
+  deleteArticle: async (id) => id,
+  addUser: async (user) => user,
+  updateUser: async (id, upd) => ({ id, ...upd }),
+  deleteUser: async (id) => id,
+};
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -87,12 +138,12 @@ const App: React.FC = () => {
       setAuth({ user, tenant, isAuthenticated: true });
       
       const [fetchedLeads, fetchedProducts, fetchedDiscounts, fetchedDocuments, fetchedInteractions, fetchedTasks, fetchedTickets, fetchedDemos, fetchedProposals, fetchedArticles, fetchedUsers] = await Promise.all([
-        db.getLeads(tenant.id),
+        api.getLeads(tenant.id),
         db.getProducts(tenant.id),
         db.getDiscounts(tenant.id),
         db.getDocuments(tenant.id, user.id),
         db.getAllInteractions(tenant.id),
-        db.getTasks(tenant.id),
+        api.getTasks(tenant.id),
         db.getTickets(tenant.id),
         db.getDemoAccounts(tenant.id),
         db.getProposals(tenant.id),
