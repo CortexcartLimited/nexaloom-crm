@@ -148,7 +148,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
         const candidates = discounts.filter(d => 
             d.type === DiscountType.CONTRACT && 
             d.contractTerm === termMonths &&
-            (d.applicableProductIds.includes('ALL') || d.applicableProductIds.includes(item.id))
+            (d.applicableProductIds || []).includes('ALL') || d.applicableProductIds.includes(item.id))
         );
 
         candidates.sort((a, b) => {
@@ -222,7 +222,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
   const getApplicableDiscounts = (productId: string) => {
     return discounts.filter(d => 
         (d.type !== DiscountType.CONTRACT) &&
-        (d.applicableProductIds.includes('ALL') || d.applicableProductIds.includes(productId)) &&
+        (d.applicableProductIds || []).includes('ALL') || d.applicableProductIds.includes(productId)) &&
         (!d.expiresAt || new Date(d.expiresAt) >= new Date())
     );
   };
