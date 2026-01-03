@@ -621,20 +621,21 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
                     </div>
 
                     <div className="pt-4 border-t border-gray-50 dark:border-gray-700">
-                        <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Applicable Products</p>
-                        <div className="flex flex-wrap gap-2">
-                            {discount.applicableProductIds.includes('ALL') ? (
-                                <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded">All Products</span>
-                            ) : (
-                                discount.applicableProductIds.map(id => {
-                                    const prod = products.find(p => p.id === id);
-                                    return prod ? (
-                                        <span key={id} className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded">{prod.name}</span>
-                                    ) : null;
-                                })
-                            )}
-                        </div>
-                    </div>
+    <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Applicable Products</p>
+    <div className="flex flex-wrap gap-2">
+        {/* We use Array.from or || [] to guarantee we are mapping an array */}
+        {(Array.isArray(discount.applicableProductIds) ? discount.applicableProductIds : []).includes('ALL') ? (
+            <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded">All Products</span>
+        ) : (
+            (Array.isArray(discount.applicableProductIds) ? discount.applicableProductIds : []).map(id => {
+                const prod = products.find(p => p.id === id);
+                return prod ? (
+                    <span key={id} className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded">{prod.name}</span>
+                ) : null;
+            })
+        )}
+    </div>
+</div>
                 </div>
              </div>
            );
