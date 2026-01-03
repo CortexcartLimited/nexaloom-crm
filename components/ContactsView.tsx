@@ -24,7 +24,9 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   documents = [], 
   articles = [], 
   onOpenDialer,
-  user
+  user,
+  documents = [], 
+  articles = []
 }) => {
   const [selectedContact, setSelectedContact] = useState<Lead | null>(null);
   const [viewMode, setViewMode] = useState<'GRID' | 'LIST'>('GRID');
@@ -55,7 +57,10 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   const [emailSuccess, setEmailSuccess] = useState('');
   const [selectedAttachments, setSelectedAttachments] = useState<Document[]>([]);
 
-  // Filter interactions for the selected contact
+  // Add this before any other logic (like useMemo or useEffect)
+if (!user) return <div className="p-8 text-center text-gray-500">Loading User Profile...</div>;
+  
+// Filter interactions for the selected contact
   const contactInteractions = useMemo(() => {
     if (!selectedContact) return [];
     return interactions
