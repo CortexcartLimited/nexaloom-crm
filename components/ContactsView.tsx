@@ -96,7 +96,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
       try {
           const interaction: Interaction = {
               id: `int-note-${Date.now()}`,
-              tenantId: user.tenantId,
+              tenantId: selectedContact.tenantId,
               leadId: selectedContact.id,
               type: 'NOTE',
               notes: newNoteText,
@@ -119,7 +119,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
       try {
           const interaction: Interaction = {
               id: `int-email-${Date.now()}`,
-              tenantId: user.tenantId,
+              tenantId: selectedContact.tenantId,
               leadId: selectedContact.id,
               type: 'EMAIL',
               notes: `Subject: ${emailSubject}\n\n${emailBody}`,
