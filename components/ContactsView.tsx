@@ -5,14 +5,14 @@ import { Phone, Mail, Building, Calendar, User as UserIcon, X, MessageSquare, Cl
 
 interface ContactsViewProps {
   contacts: Lead[];
-  interactions: Interaction[]; // Added: real interactions from App state
+  interactions: Interaction[];
   documents?: Document[];
   articles?: KnowledgeBaseArticle[];
   onAddLeads?: (leads: Omit<Lead, 'id' | 'tenantId' | 'status' | 'createdAt' | 'value'>[]) => Promise<void>;
-  onUpdateLead: (id: string, updates: Partial<Lead>) => Promise<void>; // Added: for editing
-  onAddInteraction: (interaction: Interaction) => Promise<void>; // Added: for notes/emails
+  onUpdateLead: (id: string, updates: Partial<Lead>) => Promise<void>;
+  onAddInteraction: (interaction: Interaction) => Promise<void>;
   onOpenDialer: (phone?: string) => void;
-  user: User; // Added: for tenant context
+  user: User; // Provided by App.tsx
 }
 
 export const ContactsView: React.FC<ContactsViewProps> = ({ 
@@ -26,27 +26,29 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   documents = [], 
   articles = []
 }) => {
+  // --- 1. THE SAFETY GUARD ---
+  // This must be the very first thing inside the component to prevent ReferenceErrors
+  if (!user) {
+    return (
+      <div className="p-8 text-center flex flex-col items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+        <p className="text-gray-500">Loading User Profile...</p>
+      </div>
+    );
+  }
+
+  // --- 2. STATE DECLARATIONS ---
   const [selectedContact, setSelectedContact] = useState<Lead | null>(null);
   const [viewMode, setViewMode] = useState<'GRID' | 'LIST'>('GRID');
-
-  // Profile Edit State
   const [isEditing, setIsEditing] = useState(false);
   const [editFormData, setEditFormData] = useState<Partial<Lead>>({});
-
-  // Notes Sidebar State
   const [isNotesSidebarOpen, setIsNotesSidebarOpen] = useState(false);
   const [newNoteText, setNewNoteText] = useState('');
   const [isSavingNote, setIsSavingNote] = useState(false);
-  
-  // KB Insert State
   const [isKbSearchOpen, setIsKbSearchOpen] = useState(false);
   const [kbSearchQuery, setKbSearchQuery] = useState('');
-
-  // Manual Add Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newContactData, setNewContactData] = useState({ name: '', company: '', email: '', phone: '' });
-
-  // Email Composition State
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
@@ -55,23 +57,19 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   const [emailSuccess, setEmailSuccess] = useState('');
   const [selectedAttachments, setSelectedAttachments] = useState<Document[]>([]);
 
-  // Add this before any other logic (like useMemo or useEffect)
-if (!user) return <div className="p-8 text-center text-gray-500">Loading User Profile...</div>;
-  
-// Filter interactions for the selected contact
+  // --- 3. MEMOIZED DATA ---
   const contactInteractions = useMemo(() => {
-    if (!selectedContact) return [];
+    if (!selectedContact || !interactions) return [];
     return interactions
       .filter(i => i.leadId === selectedContact.id)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [interactions, selectedContact]);
 
-  // Extract Email Logs from interactions
   const emailHistory = useMemo(() => {
     return contactInteractions.filter(i => i.type === 'EMAIL');
   }, [contactInteractions]);
 
-  // --- Handlers ---
+  // --- 4. HANDLERS ---
 
   const handleEditClick = () => {
     if (!selectedContact) return;
@@ -94,12 +92,11 @@ if (!user) return <div className="p-8 text-center text-gray-500">Loading User Pr
   const handleAddNote = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!selectedContact || !newNoteText.trim()) return;
-
       setIsSavingNote(true);
       try {
           const interaction: Interaction = {
               id: `int-note-${Date.now()}`,
-              tenantId: selectedContact.tenantId,
+              tenantId: user.tenantId, // Using the verified user object
               leadId: selectedContact.id,
               type: 'NOTE',
               notes: newNoteText,
@@ -118,11 +115,10 @@ if (!user) return <div className="p-8 text-center text-gray-500">Loading User Pr
       e.preventDefault();
       if (!selectedContact) return;
       setIsSending(true);
-      
       try {
           const interaction: Interaction = {
               id: `int-email-${Date.now()}`,
-              tenantId: selectedContact.tenantId,
+              tenantId: user.tenantId,
               leadId: selectedContact.id,
               type: 'EMAIL',
               notes: `Subject: ${emailSubject}\n\n${emailBody}`,
@@ -134,10 +130,12 @@ if (!user) return <div className="p-8 text-center text-gray-500">Loading User Pr
                   attachments: selectedAttachments.map(a => a.name)
               } as any
           };
-
           await onAddInteraction(interaction);
           setEmailSuccess('Email logged successfully!');
-          setTimeout(() => setIsEmailModalOpen(false), 1500);
+          setTimeout(() => {
+            setIsEmailModalOpen(false);
+            setEmailSuccess('');
+          }, 1500);
       } catch (error) {
           alert('Failed to log email.');
       } finally {
@@ -154,11 +152,6 @@ if (!user) return <div className="p-8 text-center text-gray-500">Loading User Pr
     }
   };
 
-  const handleInsertKbArticle = (article: KnowledgeBaseArticle) => {
-    setNewNoteText(prev => prev + `\n\nArticle: ${article.title} (ID: ${article.id})`);
-    setIsKbSearchOpen(false);
-  };
-
   const handleOpenEmail = () => {
     setEmailSubject('');
     setEmailBody(`Hi ${selectedContact?.name.split(' ')[0]},\n\n\n\nBest regards,\n${user.name}`);
@@ -166,9 +159,16 @@ if (!user) return <div className="p-8 text-center text-gray-500">Loading User Pr
     setEmailSuccess('');
   };
 
+  const handleInsertKbArticle = (article: KnowledgeBaseArticle) => {
+    setNewNoteText(prev => prev + `\n\nArticle Reference: ${article.title}`);
+    setIsKbSearchOpen(false);
+  };
+
+  const filteredKbArticles = (articles || []).filter(a => a.title.toLowerCase().includes(kbSearchQuery.toLowerCase()));
+
+  // --- 5. RENDER UI ---
   return (
     <div className="p-6 h-full flex flex-col">
-      {/* Header logic remains same */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Contact Directory</h2>
@@ -183,14 +183,14 @@ if (!user) return <div className="p-8 text-center text-gray-500">Loading User Pr
         </div>
       </div>
       
-      {/* Table/Grid logic remains same, just ensure they trigger setSelectedContact(contact) */}
+      {/* Contact Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-y-auto pb-20 pr-2 custom-scrollbar">
             {contacts.map(contact => (
             <div key={contact.id} onClick={() => setSelectedContact(contact)} className={`bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border transition-all cursor-pointer group relative overflow-hidden ${selectedContact?.id === contact.id ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-100 dark:border-gray-700 hover:shadow-md'}`}>
                 <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-500"><UserIcon size={24} /></div>
-                        <div><h3 className="font-semibold text-gray-900 dark:text-white">{contact.name}</h3><p className="text-sm text-gray-500">{contact.company}</p></div>
+                        <div><h3 className="font-semibold text-gray-900 dark:text-white truncate">{contact.name}</h3><p className="text-sm text-gray-500 truncate">{contact.company}</p></div>
                     </div>
                 </div>
                 <div className="text-xs text-gray-400 mt-4">Click to view profile</div>
@@ -198,12 +198,10 @@ if (!user) return <div className="p-8 text-center text-gray-500">Loading User Pr
             ))}
       </div>
 
-      {/* Profile Sidebar */}
+      {/* Profile Details Sidebar */}
       {selectedContact && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex justify-end z-50 animate-in fade-in duration-200" onClick={() => { setSelectedContact(null); setIsEditing(false); }}>
-          <div className="w-full max-w-md bg-white dark:bg-gray-800 h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 border-l border-gray-100 dark:border-gray-700 transition-colors" onClick={e => e.stopPropagation()}>
-            
-            {/* Sidebar Header */}
+          <div className="w-full max-w-md bg-white dark:bg-gray-800 h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 border-l border-gray-100 dark:border-gray-700" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 flex justify-between items-start shrink-0">
               <div className="flex gap-4">
                  <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">{selectedContact.name.charAt(0)}</div>
@@ -212,7 +210,7 @@ if (!user) return <div className="p-8 text-center text-gray-500">Loading User Pr
                     <p className="text-gray-500 dark:text-gray-400 text-sm flex items-center gap-1 mt-1"><Building size={14} />{selectedContact.company}</p>
                     <div className="mt-3 flex gap-2">
                         {isEditing ? (
-                            <button onClick={handleSaveContactUpdates} className="text-xs bg-green-600 text-white px-3 py-1 rounded-md font-medium flex items-center gap-1"><Save size={12} /> Save Changes</button>
+                            <button onClick={handleSaveContactUpdates} className="text-xs bg-green-600 text-white px-3 py-1 rounded-md font-medium flex items-center gap-1"><Save size={12} /> Save</button>
                         ) : (
                             <button onClick={handleEditClick} className="text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 px-3 py-1 rounded-md font-medium">Edit Profile</button>
                         )}
@@ -221,11 +219,10 @@ if (!user) return <div className="p-8 text-center text-gray-500">Loading User Pr
                     </div>
                  </div>
               </div>
-              <button onClick={() => setSelectedContact(null)} className="text-gray-400 p-2 rounded-full hover:bg-gray-200"><X size={20} /></button>
+              <button onClick={() => setSelectedContact(null)} className="text-gray-400 p-2 rounded-full hover:bg-gray-200 transition-colors"><X size={20} /></button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-8">
-              {/* Contact Details Section */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
               <div className="space-y-4">
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Contact Details</h3>
                 <div className="grid gap-3">
@@ -234,7 +231,7 @@ if (!user) return <div className="p-8 text-center text-gray-500">Loading User Pr
                         <div className="flex-1">
                           <p className="text-[10px] text-gray-500 uppercase">Email</p>
                           {isEditing ? (
-                            <input className="w-full bg-white text-sm border rounded px-1" value={editFormData.email || ''} onChange={e => setEditFormData({...editFormData, email: e.target.value})} />
+                            <input className="w-full bg-white text-sm border rounded px-1 text-black" value={editFormData.email || ''} onChange={e => setEditFormData({...editFormData, email: e.target.value})} />
                           ) : (
                             <p className="text-sm font-medium">{selectedContact.email || 'None'}</p>
                           )}
@@ -245,7 +242,7 @@ if (!user) return <div className="p-8 text-center text-gray-500">Loading User Pr
                         <div className="flex-1">
                           <p className="text-[10px] text-gray-500 uppercase">Phone</p>
                           {isEditing ? (
-                            <input className="w-full bg-white text-sm border rounded px-1" value={editFormData.phone || ''} onChange={e => setEditFormData({...editFormData, phone: e.target.value})} />
+                            <input className="w-full bg-white text-sm border rounded px-1 text-black" value={editFormData.phone || ''} onChange={e => setEditFormData({...editFormData, phone: e.target.value})} />
                           ) : (
                             <p className="text-sm font-medium">{selectedContact.phone || 'None'}</p>
                           )}
@@ -260,11 +257,10 @@ if (!user) return <div className="p-8 text-center text-gray-500">Loading User Pr
                     <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2"><Clock size={14} /> Activity Timeline</h3>
                     <button onClick={() => setIsNotesSidebarOpen(true)} className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-bold">+ New Note</button>
                  </div>
-                 
                  {contactInteractions.length > 0 ? (
                    <div className="space-y-4">
                      {contactInteractions.map((int) => (
-                       <div key={int.id} className="relative pl-6 last:pb-0">
+                       <div key={int.id} className="relative pl-6">
                          <div className="absolute left-0 top-1 w-2 h-2 rounded-full bg-blue-500" />
                          <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg text-sm shadow-sm">
                            <div className="flex justify-between text-[10px] mb-1">
@@ -280,51 +276,49 @@ if (!user) return <div className="p-8 text-center text-gray-500">Loading User Pr
                    <p className="text-center text-xs text-gray-400 py-4 italic">No activity yet.</p>
                  )}
               </div>
-
-              {/* Email Logs Section */}
-              <div>
-                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2 mb-4 border-b border-gray-100 pb-2"><Inbox size={14} /> Email History</h3>
-                  <div className="space-y-3">
-                     {emailHistory.length > 0 ? (
-                        emailHistory.map(email => (
-                          <div key={email.id} className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-100 shadow-sm">
-                              <p className="text-[10px] text-gray-400 mb-1">{new Date(email.date).toLocaleString()}</p>
-                              <p className="text-xs font-bold truncate">{email.metadata?.subject || 'Sent Email'}</p>
-                              <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mt-1">{email.notes}</p>
-                          </div>
-                        ))
-                     ) : (
-                        <p className="text-center text-xs text-gray-400 italic">No sent emails found.</p>
-                     )}
-                  </div>
-              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Notes Sidebar logic (identical to your version, but wired to onAddInteraction prop) */}
+      {/* Note Logging Sidebar */}
       {isNotesSidebarOpen && selectedContact && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex justify-end z-[70] animate-in fade-in" onClick={() => setIsNotesSidebarOpen(false)}>
            <div className="w-full max-w-md bg-white dark:bg-gray-800 h-full shadow-2xl flex flex-col animate-in slide-in-from-right" onClick={e => e.stopPropagation()}>
               <div className="p-6 border-b flex justify-between items-center bg-amber-50/50">
                  <div className="flex items-center gap-3">
                     <ClipboardList className="text-amber-600" />
-                    <h2 className="text-lg font-bold">Add Note for {selectedContact.name}</h2>
+                    <h2 className="text-lg font-bold">Log Activity: {selectedContact.name}</h2>
                  </div>
                  <button onClick={() => setIsNotesSidebarOpen(false)}><X /></button>
               </div>
-              <div className="p-6">
-                  <form onSubmit={handleAddNote}>
+              <div className="p-6 flex flex-col h-full">
+                  <form onSubmit={handleAddNote} className="flex flex-col flex-1">
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="text-xs font-bold text-gray-400 uppercase">Interaction Note</label>
+                        <button type="button" onClick={() => setIsKbSearchOpen(!isKbSearchOpen)} className="text-xs text-blue-600 flex items-center gap-1 hover:underline"><BookOpen size={12} /> Reference KB</button>
+                      </div>
+                      
+                      {isKbSearchOpen && (
+                        <div className="mb-4 p-2 bg-gray-50 border rounded-lg">
+                           <input className="w-full p-2 text-xs border rounded mb-2" placeholder="Search KB Articles..." value={kbSearchQuery} onChange={e => setKbSearchQuery(e.target.value)} />
+                           <div className="max-h-32 overflow-y-auto">
+                              {filteredKbArticles.map(art => (
+                                <button key={art.id} onClick={() => handleInsertKbArticle(art)} className="w-full text-left p-1 text-xs hover:bg-blue-50">{art.title}</button>
+                              ))}
+                           </div>
+                        </div>
+                      )}
+
                       <textarea 
                          autoFocus
-                         className="w-full h-40 p-4 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                         placeholder="Log a call, meeting result, or internal note..."
+                         className="w-full flex-1 p-4 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm text-black"
+                         placeholder="What happened? Log a call, meeting, or important detail..."
                          value={newNoteText}
                          onChange={e => setNewNoteText(e.target.value)}
                       />
-                      <button type="submit" disabled={isSavingNote || !newNoteText.trim()} className="mt-4 w-full bg-blue-600 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2">
-                        {isSavingNote ? 'Saving...' : <><Save size={18}/> Save to Timeline</>}
+                      <button type="submit" disabled={isSavingNote || !newNoteText.trim()} className="mt-4 w-full bg-blue-600 text-white py-3 rounded-lg font-bold shadow-lg disabled:opacity-50">
+                        {isSavingNote ? 'Saving...' : 'Save to Timeline'}
                       </button>
                   </form>
               </div>
@@ -332,7 +326,7 @@ if (!user) return <div className="p-8 text-center text-gray-500">Loading User Pr
         </div>
       )}
 
-      {/* Re-include your Modals for Import, Manual Add, etc. here using the same pattern */}
+      {/* Manual Add Contact Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
             <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6">
@@ -341,31 +335,31 @@ if (!user) return <div className="p-8 text-center text-gray-500">Loading User Pr
                     <button onClick={() => setIsAddModalOpen(false)}><X /></button>
                 </div>
                 <form onSubmit={handleManualSubmit} className="space-y-4">
-                    <input required className="w-full border rounded-lg p-2" placeholder="Full Name" value={newContactData.name} onChange={e => setNewContactData({...newContactData, name: e.target.value})} />
-                    <input className="w-full border rounded-lg p-2" placeholder="Company" value={newContactData.company} onChange={e => setNewContactData({...newContactData, company: e.target.value})} />
-                    <input type="email" className="w-full border rounded-lg p-2" placeholder="Email" value={newContactData.email} onChange={e => setNewContactData({...newContactData, email: e.target.value})} />
-                    <input className="w-full border rounded-lg p-2" placeholder="Phone" value={newContactData.phone} onChange={e => setNewContactData({...newContactData, phone: e.target.value})} />
+                    <input required className="w-full border rounded-lg p-2 text-black" placeholder="Full Name" value={newContactData.name} onChange={e => setNewContactData({...newContactData, name: e.target.value})} />
+                    <input className="w-full border rounded-lg p-2 text-black" placeholder="Company" value={newContactData.company} onChange={e => setNewContactData({...newContactData, company: e.target.value})} />
+                    <input type="email" className="w-full border rounded-lg p-2 text-black" placeholder="Email" value={newContactData.email} onChange={e => setNewContactData({...newContactData, email: e.target.value})} />
+                    <input className="w-full border rounded-lg p-2 text-black" placeholder="Phone" value={newContactData.phone} onChange={e => setNewContactData({...newContactData, phone: e.target.value})} />
                     <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold">Create Contact</button>
                 </form>
             </div>
         </div>
       )}
 
-      {/* Email Compose Modal */}
+      {/* Email Composition Modal */}
       {isEmailModalOpen && selectedContact && (
          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
              <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl flex flex-col p-6">
                  <div className="flex justify-between items-center mb-6">
-                     <h3 className="text-lg font-bold">Log Outbound Email</h3>
+                     <h3 className="text-lg font-bold">Log Sent Email</h3>
                      <button onClick={() => setIsEmailModalOpen(false)}><X /></button>
                  </div>
                  <form onSubmit={handleSendEmail} className="space-y-4">
-                     <input required className="w-full border rounded-lg p-2" placeholder="Subject" value={emailSubject} onChange={e => setEmailSubject(e.target.value)} />
-                     <textarea required className="w-full h-64 border rounded-lg p-2" placeholder="Message content..." value={emailBody} onChange={e => setEmailBody(e.target.value)} />
+                     <input required className="w-full border rounded-lg p-2 text-black" placeholder="Subject" value={emailSubject} onChange={e => setEmailSubject(e.target.value)} />
+                     <textarea required className="w-full h-64 border rounded-lg p-2 text-black" placeholder="Email content..." value={emailBody} onChange={e => setEmailBody(e.target.value)} />
                      <div className="flex justify-between items-center">
                         <span className="text-green-600 text-sm font-bold">{emailSuccess}</span>
                         <button type="submit" disabled={isSending} className="bg-blue-600 text-white px-8 py-2 rounded-lg font-bold">
-                            {isSending ? 'Logging...' : 'Log Sent Email'}
+                            {isSending ? 'Logging...' : 'Log Email'}
                         </button>
                      </div>
                  </form>
