@@ -1,4 +1,4 @@
-// services/api.ts
+// services/api.ts updated
 const API_BASE = '/crm/nexaloom-crm/api';
 
 export const api = {
