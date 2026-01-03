@@ -26,16 +26,11 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   documents = [], 
   articles = []
 }) => {
-  // --- 1. THE SAFETY GUARD ---
-  // This must be the very first thing inside the component to prevent ReferenceErrors
-  if (!user) {
-    return (
-      <div className="p-8 text-center flex flex-col items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-        <p className="text-gray-500">Loading User Profile...</p>
-      </div>
-    );
-  }
+ // --- ADD THIS BLOCK START ---
+ if (!user) {
+  return <div className="p-10 text-center text-gray-500">Loading profile...</div>;
+}
+// --- ADD THIS BLOCK END ---
 
   // --- 2. STATE DECLARATIONS ---
   const [selectedContact, setSelectedContact] = useState<Lead | null>(null);
