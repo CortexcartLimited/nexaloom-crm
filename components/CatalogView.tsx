@@ -413,22 +413,38 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
   };
 
   const handleContractOptionChange = (option: string) => {
-     if (option === '6MO_50') {
-         setDiscountForm(prev => ({ ...prev, type: DiscountType.CONTRACT, contractTerm: 6, value: '50', name: '6 Months - 50% Off' }));
-     } else if (option === '12MO_25') {
-         setDiscountForm(prev => ({ ...prev, type: DiscountType.CONTRACT, contractTerm: 12, value: '25', name: '12 Months - 25% Off' }));
-     } else if (option === '12MO_3FREE') {
-         setDiscountForm(prev => ({ ...prev, type: DiscountType.CONTRACT, contractTerm: 12, value: '3', name: '12 Months - 3 Months Free' }));
-     }
-  };
+    const year = new Date().getFullYear();
+    const prefix = `CONTRACT-${year}-`;
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
-      e.stopPropagation();
-      if (confirm('Are you sure you want to delete this discount?')) {
-          await onDeleteDiscount(id);
-      }
-  };
-
+    if (option === '6MO_50') {
+        setDiscountForm(prev => ({ 
+            ...prev, 
+            type: DiscountType.CONTRACT, 
+            contractTerm: 6, 
+            value: '50', 
+            name: '6 Months - 50% Off Total',
+            code: `${prefix}6MO50`
+        }));
+    } else if (option === '12MO_25') {
+        setDiscountForm(prev => ({ 
+            ...prev, 
+            type: DiscountType.CONTRACT, 
+            contractTerm: 12, 
+            value: '25', 
+            name: '12 Months - 25% Off Total',
+            code: `${prefix}12MO25`
+        }));
+    } else if (option === '12MO_3FREE') {
+        setDiscountForm(prev => ({ 
+            ...prev, 
+            type: DiscountType.CONTRACT, 
+            contractTerm: 12, 
+            value: '3', 
+            name: '12 Months - 3 Months Free', // Including "Free" triggers the monthly subtraction logic
+            code: `${prefix}12MO3F`
+        }));
+    }
+};
   const openAddDiscountModal = () => {
     setEditingDiscountId(null);
     setDiscountForm({ name: '', code: '', type: DiscountType.PERCENTAGE, value: '', applicableProductIds: [], expiresAt: '' });
@@ -1023,6 +1039,37 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
             </div>
             
             <div className="p-6 overflow-y-auto">
+    {/* Quick Templates Section */}
+    {activeTab === 'DISCOUNTS' && !editingDiscountId && (
+        <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-800">
+            <label className="block text-[10px] font-bold text-amber-800 dark:text-amber-400 uppercase tracking-widest mb-3">
+                Quick Contract Templates
+            </label>
+            <div className="flex flex-wrap gap-2">
+                <button 
+                    type="button"
+                    onClick={() => handleContractOptionChange('6MO_50')}
+                    className="text-xs bg-white dark:bg-gray-700 border border-amber-200 dark:border-amber-700 px-3 py-1.5 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-800 transition-colors"
+                >
+                    6mo / 50% Off
+                </button>
+                <button 
+                    type="button"
+                    onClick={() => handleContractOptionChange('12MO_25')}
+                    className="text-xs bg-white dark:bg-gray-700 border border-amber-200 dark:border-amber-700 px-3 py-1.5 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-800 transition-colors"
+                >
+                    12mo / 25% Off
+                </button>
+                <button 
+                    type="button"
+                    onClick={() => handleContractOptionChange('12MO_3FREE')}
+                    className="text-xs bg-white dark:bg-gray-700 border border-amber-200 dark:border-amber-700 px-3 py-1.5 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-800 transition-colors"
+                >
+                    12mo / 3mo Free
+                </button>
+            </div>
+        </div>
+    )}
                 {activeTab === 'PRODUCTS' ? (
                     <form id="productForm" onSubmit={handleProductSubmit} className="space-y-4">
                         <div>
