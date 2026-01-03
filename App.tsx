@@ -567,16 +567,16 @@ const handleAddInteraction = async (interaction: Interaction) => {
             onOpenDialer={handleOpenDialer}
           />
         )}
-       {activeTab === 'CONTACTS' && user && (
-          <ContactsView 
-          contacts={leads}
-          interactions={interactions}
-          onUpdateLead={handleUpdateLead}
-          onAddInteraction={handleAddInteraction}
-          onOpenDialer={handleOpenDialer}
-          user={user}
-        />
-        )}
+       {activeTab === 'CONTACTS' && auth.user && (
+  <ContactsView 
+    contacts={leads}
+    interactions={interactions}
+    onUpdateLead={handleUpdateLead}
+    onAddInteraction={handleAddInteraction}
+    onOpenDialer={handleOpenDialer}
+    user={auth.user} // Changed from user to auth.user
+  />
+)}
         {activeTab === 'catalog' && (
           <CatalogView 
               products={products} 
