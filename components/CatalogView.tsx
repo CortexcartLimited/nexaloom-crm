@@ -405,8 +405,8 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
     setDiscountForm(prev => {
       const exists = prev.applicableProductIds.includes(prodId);
       if (exists) {
-        return { ...prev, applicableProductIds: prev.applicableProductIds.filter(id => id !== id) };
-      } else {
+        return { ...prev, applicableProductIds: prev.applicableProductIds.filter(id => id !== prodId) };
+    } else {
         return { ...prev, applicableProductIds: [...prev.applicableProductIds, prodId] };
       }
     });
