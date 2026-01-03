@@ -57,7 +57,7 @@ export const api = {
     if (!response.ok) throw new Error('Failed to fetch discounts');
     return response.json();
   },
-  createDiscount: async (discount: any) => {
+  addDiscount: async (discount: any) => {
     const response = await fetch(`${API_BASE}/discounts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
