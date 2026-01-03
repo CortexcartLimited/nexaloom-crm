@@ -72,16 +72,21 @@ app.get('/api/leads', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+// server/index.js
+
 // Add a new lead
 app.post('/api/leads', async (req, res) => {
     const { id, tenantId, name, company, email, phone, value, status } = req.body;
+    
     try {
         await pool.query(
-            'INSERT INTO leads (id, tenantId, name, company, email, phone, value, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            `INSERT INTO leads (id, tenantId, name, company, email, phone, value, status, createdAt) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
             [id, tenantId, name, company, email, phone, value, status]
         );
-        res.json({ success: true });
+        res.status(201).json({ success: true, message: 'Lead created successfully' });
     } catch (err) {
+        console.error('Database error:', err);
         res.status(500).json({ error: err.message });
     }
 });

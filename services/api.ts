@@ -18,6 +18,10 @@ getLeads: async (tenantId: string) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(lead),
     });
-    return response.ok;
-  },
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create lead');
+    }
+    return response.json();
+  }
 };
