@@ -219,10 +219,19 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
   // --- Memoized Totals ---
 
   const getApplicableDiscounts = (productId: string) => {
-    return discounts.filter(d => 
-        (d.type !== DiscountType.CONTRACT) &&
-        (d.applicableProductIds || []).includes('ALL') || d.applicableProductIds.includes(productId)) &&
-        (!d.expiresAt || new Date(d.expiresAt) >= new Date())
+    return (discounts || []).filter(d => {
+      // 1. Must not be a contract-specific discount (those are handled by term selector)
+      const notContract = d.type !== DiscountType.CONTRACT;
+      
+      // 2. Must be applicable to this product specifically or ALL products
+      const productMatch = (d.applicableProductIds || []).includes('ALL') || 
+                           (d.applicableProductIds || []).includes(productId);
+      
+      // 3. Must not be expired
+      const notExpired = !d.expiresAt || new Date(d.expiresAt) >= new Date();
+
+      return notContract && productMatch && notExpired;
+    });
   };
 
   const { subtotal, totalDiscount, finalTotal } = useMemo(() => {
