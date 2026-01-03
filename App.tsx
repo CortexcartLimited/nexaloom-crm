@@ -239,28 +239,20 @@ const App: React.FC = () => {
     }
   };
 
-  const handleAddDiscount = async (discountData: Omit<Discount, 'id' | 'tenantId'>) => {
-    if (!auth.tenant) return;
-  
-    const newDiscount: Discount = {
+  const handleAddDiscount = async (discountData: any) => {
+    const newDiscount = {
       ...discountData,
       id: `disc-${Date.now()}`,
       tenantId: auth.tenant.id,
-      // Ensure applicableProductIds is a stringified array for the DB if necessary
-      // or keep as array if your backend handles the conversion
     };
   
     try {
-      // 1. Tell the Server to save it
-      const success = await api.createDiscount(newDiscount);
-  
+      const success = await api.addDiscount(newDiscount); // Make sure this matches your api.ts function name
       if (success) {
-        // 2. Only update the UI if the database confirmed it
         setDiscounts(prev => [...prev, newDiscount]);
       }
     } catch (error) {
-      console.error("Failed to persist discount:", error);
-      alert("Database Error: Could not save discount.");
+      console.error("Save failed:", error);
     }
   };
 

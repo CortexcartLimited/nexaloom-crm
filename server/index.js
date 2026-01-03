@@ -114,20 +114,37 @@ app.get('/api/discounts', async (req, res) => {
 });
 
 app.post('/api/discounts', async (req, res) => {
-    const { id, tenantId, name, code, type, value, applicableProductIds, expiresAt, contractTerm } = req.body;
+    const { id, tenantId, name, code, type, value, applicableProductIds, expiresAt, contractTerm, isManagerOnly } = req.body;
     
     try {
-        // Convert the array to a string for MySQL storage
-        const productIdsString = JSON.stringify(applicableProductIds || []);
+        // Stringify the array for MySQL TEXT column
+        const productsJson = JSON.stringify(applicableProductIds || ['ALL']);
+        
+        // Format date for MySQL or use NULL
+        const mysqlExpiresAt = expiresAt ? new Date(expiresAt).toISOString().slice(0, 19).replace('T', ' ') : null;
 
-        await pool.query(
-            `INSERT INTO discounts (id, tenantId, name, code, type, value, applicableProductIds, expiresAt, contractTerm) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [id, tenantId, name, code, type, value, productIdsString, expiresAt || null, contractTerm || null]
-        );
+        const query = `
+            INSERT INTO discounts 
+            (id, tenantId, name, code, type, value, applicableProductIds, expiresAt, contractTerm, isManagerOnly) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        await pool.query(query, [
+            id, 
+            tenantId, 
+            name, 
+            code, 
+            type, 
+            value, 
+            productsJson, 
+            mysqlExpiresAt, 
+            contractTerm || null, 
+            isManagerOnly ? 1 : 0
+        ]);
+
         res.status(201).json({ success: true });
     } catch (err) {
-        console.error("DB Insert Error:", err);
+        console.error("DISCOUNT INSERT ERROR:", err);
         res.status(500).json({ error: err.message });
     }
 });
