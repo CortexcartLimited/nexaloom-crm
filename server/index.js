@@ -20,7 +20,7 @@ const pool = mysql.createPool({
 // --- LEADS ROUTES ---
 
 // Get all leads for a tenant
-app.get('/crm/nexaloom-crm/api/leads', async (req, res) => {
+app.get('/api/leads', async (req, res) => {
     const { tenantId } = req.query;
     if (!tenantId) return res.status(400).json({ error: "tenantId is required" });
 
@@ -36,7 +36,7 @@ app.get('/crm/nexaloom-crm/api/leads', async (req, res) => {
 });
 
 // Add a new lead
-app.post('/crm/nexaloom-crm/api/leads', async (req, res) => {
+app.post('/api/leads', async (req, res) => {
     const { tenantId, name, company, email, phone, value, status } = req.body;
     const id = uuidv4();
     
@@ -54,7 +54,7 @@ app.post('/crm/nexaloom-crm/api/leads', async (req, res) => {
 });
 
 // Update lead status
-app.patch('/crm/nexaloom-crm/api/leads/:id/status', async (req, res) => {
+app.patch('/api/leads/:id/status', async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
     try {
@@ -72,7 +72,7 @@ app.patch('/crm/nexaloom-crm/api/leads/:id/status', async (req, res) => {
 });
 
 // --- PRODUCTS ROUTES ---
-app.get('/crm/nexaloom-crm/api/products', async (req, res) => {
+app.get('/api/products', async (req, res) => {
     const { tenantId } = req.query;
     if (!tenantId) {
         return res.status(400).json({ error: 'tenantId is required' });
@@ -85,7 +85,7 @@ app.get('/crm/nexaloom-crm/api/products', async (req, res) => {
     }
 });
 
-app.post('/crm/nexaloom-crm/api/products', async (req, res) => {
+app.post('/api/products', async (req, res) => {
     const { tenantId, name, description, price, category } = req.body;
     const id = uuidv4();
     try {
@@ -100,7 +100,7 @@ app.post('/crm/nexaloom-crm/api/products', async (req, res) => {
 });
 
 // --- DISCOUNTS ROUTES ---
-app.get('/crm/nexaloom-crm/api/discounts', async (req, res) => {
+app.get('/api/discounts', async (req, res) => {
     const { tenantId } = req.query;
     if (!tenantId) {
         return res.status(400).json({ error: 'tenantId is required' });
@@ -113,7 +113,7 @@ app.get('/crm/nexaloom-crm/api/discounts', async (req, res) => {
     }
 });
 
-app.post('/crm/nexaloom-crm/api/discounts', async (req, res) => {
+app.post('/api/discounts', async (req, res) => {
     const { tenantId, code, type, value, productId } = req.body;
     const id = uuidv4();
     try {
@@ -128,7 +128,7 @@ app.post('/crm/nexaloom-crm/api/discounts', async (req, res) => {
 });
 
 // --- INTERACTIONS ROUTES ---
-app.get('/crm/nexaloom-crm/api/interactions', async (req, res) => {
+app.get('/api/interactions', async (req, res) => {
     const { leadId, tenantId } = req.query;
     if(!tenantId){
         return res.status(400).json({ error: 'tenantId is required' });
@@ -151,7 +151,7 @@ app.get('/crm/nexaloom-crm/api/interactions', async (req, res) => {
     }
 });
 
-app.post('/crm/nexaloom-crm/api/interactions', async (req, res) => {
+app.post('/api/interactions', async (req, res) => {
     const { tenantId, leadId, userId, type, notes } = req.body;
     const id = uuidv4();
     const date = new Date().toISOString().slice(0, 19).replace('T', ' ');
