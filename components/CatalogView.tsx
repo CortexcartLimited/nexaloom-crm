@@ -426,39 +426,16 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
   };
 
   const handleContractOptionChange = (option: string) => {
-    const year = new Date().getFullYear();
-    const prefix = `CONTRACT-${year}-`;
-
     if (option === '6MO_50') {
-        setDiscountForm(prev => ({ 
-            ...prev, 
-            type: DiscountType.CONTRACT, 
-            contractTerm: 6, 
-            value: '50', 
-            name: '6 Months - 50% Off Total',
-            code: `${prefix}6MO50`
-        }));
+        setDiscountForm(prev => ({ ...prev, type: DiscountType.CONTRACT, contractTerm: 6, value: '50', name: '6 Months - 50% Off' }));
     } else if (option === '12MO_25') {
-        setDiscountForm(prev => ({ 
-            ...prev, 
-            type: DiscountType.CONTRACT, 
-            contractTerm: 12, 
-            value: '25', 
-            name: '12 Months - 25% Off Total',
-            code: `${prefix}12MO25`
-        }));
+        setDiscountForm(prev => ({ ...prev, type: DiscountType.CONTRACT, contractTerm: 12, value: '25', name: '12 Months - 25% Off' }));
     } else if (option === '12MO_3FREE') {
-        setDiscountForm(prev => ({ 
-            ...prev, 
-            type: DiscountType.CONTRACT, 
-            contractTerm: 12, 
-            value: '3', 
-            name: '12 Months - 3 Months Free', // Including "Free" triggers the monthly subtraction logic
-            code: `${prefix}12MO3F`
-        }));
+        // This sets the value to 3. The calculateItemPrice logic will see "Free" in the name and subtract 3 months.
+        setDiscountForm(prev => ({ ...prev, type: DiscountType.CONTRACT, contractTerm: 12, value: '3', name: '12 Months - 3 Months Free' }));
     }
-};
-  const openAddDiscountModal = () => {
+ };
+   const openAddDiscountModal = () => {
     setEditingDiscountId(null);
     setDiscountForm({ name: '', code: '', type: DiscountType.PERCENTAGE, value: '', applicableProductIds: [], expiresAt: '' });
     setActiveTab('DISCOUNTS'); 
