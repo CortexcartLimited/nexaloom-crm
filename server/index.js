@@ -72,6 +72,19 @@ app.get('/api/leads', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+// Add a new lead
+app.post('/api/leads', async (req, res) => {
+    const { id, tenantId, name, company, email, phone, value, status } = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO leads (id, tenantId, name, company, email, phone, value, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [id, tenantId, name, company, email, phone, value, status]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 const PORT = 5000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

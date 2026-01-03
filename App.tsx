@@ -249,7 +249,7 @@ const App: React.FC = () => {
       status: leadData?.status || LeadStatus.NEW,
       createdAt: new Date().toISOString()
     };
-    await db.addLead(newLead);
+    await api.createLead(newLead); 
     setLeads([...leads, newLead]);
     
     // Log creation
