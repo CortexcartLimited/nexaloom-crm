@@ -86,7 +86,7 @@ const App: React.FC = () => {
       
       setAuth({ user, tenant, isAuthenticated: true });
       
-      if (tenant) {
+      if (user?.tenantId) {
         const [fetchedLeads, fetchedProducts, fetchedDiscounts, fetchedInteractions, fetchedTasks] = await Promise.all([
           api.getLeads(tenant.id),
           api.getProducts(tenant.id),
