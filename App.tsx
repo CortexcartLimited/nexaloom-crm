@@ -567,7 +567,7 @@ const handleAddInteraction = async (interaction: Interaction) => {
             onOpenDialer={handleOpenDialer}
           />
         )}
-        {activeTab === 'contacts' && (
+       {activeTab === 'CONTACTS' && user && (
           <ContactsView 
           contacts={leads}
           interactions={interactions}
