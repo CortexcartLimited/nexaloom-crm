@@ -28,7 +28,22 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
 }) => {
  // --- ADD THIS BLOCK START ---
  if (!user) {
-  return <div className="p-10 text-center text-gray-500">Loading profile...</div>;
+  return <div className="p-10 text-center">User not loaded...</div>;
+}
+
+if (!contacts || contacts.length === 0) {
+  return (
+    <div className="p-10 text-center flex flex-col items-center justify-center h-full">
+      <div className="bg-gray-50 p-6 rounded-full mb-4">
+        <UserIcon size={48} className="text-gray-300" />
+      </div>
+      <h3 className="text-lg font-medium text-gray-900">No contacts found</h3>
+      <p className="text-gray-500">Try importing leads or adding a new contact manually.</p>
+      <button onClick={() => setIsAddModalOpen(true)} className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg">
+        + Add First Contact
+      </button>
+    </div>
+  );
 }
 // --- ADD THIS BLOCK END ---
 
