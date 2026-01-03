@@ -223,7 +223,6 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
         (d.type !== DiscountType.CONTRACT) &&
         (d.applicableProductIds || []).includes('ALL') || d.applicableProductIds.includes(productId)) &&
         (!d.expiresAt || new Date(d.expiresAt) >= new Date())
-    );
   };
 
   const { subtotal, totalDiscount, finalTotal } = useMemo(() => {
