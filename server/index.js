@@ -102,14 +102,19 @@ app.post('/api/products', async (req, res) => {
 // --- DISCOUNTS ROUTES ---
 app.get('/api/discounts', async (req, res) => {
     const { tenantId } = req.query;
-    if (!tenantId) {
-        return res.status(400).json({ error: 'tenantId is required' });
-    }
     try {
         const [rows] = await pool.query('SELECT * FROM discounts WHERE tenantId = ?', [tenantId]);
-        res.json(rows);
+        
+        // This part is the "Magic Fix" for the disappearing discounts
+        const sanitizedRows = rows.map(row => ({
+            ...row,
+            applicableProductIds: row.applicableProductIds ? JSON.parse(row.applicableProductIds) : []
+        }));
+
+        res.json(sanitizedRows);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch discounts" });
     }
 });
 
