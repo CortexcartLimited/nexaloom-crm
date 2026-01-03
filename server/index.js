@@ -114,15 +114,20 @@ app.get('/api/discounts', async (req, res) => {
 });
 
 app.post('/api/discounts', async (req, res) => {
-    const { id, tenantId, productId, name, type, value, code } = req.body;
+    const { id, tenantId, name, code, type, value, applicableProductIds, expiresAt, contractTerm } = req.body;
+    
     try {
+        // Convert the array to a string for MySQL storage
+        const productIdsString = JSON.stringify(applicableProductIds || []);
+
         await pool.query(
-            'INSERT INTO discounts (id, tenantId, productId, name, type, value, code) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [id, tenantId, productId, name, type, value, code]
+            `INSERT INTO discounts (id, tenantId, name, code, type, value, applicableProductIds, expiresAt, contractTerm) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [id, tenantId, name, code, type, value, productIdsString, expiresAt || null, contractTerm || null]
         );
         res.status(201).json({ success: true });
     } catch (err) {
-        console.error(err);
+        console.error("DB Insert Error:", err);
         res.status(500).json({ error: err.message });
     }
 });

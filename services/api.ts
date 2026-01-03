@@ -63,10 +63,9 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(discount),
     });
-    if (!response.ok) throw new Error('Failed to create discount');
-    return response.json();
+    return response.ok;
   },
-  
+    
   // Interactions
   getInteractions: async (tenantId: string, leadId?: string) => {
     let url = `${API_BASE}/interactions?tenantId=${tenantId}`;
