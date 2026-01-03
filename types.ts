@@ -7,7 +7,7 @@ export enum UserRole {
 }
 
 export enum LeadStatus {
-  NEW = 'New',
+  NEW = 'NEW',
   CONTACTED = 'Contacted',
   QUALIFIED = 'Qualified',
   PROPOSAL = 'Proposal',
