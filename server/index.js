@@ -113,7 +113,7 @@ app.get('/api/discounts', async (req, res) => {
     }
 });
 
-aapp.post('/api/discounts', async (req, res) => {
+app.post('/api/discounts', async (req, res) => {
     const { id, tenantId, productId, name, type, value, code } = req.body;
     try {
         await pool.query(
