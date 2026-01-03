@@ -8,11 +8,11 @@ export enum UserRole {
 
 export enum LeadStatus {
   NEW = 'NEW',
-  CONTACTED = 'Contacted',
-  QUALIFIED = 'Qualified',
-  PROPOSAL = 'Proposal',
-  WON = 'Won',
-  LOST = 'Lost'
+  CONTACTED = 'CONTACTED',
+  QUALIFIED = 'QUALIFIED',
+  PROPOSAL = 'PROPOSAL',
+  WON = 'WON',
+  LOST = 'LOST'
 }
 
 export enum TaskPriority {
