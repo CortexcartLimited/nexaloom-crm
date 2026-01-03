@@ -425,7 +425,40 @@ const App: React.FC = () => {
       };
       setArticles(prev => [newArticle, ...prev]);
   };
+// App.tsx
 
+// 1. Handle Updating Contact Details (The "Edit" button)
+const handleUpdateLead = async (id: string, updates: Partial<Lead>) => {
+  try {
+    const success = await api.updateLead(id, updates);
+    if (success) {
+      // Update local state so UI reflects changes immediately
+      setLeads(prev => prev.map(lead => 
+        lead.id === id ? { ...lead, ...updates } : lead
+      ));
+    }
+  } catch (error) {
+    console.error("Failed to update lead:", error);
+    alert("Error updating contact information.");
+  }
+};
+
+// 2. Handle Adding Interactions (Notes, Emails, Calls)
+const handleAddInteraction = async (interaction: Interaction) => {
+  try {
+    // Ensure tenantId is included
+    const payload = { ...interaction, tenantId: auth.tenant?.id };
+    
+    const success = await api.createInteraction(payload);
+    if (success) {
+      // Add to local state to refresh the Timeline instantly
+      setInteractions(prev => [payload, ...prev]);
+    }
+  } catch (error) {
+    console.error("Failed to save interaction:", error);
+    alert("Error saving note to timeline.");
+  }
+};
   const handleUpdateArticle = async (id: string, updates: Partial<KnowledgeBaseArticle>) => {
       setArticles(prev => prev.map(a => a.id === id ? { ...a, ...updates, updatedAt: new Date().toISOString() } : a));
   };

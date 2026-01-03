@@ -98,6 +98,40 @@ app.post('/api/products', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+// ROUTE: Update Lead (Edit Profile)
+app.patch('/api/leads/:id', async (req, res) => {
+    const { id } = req.params;
+    const updates = req.body;
+    
+    try {
+        // Dynamically build the update query based on provided fields
+        const fields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
+        const values = Object.values(updates);
+        
+        await pool.query(
+            `UPDATE leads SET ${fields} WHERE id = ?`,
+            [...values, id]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ROUTE: Create Interaction (Save Notes/Emails)
+app.post('/api/interactions', async (req, res) => {
+    const { id, tenantId, leadId, type, notes, date, metadata } = req.body;
+    try {
+        await pool.query(
+            `INSERT INTO interactions (id, tenantId, leadId, type, notes, date, metadata) 
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [id, tenantId, leadId, type, notes, date, JSON.stringify(metadata || {})]
+        );
+        res.status(201).json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // --- DISCOUNTS ROUTES ---
 app.get('/api/discounts', async (req, res) => {
