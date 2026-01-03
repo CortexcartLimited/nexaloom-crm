@@ -26,6 +26,8 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   documents = [], 
   articles = []
 }) => {
+  console.log("Contacts received by component:", contacts); 
+  
  // --- ADD THIS BLOCK START ---
  if (!user) {
   return <div className="p-10 text-center">User not loaded...</div>;
