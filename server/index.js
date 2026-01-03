@@ -113,16 +113,16 @@ app.get('/api/discounts', async (req, res) => {
     }
 });
 
-app.post('/api/discounts', async (req, res) => {
-    const { tenantId, code, type, value, productId } = req.body;
-    const id = uuidv4();
+aapp.post('/api/discounts', async (req, res) => {
+    const { id, tenantId, productId, name, type, value, code } = req.body;
     try {
         await pool.query(
-            'INSERT INTO discounts (id, tenantId, code, type, value, productId) VALUES (?, ?, ?, ?, ?, ?)',
-            [id, tenantId, code, type, value, productId]
+            'INSERT INTO discounts (id, tenantId, productId, name, type, value, code) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [id, tenantId, productId, name, type, value, code]
         );
-        res.status(201).json({ id, ...req.body });
+        res.status(201).json({ success: true });
     } catch (err) {
+        console.error(err);
         res.status(500).json({ error: err.message });
     }
 });
