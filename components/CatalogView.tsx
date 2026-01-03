@@ -1072,42 +1072,101 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
                     </form>
                 ) : (
                     <form id="discountForm" onSubmit={handleDiscountSubmit} className="space-y-4">
-                         <div>
-                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discount Type</label>
-                             <div className="grid grid-cols-2 gap-2 mb-4">
-                                {[
-                                    { id: DiscountType.PERCENTAGE, label: 'Promo Code' },
-                                    { id: DiscountType.TRIAL_EXTENSION, label: 'Trial Extension' },
-                                    { id: DiscountType.CONTRACT, label: 'Contract Deal' },
-                                    { id: DiscountType.CUSTOM, label: 'Manager Custom' }
-                                ].map(t => (
-                                    <button 
-                                        key={t.id}
-                                        type="button"
-                                        onClick={() => setDiscountForm({...discountForm, type: t.id})}
-                                        className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${discountForm.type === t.id ? 'bg-blue-50 dark:bg-blue-900/40 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300' : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'}`}
-                                    >
-                                        {t.label}
-                                    </button>
-                                ))}
-                             </div>
-                         </div>
+  <div>
+    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discount Type</label>
+    <div className="grid grid-cols-2 gap-2 mb-4">
+      {[
+        { id: DiscountType.PERCENTAGE, label: 'Promo Code' },
+        { id: DiscountType.TRIAL_EXTENSION, label: 'Trial Extension' },
+        { id: DiscountType.CONTRACT, label: 'Contract Deal' },
+        { id: DiscountType.CUSTOM, label: 'Manager Custom' }
+      ].map(t => (
+        <button
+          key={t.id}
+          type="button"
+          onClick={() => setDiscountForm({ ...discountForm, type: t.id })}
+          className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${discountForm.type === t.id ? 'bg-blue-50 dark:bg-blue-900/40 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300' : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'}`}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  </div>
 
-                         <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Offer Name</label>
-                            <input required type="text" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={discountForm.name} onChange={e => setDiscountForm({...discountForm, name: e.target.value})} placeholder="e.g. Black Friday Deal" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discount Code</label>
-                            <input required type="text" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono uppercase bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={discountForm.code} onChange={e => setDiscountForm({...discountForm, code: e.target.value.toUpperCase()})} placeholder="e.g. SAVE20" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Value</label>
-                                <input required type="number" min="1" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={discountForm.value} onChange={e => setDiscountForm({...discountForm, value: e.target.value})} />
-                            </div>
-                        </div>
-                    </form>
+  <div>
+    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Offer Name</label>
+    <input required type="text" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={discountForm.name} onChange={e => setDiscountForm({ ...discountForm, name: e.target.value })} placeholder={discountForm.type === DiscountType.CONTRACT ? "e.g. 12 Months - 3 Months Free" : "e.g. Black Friday Deal"} />
+  </div>
+
+  {/* Only show Code for Promo/Trial/Contract, not for Manager Custom */}
+  {discountForm.type !== DiscountType.CUSTOM && (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discount Code</label>
+      <input required type="text" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm font-mono uppercase bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={discountForm.code} onChange={e => setDiscountForm({ ...discountForm, code: e.target.value.toUpperCase() })} placeholder="e.g. SAVE20" />
+    </div>
+  )}
+
+  <div className="grid grid-cols-2 gap-4">
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        {discountForm.name.toLowerCase().includes('free') ? 'Months Free' : 'Value (%)'}
+      </label>
+      <input required type="number" min="1" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={discountForm.value} onChange={e => setDiscountForm({ ...discountForm, value: e.target.value })} />
+    </div>
+
+    {/* SHOW CONTRACT TERM SELECTOR ONLY FOR CONTRACT TYPE */}
+    {discountForm.type === DiscountType.CONTRACT && (
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contract Term</label>
+        <select
+          className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          value={discountForm.contractTerm || 12}
+          onChange={e => setDiscountForm({ ...discountForm, contractTerm: parseInt(e.target.value) as any })}
+        >
+          <option value={6}>6 Months</option>
+          <option value={12}>12 Months</option>
+        </select>
+      </div>
+    )}
+
+    {/* SHOW EXPIRATION DATE FOR NON-CUSTOM DISCOUNTS */}
+    {discountForm.type !== DiscountType.CUSTOM && (
+      <div className="col-span-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expiration Date (Optional)</label>
+        <input
+          type="date"
+          className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          value={discountForm.expiresAt}
+          onChange={e => setDiscountForm({ ...discountForm, expiresAt: e.target.value })}
+        />
+      </div>
+    )}
+  </div>
+
+  {/* PRODUCT SELECTION UI (Hidden in your previous code but logic was there) */}
+  <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
+    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Apply to Specific Products</label>
+    <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+      <button
+        type="button"
+        onClick={() => setDiscountForm({ ...discountForm, applicableProductIds: [] })}
+        className={`w-full text-left px-3 py-2 rounded-lg text-sm border transition-all ${discountForm.applicableProductIds.length === 0 ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-100 text-gray-600'}`}
+      >
+        All Products
+      </button>
+      {products.map(p => (
+        <button
+          key={p.id}
+          type="button"
+          onClick={() => toggleProductSelection(p.id)}
+          className={`w-full text-left px-3 py-2 rounded-lg text-sm border transition-all ${discountForm.applicableProductIds.includes(p.id) ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-100 text-gray-600'}`}
+        >
+          {p.name}
+        </button>
+      ))}
+    </div>
+  </div>
+</form>
                 )}
             </div>
             
