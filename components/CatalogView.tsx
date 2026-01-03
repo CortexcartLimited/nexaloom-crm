@@ -149,7 +149,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
             d.type === DiscountType.CONTRACT && 
             d.contractTerm === termMonths &&
             ((d.applicableProductIds || []).includes('ALL') || (d.applicableProductIds || []).includes(item.id))
-
+        );
         candidates.sort((a, b) => {
             const aSpecific = a.applicableProductIds.includes(item.id);
             const bSpecific = b.applicableProductIds.includes(item.id);
