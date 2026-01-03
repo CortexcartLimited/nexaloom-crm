@@ -1,4 +1,4 @@
-const API_BASE = '/api';
+const API_BASE = '/crm/nexaloom-crm/api';
 
 export const api = {
   getTasks: async (tenantId: string) => {
