@@ -20,13 +20,6 @@ export default defineConfig(({ mode }) => {
       "./*.{js,ts,jsx,tsx}",
     ],
     build: {
-      rollupOptions: {
-        // This stops the "white screen" by preventing Node.js code from entering the browser
-        external: [
-          'mysql2', 'mysql2/promise', 'events', 'process', 'net', 
-          'tls', 'crypto', 'stream', 'util', 'zlib', 'url', 'timers', 'fs', 'path'
-        ],
-      },
     },
 
     define: {
