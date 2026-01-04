@@ -76,22 +76,27 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // 1. Find the selected product from the catalog props
+    // 1. Find the product object to get its price
     const selectedProd = products.find(p => p.id === newLeadData.productId);
     
-    // 2. Calculate values (using unique variable names to avoid "already declared" errors)
-    const basePriceAmount = selectedProd ? Number(selectedProd.price) : 0;
-    const discountAmount = newLeadData.discount || 0;
-    const finalCalculatedValue = Math.max(0, basePriceAmount - discountAmount);
+    // 2. Ensure we are working with numbers (database values can sometimes be strings)
+    const basePrice = selectedProd ? Number(selectedProd.price) : 0;
+    const discount = Number(newLeadData.discount) || 0;
+    
+    // 3. Calculate the final value
+    const finalLeadValue = Math.max(0, basePrice - discount);
 
-    // 3. Submit the lead
+    // Debug: This will show in your F12 console
+    console.log(`Creating Lead: Product Price (${basePrice}) - Discount (${discount}) = Total (${finalLeadValue})`);
+
+    // 4. Send to the database
     await onAddLead({
       ...newLeadData,
-      value: finalCalculatedValue, // Added missing comma here
+      value: finalLeadValue, // This is the critical line that updates the $ total
       notes: selectedProd ? `Interested in: ${selectedProd.name}` : ''
     });
 
-    // 4. Close and Reset
+    // 5. Cleanup
     setIsAddModalOpen(false);
     setNewLeadData({ 
       name: '', 
@@ -104,7 +109,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
       discount: 0 
     });
   };
-
+  
   const handleOpenAnalysis = async (lead: Lead) => {
     setSelectedLead(lead);
     setModalMode('ANALYSIS');
