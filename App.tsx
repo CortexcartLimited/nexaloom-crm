@@ -128,13 +128,6 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [tasks, loading, auth.isAuthenticated]);
 
-  const handleToggleTheme = async () => {
-      const newTheme = theme === 'light' ? 'dark' : 'light';
-      setTheme(newTheme);
-      localStorage.setItem('theme', newTheme);
-      document.documentElement.classList.toggle('dark', newTheme === 'dark');
-  };
-
   const handleBackgroundChange = async (id: string) => {
       setBackgroundId(id);
       localStorage.setItem('nexaloom_bg_theme', id);
@@ -432,7 +425,20 @@ const handleUpdateLead = async (id: string, updates: Partial<Lead>) => {
     alert("Error updating contact information.");
   }
 };
-
+const handleToggleTheme = () => {
+  const newTheme = theme === 'light' ? 'dark' : 'light';
+  setTheme(newTheme);
+  
+  // Persist to storage
+  localStorage.setItem('theme', newTheme);
+  
+  // Directly manipulate the DOM for instant effect
+  if (newTheme === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+};
 // 2. Handle Adding Interactions (Notes, Emails, Calls)
 const handleAddInteraction = async (interaction: Interaction) => {
   try {

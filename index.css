@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* This ensures the background and text colors fade smoothly when switching */
+html, body {
+  @apply transition-colors duration-300;
+}
+
+/* Optional: Set a default background for dark mode if not already set in components */
+.dark body {
+  @apply bg-gray-900 text-white;
+}
