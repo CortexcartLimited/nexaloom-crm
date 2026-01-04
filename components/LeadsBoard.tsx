@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Lead, LeadStatus, Document } from '../types';
 import { 
   MoreHorizontal, Plus, Sparkles, MessageSquare, X, Wand2, Upload, 
@@ -7,6 +6,7 @@ import {
   User, DollarSign, Building, Mail, Phone, Copy, Paperclip, File, Search 
 } from 'lucide-react';
 import { generateEmailDraft, analyzeLeadPotential } from '../services/geminiService';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 interface LeadsBoardProps {
   leads: Lead[];
