@@ -78,6 +78,34 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
     setIsAddModalOpen(false);
     setNewLeadData({ name: '', company: '', email: '', phone: '', value: 0, status: LeadStatus.NEW });
   };
+  const handleOpenAnalysis = async (lead: Lead) => {
+    setSelectedLead(lead);
+    setModalMode('ANALYSIS');
+    setIsGenerating(true);
+    setAiAnalysis(null);
+    
+    try {
+      // Filter interactions specifically for this lead to give Gemini context
+      const leadHistory = leads.filter(l => l.id === lead.id); 
+      // Note: In a production environment, you'd fetch the specific 
+      // interaction strings from your state or API here.
+      
+      const analysis = await analyzeLeadPotential(lead, []); 
+      setAiAnalysis(analysis);
+    } catch (error) {
+      console.error("AI Analysis Error:", error);
+      setAiAnalysis({ 
+        score: 0, 
+        reasoning: "Analysis temporarily unavailable. Please check your Gemini API key." 
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+// Calculate total value for this specific column
+const columnLeads = leads.filter(l => l.status === status);
+const totalValue = columnLeads.reduce((sum, lead) => sum + (lead.value || 0), 0);
 
   return (
     <div className="h-full flex flex-col p-6 overflow-hidden">
@@ -92,6 +120,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
       {/* Board Layout */}
       <div className="flex gap-4 overflow-x-auto pb-4 h-full custom-scrollbar">
         {COLUMNS.map((status) => (
+            
           <div 
             key={status} 
             onDragOver={handleDragOver}
@@ -104,7 +133,11 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
                 {leads.filter(l => l.status === status).length}
               </span>
             </div>
-            
+            <div className="px-2 mb-4">
+        <span className="text-lg font-black text-gray-900 dark:text-white">
+          ${totalValue.toLocaleString()}
+        </span>
+      </div>
             <div className="flex-1 overflow-y-auto space-y-3 p-1 rounded-lg min-h-[150px]">
               {leads.filter(l => l.status === status).map((lead) => (
                 <div 
@@ -158,7 +191,57 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
             </div>
         </div>
       )}
+{selectedLead && modalMode === 'ANALYSIS' && (
+  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col transition-colors">
+      <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-purple-50/30 dark:bg-purple-900/10">
+          <h3 className="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-white">
+            <Sparkles className="text-purple-500" /> Deal Intelligence
+          </h3>
+          <button onClick={() => setSelectedLead(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+      </div>
+      
+      <div className="p-8">
+        {isGenerating ? (
+          <div className="flex flex-col items-center justify-center py-10">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600 mb-4"></div>
+            <p className="text-sm text-gray-500 animate-pulse">Consulting Gemini AI...</p>
+          </div>
+        ) : aiAnalysis && (
+          <div className="animate-in fade-in zoom-in duration-300">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">Win Probability</span>
+              <span className={`text-3xl font-black ${aiAnalysis.score > 70 ? 'text-green-500' : aiAnalysis.score > 40 ? 'text-yellow-500' : 'text-red-500'}`}>
+                {aiAnalysis.score}%
+              </span>
+            </div>
+            
+            {/* Progress Bar Gauge */}
+            <div className="h-4 w-full bg-gray-100 dark:bg-gray-700 rounded-full mb-8 overflow-hidden border border-gray-200 dark:border-gray-600">
+              <div 
+                className={`h-full transition-all duration-1000 ease-out ${aiAnalysis.score > 70 ? 'bg-green-500' : aiAnalysis.score > 40 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                style={{ width: `${aiAnalysis.score}%` }}
+              />
+            </div>
 
+            <div className="bg-purple-50 dark:bg-purple-900/20 p-5 rounded-xl border border-purple-100 dark:border-purple-800">
+              <h4 className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase mb-3 flex items-center gap-2">
+                <ArrowRight size={14} /> Strategic Reasoning
+              </h4>
+              <p className="text-sm text-gray-700 dark:text-gray-200 leading-relaxed italic">
+                "{aiAnalysis.reasoning}"
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 bg-gray-50 dark:bg-gray-900/50 flex justify-end">
+        <button onClick={() => setSelectedLead(null)} className="px-6 py-2 text-gray-500 text-sm font-bold hover:text-gray-700">Close</button>
+      </div>
+    </div>
+  </div>
+)}
       {/* AI Email Modal */}
       {selectedLead && modalMode === 'EMAIL' && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
