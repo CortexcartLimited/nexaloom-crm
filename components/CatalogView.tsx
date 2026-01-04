@@ -387,13 +387,13 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
     const finalTerm = isContract ? (discountForm.contractTerm || 12) : null;
 
     const payload = {
-      name: discountForm.name,
-      code: discountForm.code,
-      type: discountForm.type,
+      ...discountForm, // keep existing fields
       value: parseFloat(discountForm.value) || 0,
       contractTerm: finalTerm,
-      isManagerOnly: discountForm.type === DiscountType.CUSTOM,
-      applicableProductIds: discountForm.applicableProductIds.length === 0 ? ['ALL'] : discountForm.applicableProductIds,
+      // FIX: If the array is empty, force it to 'ALL'
+      applicableProductIds: (discountForm.applicableProductIds.length === 0 || discountForm.applicableProductIds.includes('ALL')) 
+        ? ['ALL'] 
+        : discountForm.applicableProductIds,
       expiresAt: discountForm.expiresAt ? new Date(discountForm.expiresAt).toISOString() : null
     };
 
@@ -416,11 +416,14 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
 
   const toggleProductSelection = (prodId: string) => {
     setDiscountForm(prev => {
-      const exists = prev.applicableProductIds.includes(prodId);
+      // If "ALL" was previously in there, clear it out first
+      const currentIds = prev.applicableProductIds.filter(id => id !== 'ALL');
+      const exists = currentIds.includes(prodId);
+      
       if (exists) {
-        return { ...prev, applicableProductIds: prev.applicableProductIds.filter(id => id !== prodId) };
-    } else {
-        return { ...prev, applicableProductIds: [...prev.applicableProductIds, prodId] };
+        return { ...prev, applicableProductIds: currentIds.filter(id => id !== prodId) };
+      } else {
+        return { ...prev, applicableProductIds: [...currentIds, prodId] };
       }
     });
   };
@@ -1207,13 +1210,17 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
   <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
     <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Apply to Specific Products</label>
     <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-      <button
-        type="button"
-        onClick={() => setDiscountForm({ ...discountForm, applicableProductIds: [] })}
-        className={`w-full text-left px-3 py-2 rounded-lg text-sm border transition-all ${discountForm.applicableProductIds.length === 0 ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-100 text-gray-600'}`}
-      >
-        All Products
-      </button>
+    <button
+  type="button"
+  onClick={() => setDiscountForm({ ...discountForm, applicableProductIds: ['ALL'] })} // Changed from [] to ['ALL']
+  className={`w-full text-left px-3 py-2 rounded-lg text-sm border transition-all ${
+    discountForm.applicableProductIds.includes('ALL') || discountForm.applicableProductIds.length === 0 
+    ? 'bg-blue-50 border-blue-200 text-blue-700' 
+    : 'bg-white border-gray-100 text-gray-600'
+  }`}
+>
+  All Products
+</button>
       {products.map(p => (
         <button
           key={p.id}
