@@ -71,7 +71,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ leads, interactions, onNav
           <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Total Pipeline Value</p>
           <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
            {/* toLocaleString adds commas and fixes the decimals */}
-  ${totalPipelineValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+  £{totalPipelineValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         </div>
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
@@ -178,7 +178,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ leads, interactions, onNav
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-gray-600 dark:text-gray-300 font-medium">
-                                        ${lead.value.toLocaleString()}
+                                        £{lead.value.toLocaleString()}
                                     </td>
                                     <td className="px-6 py-4 text-gray-500 dark:text-gray-400">
                                         {new Date(lead.createdAt).toLocaleDateString()}
