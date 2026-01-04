@@ -627,45 +627,44 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
                     </div>
 
                     <div className="pt-4 border-t border-gray-50 dark:border-gray-700">
-  <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
-    Applicable Products
-  </p>
-  <div className="flex flex-wrap gap-2">
-    {(() => {
-      // 1. Convert TEXT from DB back into a JavaScript Array
-      let ids: string[] = [];
-      try {
-        if (typeof discount.applicableProductIds === 'string') {
-          // If MySQL sent a string like "['prod_1']", parse it
-          ids = JSON.parse(discount.applicableProductIds);
-        } else if (Array.isArray(discount.applicableProductIds)) {
-          // If it's already an array, use it
-          ids = discount.applicableProductIds;
-        } else {
-          // If it's null or missing, default to ALL
-          ids = ['ALL'];
-        }
-      } catch (e) {
-        // If parsing fails, treat it as a single string fallback
-        ids = [String(discount.applicableProductIds)];
-      }
+                      <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+                        Applicable Products
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {(() => {
+                          // --- THE FIX STARTS HERE ---
+                          let ids: string[] = [];
+                          try {
+                            if (typeof discount.applicableProductIds === 'string') {
+                              // If it's a string from MySQL, turn it into a real array
+                              ids = JSON.parse(discount.applicableProductIds);
+                            } else if (Array.isArray(discount.applicableProductIds)) {
+                              // If it's already an array, use it directly
+                              ids = discount.applicableProductIds;
+                            }
+                          } catch (e) {
+                            // If parsing fails (data is weird), wrap the raw value in an array
+                            ids = discount.applicableProductIds ? [String(discount.applicableProductIds)] : [];
+                          }
 
-      // 2. Render the badges based on the parsed IDs
-      if (ids.includes('ALL')) {
-        return <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded">All Products</span>;
-      }
+                          // If no IDs found or explicitly set to ALL
+                          if (ids.length === 0 || ids.includes('ALL')) {
+                            return <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded">All Products</span>;
+                          }
 
-      return ids.map(id => {
-        const prod = products.find(p => p.id === id);
-        return prod ? (
-          <span key={id} className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-1 rounded border border-blue-100 dark:border-blue-800">
-            {prod.name}
-          </span>
-        ) : null;
-      });
-    })()}
-  </div>
-</div>
+                          // Map the IDs to real Product Names
+                          return ids.map(id => {
+                            const prod = products.find(p => p.id === id);
+                            return prod ? (
+                              <span key={id} className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-1 rounded border border-blue-100 dark:border-blue-800">
+                                {prod.name}
+                              </span>
+                            ) : null;
+                          });
+                          // --- THE FIX ENDS HERE ---
+                        })()}
+                      </div>
+                    </div>
                 </div>
              </div>
            );
