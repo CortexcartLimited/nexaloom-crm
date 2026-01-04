@@ -10,7 +10,7 @@ import { generateEmailDraft, analyzeLeadPotential } from '../services/geminiServ
 interface LeadsBoardProps {
   leads: Lead[];
   documents?: Document[];
-  products: any[];
+  products: any[]; // Ensure this is passed from App.tsx
   onStatusChange: (id: string, newStatus: LeadStatus) => void;
   onAddLead: (leadData?: Partial<Lead>) => Promise<void>;
   onAddLeads: (leads: Omit<Lead, 'id' | 'tenantId' | 'status' | 'createdAt' | 'value'>[]) => Promise<void>;
@@ -19,15 +19,14 @@ interface LeadsBoardProps {
 
 const COLUMNS = Object.values(LeadStatus);
 
-// Price Logic Configuration
-const PRODUCT_PRICES: Record<string, number> = {
-  'Basic': 1000,
-  'Premium': 5000,
-  'Enterprise': 15000
-};
-
 export const LeadsBoard: React.FC<LeadsBoardProps> = ({ 
-  leads, onStatusChange, onAddLead, onAddLeads, documents = [], onOpenDialer 
+  leads, 
+  onStatusChange, 
+  onAddLead, 
+  onAddLeads, 
+  documents = [], 
+  onOpenDialer,
+  products = [] // FIX 1: Added products to destructuring with a default empty array
 }) => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [modalMode, setModalMode] = useState<'EMAIL' | 'ANALYSIS' | null>(null);
@@ -38,9 +37,8 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // Added productId and discount to state
   const [newLeadData, setNewLeadData] = useState<Partial<Lead & { productId: string, discount: number }>>({ 
-    name: '', company: '', email: '', phone: '', value: 0, status: LeadStatus.NEW, productId: 'Basic', discount: 0
+    name: '', company: '', email: '', phone: '', value: 0, status: LeadStatus.NEW, productId: '', discount: 0
   });
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
@@ -78,8 +76,9 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Calculate final value based on selection
-    const basePrice = PRODUCT_PRICES[newLeadData.productId || 'Basic'] || 0;
+    // Calculate final value based on selected product from CATALOG
+    const selectedProd = products.find(p => p.id === newLeadData.productId);
+    const basePrice = selectedProd ? Number(selectedProd.price) : 0;
     const discountAmount = newLeadData.discount || 0;
     const calculatedValue = Math.max(0, basePrice - discountAmount);
 
@@ -89,7 +88,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
     });
 
     setIsAddModalOpen(false);
-    setNewLeadData({ name: '', company: '', email: '', phone: '', value: 0, status: LeadStatus.NEW, productId: 'Basic', discount: 0 });
+    setNewLeadData({ name: '', company: '', email: '', phone: '', value: 0, status: LeadStatus.NEW, productId: '', discount: 0 });
   };
 
   const handleOpenAnalysis = async (lead: Lead) => {
@@ -118,7 +117,6 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
 
       <div className="flex gap-4 overflow-x-auto pb-4 h-full custom-scrollbar">
         {COLUMNS.map((status) => {
-          // IMPORTANT: Calculation must happen INSIDE the map for each column
           const columnLeads = leads.filter(l => l.status === status);
           const totalValue = columnLeads.reduce((sum, lead) => sum + (Number(lead.value) || 0), 0);
 
@@ -180,48 +178,31 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
                     <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2"><User size={18} className="text-blue-500" /> New Lead</h3>
                     <button onClick={() => setIsAddModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
                 </div>
-                <select 
-    className="..."
-    value={newLeadData.productId}
-    onChange={e => {
-        const selectedProd = products.find(p => p.id === e.target.value);
-        setNewLeadData({
-            ...newLeadData, 
-            productId: e.target.value,
-            // Automatically set the value if product is found
-            value: selectedProd ? selectedProd.price : 0 
-        });
-    }}
->
-    <option value="">-- Select from Catalog --</option>
-    {products.map(prod => (
-        <option key={prod.id} value={prod.id}>
-            {prod.name} (${prod.price})
-        </option>
-    ))}
-</select>
+                
                 <form onSubmit={handleManualSubmit} className="p-6 space-y-4">
                     <div className="space-y-3">
-                        <input required type="text" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" value={newLeadData.name} onChange={e => setNewLeadData({...newLeadData, name: e.target.value})} placeholder="Prospect Name" />
-                        <input type="text" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" value={newLeadData.company} onChange={e => setNewLeadData({...newLeadData, company: e.target.value})} placeholder="Company Name" />
+                        <input required type="text" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none" value={newLeadData.name} onChange={e => setNewLeadData({...newLeadData, name: e.target.value})} placeholder="Prospect Name" />
+                        <input type="text" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none" value={newLeadData.company} onChange={e => setNewLeadData({...newLeadData, company: e.target.value})} placeholder="Company Name" />
                         <div className="grid grid-cols-2 gap-4">
-                            <input type="email" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" value={newLeadData.email} onChange={e => setNewLeadData({...newLeadData, email: e.target.value})} placeholder="Email" />
-                            <input type="tel" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" value={newLeadData.phone} onChange={e => setNewLeadData({...newLeadData, phone: e.target.value})} placeholder="Phone" />
+                            <input type="email" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none" value={newLeadData.email} onChange={e => setNewLeadData({...newLeadData, email: e.target.value})} placeholder="Email" />
+                            <input type="tel" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none" value={newLeadData.phone} onChange={e => setNewLeadData({...newLeadData, phone: e.target.value})} placeholder="Phone" />
                         </div>
                     </div>
 
                     <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Product & Pricing</p>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Product & Pricing (From Catalog)</p>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-[10px] text-gray-500 mb-1">Select Product</label>
                                 <select 
-                                    className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-2 py-2 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                                    required
+                                    className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-2 py-2 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
                                     value={newLeadData.productId}
                                     onChange={e => setNewLeadData({...newLeadData, productId: e.target.value})}
                                 >
-                                    {Object.keys(PRODUCT_PRICES).map(name => (
-                                        <option key={name} value={name}>{name} (${PRODUCT_PRICES[name]})</option>
+                                    <option value="">-- Choose --</option>
+                                    {products.map(prod => (
+                                        <option key={prod.id} value={prod.id}>{prod.name} (${prod.price})</option>
                                     ))}
                                 </select>
                             </div>
@@ -229,7 +210,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
                                 <label className="block text-[10px] text-gray-500 mb-1">Discount ($)</label>
                                 <input 
                                     type="number" 
-                                    className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-2 py-2 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                                    className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-2 py-2 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
                                     value={newLeadData.discount}
                                     onChange={e => setNewLeadData({...newLeadData, discount: parseFloat(e.target.value) || 0})}
                                     placeholder="0"
@@ -239,7 +220,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
                     </div>
 
                     <div className="flex justify-end gap-3 pt-4">
-                        <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 text-gray-600 dark:text-gray-400 text-sm font-medium">Cancel</button>
+                        <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
                         <button type="submit" className="px-6 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all">Create Lead</button>
                     </div>
                 </form>
@@ -275,7 +256,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
                     <div className={`h-full transition-all duration-1000 ease-out ${aiAnalysis.score > 70 ? 'bg-green-500' : aiAnalysis.score > 40 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${aiAnalysis.score}%` }} />
                   </div>
                   <div className="bg-purple-50 dark:bg-purple-900/20 p-5 rounded-xl border border-purple-100 dark:border-purple-800">
-                    <h4 className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase mb-3 flex items-center gap-2"><ArrowRight size={14} /> AI Insight</h4>
+                    <h4 className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase mb-3 flex items-center gap-2"><ArrowRight size={14} /> Strategic Insight</h4>
                     <p className="text-sm text-gray-700 dark:text-gray-200 leading-relaxed italic">"{aiAnalysis.reasoning}"</p>
                   </div>
                 </div>
@@ -314,7 +295,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
                 )}
             </div>
             <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex justify-end">
-                <button onClick={() => setSelectedLead(null)} className="px-6 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-bold rounded-lg">Close</button>
+                <button onClick={() => setSelectedLead(null)} className="px-6 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-bold rounded-lg transition-colors">Close</button>
             </div>
           </div>
         </div>
