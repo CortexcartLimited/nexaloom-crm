@@ -106,7 +106,10 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
 // Calculate total value for this specific column
 const columnLeads = leads.filter(l => l.status === status);
 const totalValue = columnLeads.reduce((sum, lead) => sum + (lead.value || 0), 0);
-
+const totalValue = columnLeads.reduce((sum, lead) => {
+    const val = Number(lead.value) || 0; 
+    return sum + val;
+  }, 0);
   return (
     <div className="h-full flex flex-col p-6 overflow-hidden">
       {/* Header */}
