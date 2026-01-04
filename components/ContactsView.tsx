@@ -106,14 +106,16 @@ if (!contacts || contacts.length === 0) {
       if (!selectedContact || !newNoteText.trim()) return;
       setIsSavingNote(true);
       try {
-          const interaction: Interaction = {
-              id: `int-note-${Date.now()}`,
-              tenantId: user.tenantId, // Using the verified user object
-              leadId: selectedContact.id,
-              type: 'NOTE',
-              notes: newNoteText,
-              date: new Date().toISOString()
-          };
+        const interaction: Interaction = {
+          id: `int-note-${Date.now()}`,
+          tenantId: user.tenantId,
+          leadId: selectedContact.id,
+          userId: user.id, // Ensure this is passed
+          type: 'NOTE',
+          notes: newNoteText,
+          date: new Date().toISOString()
+          // productId: someValue // You can add this if the note is about a specific product
+      };
           await onAddInteraction(interaction);
           setNewNoteText('');
       } catch (err) {
