@@ -75,28 +75,34 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
 
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Find the actual product object from the props
-  const selectedProduct = products.find(p => p.id === newLeadData.productId);
-  const basePrice = selectedProduct ? Number(selectedProduct.price) : 0;
-  
-  // Calculate value: (Base Price - Flat Discount)
-  // Note: We can expand this later to handle % discounts like your Catalog does
-  const calculatedValue = Math.max(0, basePrice - (newLeadData.discount || 0));
-    // Calculate final value based on selected product from CATALOG
+    
+    // 1. Find the selected product from the catalog props
     const selectedProd = products.find(p => p.id === newLeadData.productId);
-    const basePrice = selectedProd ? Number(selectedProd.price) : 0;
+    
+    // 2. Calculate values (using unique variable names to avoid "already declared" errors)
+    const basePriceAmount = selectedProd ? Number(selectedProd.price) : 0;
     const discountAmount = newLeadData.discount || 0;
-    const calculatedValue = Math.max(0, basePrice - discountAmount);
+    const finalCalculatedValue = Math.max(0, basePriceAmount - discountAmount);
 
+    // 3. Submit the lead
     await onAddLead({
       ...newLeadData,
-      value: calculatedValue
-      notes: selectedProduct ? `Interested in: ${selectedProduct.name}` : ''
+      value: finalCalculatedValue, // Added missing comma here
+      notes: selectedProd ? `Interested in: ${selectedProd.name}` : ''
     });
 
+    // 4. Close and Reset
     setIsAddModalOpen(false);
-    setNewLeadData({ name: '', company: '', email: '', phone: '', value: 0, status: LeadStatus.NEW, productId: '', discount: 0 });
+    setNewLeadData({ 
+      name: '', 
+      company: '', 
+      email: '', 
+      phone: '', 
+      value: 0, 
+      status: LeadStatus.NEW, 
+      productId: '', 
+      discount: 0 
+    });
   };
 
   const handleOpenAnalysis = async (lead: Lead) => {
