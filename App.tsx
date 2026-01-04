@@ -601,6 +601,7 @@ const handleAddInteraction = async (interaction: Interaction) => {
               onDeleteDiscount={handleDeleteDiscount}
               onAddInteraction={handleAddInteraction}
               user={auth.user}
+              onRefresh={refreshCatalog}
           />
         )}
         {activeTab === 'proposals' && (

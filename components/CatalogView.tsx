@@ -13,6 +13,7 @@ interface CatalogViewProps {
   onDeleteDiscount: (id: string) => Promise<void>;
   onAddInteraction: (interaction: Interaction) => Promise<void>;
   user: User;
+  onRefresh?: () => Promise<void>;
 }
 
 interface CartItem extends Product {
@@ -494,7 +495,13 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
                 </span>
               )}
             </button>
-
+            <button 
+  onClick={onRefresh}
+  className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors shadow-sm text-sm font-medium"
+>
+  <Zap size={16} className="text-amber-500" />
+  Sync Catalog
+</button>
             <button 
               onClick={() => activeTab === 'PRODUCTS' ? setIsModalOpen(true) : openAddDiscountModal()}
               className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-sm font-medium"
