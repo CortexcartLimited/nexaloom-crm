@@ -47,6 +47,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ leads, interactions, onNav
         .reduce((sum, lead) => sum + (Number(lead.value) || 0), 0) 
     }));
   }, [leads]);
+  
   const newLeads = leads
     .filter(lead => lead.status === LeadStatus.NEW)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
