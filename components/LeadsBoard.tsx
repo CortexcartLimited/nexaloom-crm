@@ -219,12 +219,12 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
             value={newLeadData.productId}
             onChange={e => setNewLeadData({...newLeadData, productId: e.target.value})}
           >
-            <option value="">-- Select Product --</option>
-            {products.map(prod => (
-              <option key={prod.id} value={prod.id}>
-                {prod.name} (${prod.price}/{prod.billingCycle.toLowerCase()})
-              </option>
-            ))}
+           {products.map(prod => (
+  <option key={prod.id} value={prod.id}>
+    {/* Use optional chaining (?.) and a fallback string to prevent the crash */}
+    {prod.name} (${prod.price}/{prod.billingCycle?.toLowerCase() || 'unit'})
+  </option>
+))}
           </select>
         </div>
       </div>
