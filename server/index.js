@@ -209,8 +209,8 @@ app.delete('/api/discounts/:id', async (req, res) => {
     const { id } = req.params;
     const tenantId = req.headers['x-tenant-id'];
   
-    const sql = "DELETE FROM discounts WHERE id = ? AND tenantId = ?";
-    pool.query(sql, [id, tenantId], (err, result) => {
+    // FIX: Changed 'db' to 'pool' (or whatever your working routes use)
+    pool.query('DELETE FROM discounts WHERE id = ? AND tenantId = ?', [id, tenantId], (err, result) => {
       if (err) return res.status(500).json(err);
       res.json({ message: "Deleted successfully" });
     });
