@@ -24,19 +24,33 @@
 /* 'default' uses the standard theme colors */
 .bg-wallpaper-default { @apply bg-gray-50 dark:bg-gray-950; }
 
-.bg-wallpaper-1 { 
-  background-image: linear-gradient(rgba(255,255,255,0.1), rgba(255,255,255,0.1)), url('/wallpapers/wp1.jpg'); 
-  background-size: cover; 
-  background-position: center;
+/* --- WALLPAPER DEFINITIONS --- */
+
+/* Default / Executive: Professional Office/Architecture */
+.bg-wallpaper-executive { 
+  background-image: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=2070');
+  background-size: cover;
+  background-attachment: fixed;
 }
 
-.bg-wallpaper-2 { 
-  background-image: url('/wallpapers/wp2.jpg'); 
-  background-size: cover; 
+/* Serenity: Nature / Calm Landscapes */
+.bg-wallpaper-serenity { 
+  background-image: linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2070');
+  background-size: cover;
+  background-attachment: fixed;
 }
-/* --- WALLPAPER LOGIC --- */
-/* Ensure these classes are not purged and are available for selection */
-.bg-wallpaper-default { background-color: transparent; }
-.bg-wallpaper-1 { background-image: url('/wallpapers/wp1.jpg'); background-size: cover; }
-.bg-wallpaper-2 { background-image: url('/wallpapers/wp2.jpg'); background-size: cover; }
-.bg-wallpaper-3 { background-image: url('/wallpapers/wp3.jpg'); background-size: cover; }
+
+/* Metropolis: Cityscapes / High-tech Night */
+.bg-wallpaper-metropolis { 
+  background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&q=80&w=2070');
+  background-size: cover;
+  background-attachment: fixed;
+}
+
+/* Flow: Abstract / Gradient / Modern */
+.bg-wallpaper-flow { 
+  background-image: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url('https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?auto=format&fit=crop&q=80&w=2071');
+  background-size: cover;
+  background-attachment: fixed;
+} /* Fallback default background when no wallpaper is selected */
+.bg-wallpaper-default { @apply bg-gray-50 dark:bg-gray-950;
