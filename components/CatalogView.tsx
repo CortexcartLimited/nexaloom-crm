@@ -23,7 +23,7 @@ interface CartItem extends Product {
   customDiscountValue?: number; // For manager custom discount (flat amount)
 }
 
-export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, leads, onAddProduct, onAddDiscount, onEditDiscount, onDeleteDiscount, onAddInteraction, user }) => {
+export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, leads, onAddProduct, onAddDiscount, onEditDiscount, onDeleteDiscount, onAddInteraction, user, onRefresh }) => {
   const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'DISCOUNTS'>('PRODUCTS');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDiscountId, setEditingDiscountId] = useState<string | null>(null);
