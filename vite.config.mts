@@ -27,7 +27,10 @@ export default defineConfig(({ mode }) => {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'global': 'window',
     },
-
+    optimizeDeps: {
+      // This tells Vite: "Expect this library and bundle it for the browser"
+      include: ['@hello-pangea/dnd']
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
