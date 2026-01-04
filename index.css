@@ -3,7 +3,7 @@
 @tailwind utilities;
 @import "tailwindcss";
 
-/* This directive is REQUIRED in v4 for manual dark mode toggling */
+/* REQUIRED: Tells Tailwind to apply dark: styles when the .dark class is present */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
@@ -11,7 +11,7 @@
     @apply transition-colors duration-300;
   }
 
-  /* Ensure the body actually changes color */
+  /* Define base colors so the toggle has an immediate effect */
   body {
     @apply bg-white text-gray-900;
   }
@@ -20,3 +20,23 @@
     @apply bg-gray-950 text-gray-100;
   }
 }
+/* 2. FORCE wallpaper classes to exist */
+/* 'default' uses the standard theme colors */
+.bg-wallpaper-default { @apply bg-gray-50 dark:bg-gray-950; }
+
+.bg-wallpaper-1 { 
+  background-image: linear-gradient(rgba(255,255,255,0.1), rgba(255,255,255,0.1)), url('/wallpapers/wp1.jpg'); 
+  background-size: cover; 
+  background-position: center;
+}
+
+.bg-wallpaper-2 { 
+  background-image: url('/wallpapers/wp2.jpg'); 
+  background-size: cover; 
+}
+/* --- WALLPAPER LOGIC --- */
+/* Ensure these classes are not purged and are available for selection */
+.bg-wallpaper-default { background-color: transparent; }
+.bg-wallpaper-1 { background-image: url('/wallpapers/wp1.jpg'); background-size: cover; }
+.bg-wallpaper-2 { background-image: url('/wallpapers/wp2.jpg'); background-size: cover; }
+.bg-wallpaper-3 { background-image: url('/wallpapers/wp3.jpg'); background-size: cover; }
