@@ -210,7 +210,7 @@ app.delete('/api/discounts/:id', async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
   
     const sql = "DELETE FROM discounts WHERE id = ? AND tenantId = ?";
-    db.query(sql, [id, tenantId], (err, result) => {
+    pool.query(sql, [id, tenantId], (err, result) => {
       if (err) return res.status(500).json(err);
       res.json({ message: "Deleted successfully" });
     });
