@@ -708,18 +708,6 @@ const handleAddInteraction = async (interaction: Interaction) => {
         tenantId={auth.tenant?.id}
         onAddInteraction={handleAddInteraction}
       />
-      <div className="fixed bottom-6 right-20 z-[300] flex gap-2 bg-white/20 dark:bg-black/20 backdrop-blur-md p-2 rounded-full border border-white/30">
-  {['default', 'executive', 'serenity', 'metropolis', 'flow'].map((id) => (
-    <button
-      key={id}
-      onClick={() => handleBackgroundChange(id)}
-      className={`w-6 h-6 rounded-full border-2 transition-all ${
-        backgroundId === id ? 'border-blue-500 scale-110' : 'border-white/50 hover:scale-105'
-      } bg-wallpaper-${id} bg-center bg-no-repeat`}
-      title={id.charAt(0).toUpperCase() + id.slice(1)}
-    />
-  ))}
-</div>
     </>
   );
 };
