@@ -75,7 +75,14 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
 
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    // Find the actual product object from the props
+  const selectedProduct = products.find(p => p.id === newLeadData.productId);
+  const basePrice = selectedProduct ? Number(selectedProduct.price) : 0;
+  
+  // Calculate value: (Base Price - Flat Discount)
+  // Note: We can expand this later to handle % discounts like your Catalog does
+  const calculatedValue = Math.max(0, basePrice - (newLeadData.discount || 0));
     // Calculate final value based on selected product from CATALOG
     const selectedProd = products.find(p => p.id === newLeadData.productId);
     const basePrice = selectedProd ? Number(selectedProd.price) : 0;
@@ -85,6 +92,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
     await onAddLead({
       ...newLeadData,
       value: calculatedValue
+      notes: selectedProduct ? `Interested in: ${selectedProduct.name}` : ''
     });
 
     setIsAddModalOpen(false);
@@ -180,50 +188,74 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
                 </div>
                 
                 <form onSubmit={handleManualSubmit} className="p-6 space-y-4">
-                    <div className="space-y-3">
-                        <input required type="text" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none" value={newLeadData.name} onChange={e => setNewLeadData({...newLeadData, name: e.target.value})} placeholder="Prospect Name" />
-                        <input type="text" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none" value={newLeadData.company} onChange={e => setNewLeadData({...newLeadData, company: e.target.value})} placeholder="Company Name" />
-                        <div className="grid grid-cols-2 gap-4">
-                            <input type="email" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none" value={newLeadData.email} onChange={e => setNewLeadData({...newLeadData, email: e.target.value})} placeholder="Email" />
-                            <input type="tel" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none" value={newLeadData.phone} onChange={e => setNewLeadData({...newLeadData, phone: e.target.value})} placeholder="Phone" />
-                        </div>
-                    </div>
+  {/* SECTION 1: CONTACT INFO */}
+  <div className="space-y-3">
+    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contact Information</p>
+    <input required type="text" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none" value={newLeadData.name} onChange={e => setNewLeadData({...newLeadData, name: e.target.value})} placeholder="Full Name" />
+    <input type="text" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={newLeadData.company} onChange={e => setNewLeadData({...newLeadData, company: e.target.value})} placeholder="Company Name" />
+    <div className="grid grid-cols-2 gap-3">
+      <input type="email" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={newLeadData.email} onChange={e => setNewLeadData({...newLeadData, email: e.target.value})} placeholder="Email Address" />
+      <input type="tel" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={newLeadData.phone} onChange={e => setNewLeadData({...newLeadData, phone: e.target.value})} placeholder="Phone Number" />
+    </div>
+  </div>
 
-                    <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Product & Pricing (From Catalog)</p>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-[10px] text-gray-500 mb-1">Select Product</label>
-                                <select 
-                                    required
-                                    className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-2 py-2 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={newLeadData.productId}
-                                    onChange={e => setNewLeadData({...newLeadData, productId: e.target.value})}
-                                >
-                                    <option value="">-- Choose --</option>
-                                    {products.map(prod => (
-                                        <option key={prod.id} value={prod.id}>{prod.name} (${prod.price})</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-[10px] text-gray-500 mb-1">Discount ($)</label>
-                                <input 
-                                    type="number" 
-                                    className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-2 py-2 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={newLeadData.discount}
-                                    onChange={e => setNewLeadData({...newLeadData, discount: parseFloat(e.target.value) || 0})}
-                                    placeholder="0"
-                                />
-                            </div>
-                        </div>
-                    </div>
+  {/* SECTION 2: DEAL INFO (CATALOG INTEGRATION) */}
+  <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
+    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Deal Details (From Catalog)</p>
+    <div className="space-y-4">
+      <div>
+        <label className="block text-[10px] text-gray-500 mb-1 font-bold uppercase">Target Product</label>
+        <div className="relative">
+          <ShoppingBag className="absolute left-3 top-2.5 text-gray-400" size={14} />
+          <select 
+            required
+            className="w-full pl-9 pr-3 py-2 rounded-lg border-gray-300 dark:border-gray-600 border text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white appearance-none focus:ring-2 focus:ring-blue-500 outline-none"
+            value={newLeadData.productId}
+            onChange={e => setNewLeadData({...newLeadData, productId: e.target.value})}
+          >
+            <option value="">-- Select Product --</option>
+            {products.map(prod => (
+              <option key={prod.id} value={prod.id}>
+                {prod.name} (${prod.price}/{prod.billingCycle.toLowerCase()})
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
-                    <div className="flex justify-end gap-3 pt-4">
-                        <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
-                        <button type="submit" className="px-6 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all">Create Lead</button>
-                    </div>
-                </form>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-[10px] text-gray-500 mb-1 font-bold uppercase">Lead Status</label>
+          <select 
+            className="w-full px-3 py-2 rounded-lg border-gray-300 dark:border-gray-600 border text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            value={newLeadData.status}
+            onChange={e => setNewLeadData({...newLeadData, status: e.target.value as LeadStatus})}
+          >
+            {COLUMNS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-[10px] text-gray-500 mb-1 font-bold uppercase">Intro Discount ($)</label>
+          <div className="relative">
+            <DollarSign className="absolute left-3 top-2.5 text-gray-400" size={14} />
+            <input 
+              type="number" 
+              className="w-full pl-9 pr-3 py-2 rounded-lg border-gray-300 dark:border-gray-600 border text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              value={newLeadData.discount}
+              onChange={e => setNewLeadData({...newLeadData, discount: parseFloat(e.target.value) || 0})}
+              placeholder="0.00"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div className="flex justify-end gap-3 pt-6">
+    <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 text-gray-500 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">Cancel</button>
+    <button type="submit" className="px-6 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg shadow-md hover:bg-blue-700 transition-all">Create & Value Lead</button>
+  </div>
+</form>
             </div>
         </div>
       )}
