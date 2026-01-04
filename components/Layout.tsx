@@ -81,11 +81,24 @@ export const Layout: React.FC<LayoutProps> = ({
   ];
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-
+  const wallpaperMap: Record<string, string> = {
+    executive: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=2070',
+    serenity: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2070',
+    metropolis: 'https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&q=80&w=2070',
+    flow: 'https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?auto=format&fit=crop&q=80&w=2071',
+    default: ''
+  };
   return (
     // Definition for custom wallpapers selection
-    <div className={`flex h-screen text-gray-900 dark:text-gray-100 font-sans overflow-hidden transition-all duration-300 bg-wallpaper-${backgroundId}`}>
-            {isSidebarOpen && <div className="fixed inset-0 bg-black/50 z-20 lg:hidden backdrop-blur-sm transition-opacity" onClick={() => setIsSidebarOpen(false)} />}
+    <div 
+  className="flex h-screen text-gray-900 dark:text-gray-100 font-sans overflow-hidden transition-all duration-300 bg-gray-50 dark:bg-gray-950 bg-cover bg-center bg-fixed"
+  style={
+    backgroundId !== 'default' 
+    ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), url('${wallpaperMap[backgroundId]}')` }
+    : {}
+  }
+>
+              {isSidebarOpen && <div className="fixed inset-0 bg-black/50 z-20 lg:hidden backdrop-blur-sm transition-opacity" onClick={() => setIsSidebarOpen(false)} />}
       <aside className={`fixed inset-y-0 left-0 z-30 w-64 bg-gray-900 dark:bg-gray-950 text-white flex flex-col transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none border-r border-gray-800 lg:translate-x-0 lg:static lg:inset-auto lg:inset-y-0 lg:flex-shrink-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 flex items-center justify-between border-b border-gray-800">
           <div className="flex items-center gap-3">
