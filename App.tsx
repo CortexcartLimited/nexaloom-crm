@@ -529,6 +529,11 @@ const handleAddInteraction = async (interaction: Interaction) => {
       setDiscounts(prev => prev.filter(d => d.id !== id));
     }
   };
+  const handleSyncCatalog = async () => {
+    // Call your existing fetch functions
+    await fetchProducts(); 
+    await fetchDiscounts();
+};
   return (
     <>
       <Layout
@@ -580,6 +585,7 @@ const handleAddInteraction = async (interaction: Interaction) => {
             onOpenDialer={handleOpenDialer}
           />
         )}
+        
        {activeTab === 'contacts' && auth.user && (
   <ContactsView 
     contacts={leads}
@@ -589,7 +595,9 @@ const handleAddInteraction = async (interaction: Interaction) => {
     onOpenDialer={handleOpenDialer}
     user={auth.user} // Changed from user to auth.user
   />
+  
 )}
+
         {activeTab === 'catalog' && (
           <CatalogView 
               products={products} 
@@ -601,7 +609,7 @@ const handleAddInteraction = async (interaction: Interaction) => {
               onDeleteDiscount={handleDeleteDiscount}
               onAddInteraction={handleAddInteraction}
               user={auth.user}
-              onRefresh={refreshCatalog}
+              onRefresh={handleSyncCatalog}
           />
         )}
         {activeTab === 'proposals' && (
