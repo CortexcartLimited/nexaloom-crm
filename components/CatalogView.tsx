@@ -627,20 +627,44 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
                     </div>
 
                     <div className="pt-4 border-t border-gray-50 dark:border-gray-700">
-    <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Applicable Products</p>
-    <div className="flex flex-wrap gap-2">
-        {/* We use Array.from or || [] to guarantee we are mapping an array */}
-        {(Array.isArray(discount.applicableProductIds) ? discount.applicableProductIds : []).includes('ALL') ? (
-            <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded">All Products</span>
-        ) : (
-            (Array.isArray(discount.applicableProductIds) ? discount.applicableProductIds : []).map(id => {
-                const prod = products.find(p => p.id === id);
-                return prod ? (
-                    <span key={id} className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded">{prod.name}</span>
-                ) : null;
-            })
-        )}
-    </div>
+  <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+    Applicable Products
+  </p>
+  <div className="flex flex-wrap gap-2">
+    {(() => {
+      // 1. Convert TEXT from DB back into a JavaScript Array
+      let ids: string[] = [];
+      try {
+        if (typeof discount.applicableProductIds === 'string') {
+          // If MySQL sent a string like "['prod_1']", parse it
+          ids = JSON.parse(discount.applicableProductIds);
+        } else if (Array.isArray(discount.applicableProductIds)) {
+          // If it's already an array, use it
+          ids = discount.applicableProductIds;
+        } else {
+          // If it's null or missing, default to ALL
+          ids = ['ALL'];
+        }
+      } catch (e) {
+        // If parsing fails, treat it as a single string fallback
+        ids = [String(discount.applicableProductIds)];
+      }
+
+      // 2. Render the badges based on the parsed IDs
+      if (ids.includes('ALL')) {
+        return <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded">All Products</span>;
+      }
+
+      return ids.map(id => {
+        const prod = products.find(p => p.id === id);
+        return prod ? (
+          <span key={id} className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-1 rounded border border-blue-100 dark:border-blue-800">
+            {prod.name}
+          </span>
+        ) : null;
+      });
+    })()}
+  </div>
 </div>
                 </div>
              </div>
