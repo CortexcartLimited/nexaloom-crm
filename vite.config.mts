@@ -31,16 +31,9 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
-        // Add this line to tell Vite exactly where the DND code lives
-        '@hello-pangea/dnd': path.resolve(__dirname, 'node_modules/@hello-pangea/dnd/dist/dnd.esm.js'),
-        
-        // Backend polyfills
         'mysql2/promise': path.resolve(__dirname, 'empty-module.js'),
         'mysql2': path.resolve(__dirname, 'empty-module.js'),
       },
-    },
-    optimizeDeps: {
-      include: ['@hello-pangea/dnd']
     },
   };
 });
