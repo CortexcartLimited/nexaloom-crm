@@ -253,10 +253,6 @@ const App: React.FC = () => {
     setDiscounts(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d));
   };
 
-  const handleDeleteDiscount = async (id: string) => {
-    setDiscounts(prev => prev.filter(d => d.id !== id));
-  };
-
   const handleAddDocument = async (docData: Omit<Document, 'id' | 'createdAt' | 'tenantId' | 'uploaderId' | 'uploaderName'>) => {
     if (!auth.tenant || !auth.user) return;
     const newDoc: Document = {
