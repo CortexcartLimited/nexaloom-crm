@@ -3,25 +3,20 @@
 @tailwind utilities;
 @import "tailwindcss";
 
-/* In Tailwind v4, use the @theme block or simple standard CSS for global resets */
+/* This directive is REQUIRED in v4 for manual dark mode toggling */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   html, body {
     @apply transition-colors duration-300;
   }
 
-  /* Direct CSS is often safer in v4 for global dark mode body resets */
-  .dark body {
-    background-color: #111827; /* This is the hex for gray-900 */
-    color: white;
+  /* Ensure the body actually changes color */
+  body {
+    @apply bg-white text-gray-900;
   }
-}
 
-/* This ensures the background and text colors fade smoothly when switching */
-html, body {
-  @apply transition-colors duration-300;
-}
-
-/* Optional: Set a default background for dark mode if not already set in components */
-.dark body {
-  @apply bg-gray-900 text-white;
+  .dark body {
+    @apply bg-gray-950 text-gray-100;
+  }
 }

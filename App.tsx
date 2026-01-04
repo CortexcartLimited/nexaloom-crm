@@ -429,16 +429,16 @@ const handleToggleTheme = () => {
   const newTheme = theme === 'light' ? 'dark' : 'light';
   setTheme(newTheme);
   
-  // Persist to storage
   localStorage.setItem('theme', newTheme);
   
-  // Directly manipulate the DOM for instant effect
+  // Directly toggle the class on the html element
   if (newTheme === 'dark') {
     document.documentElement.classList.add('dark');
   } else {
     document.documentElement.classList.remove('dark');
   }
 };
+
 // 2. Handle Adding Interactions (Notes, Emails, Calls)
 const handleAddInteraction = async (interaction: Interaction) => {
   try {
