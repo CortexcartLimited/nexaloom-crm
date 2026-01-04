@@ -287,7 +287,27 @@ const App: React.FC = () => {
   const handleDeleteDocument = async (id: string) => {
     setDocuments(prev => prev.filter(d => d.id !== id));
   };
+  const loadProducts = async (tenantId?: string) => {
+    const id = tenantId || auth.tenant?.id;
+    if (!id) return;
+    try {
+      const fetchedProducts = await api.getProducts(id);
+      setProducts(fetchedProducts);
+    } catch (e) {
+      console.error("Error loading products:", e);
+    }
+  };
 
+  const loadDiscounts = async (tenantId?: string) => {
+    const id = tenantId || auth.tenant?.id;
+    if (!id) return;
+    try {
+      const fetchedDiscounts = await api.getDiscounts(id);
+      setDiscounts(fetchedDiscounts);
+    } catch (e) {
+      console.error("Error loading discounts:", e);
+    }
+  };
   const handleAddTask = async (taskData: Omit<Task, 'id' | 'tenantId' | 'createdAt' | 'isCompleted'>) => {
     if (!auth.tenant) return;
     const newTask: Task = {
@@ -519,21 +539,38 @@ const handleAddInteraction = async (interaction: Interaction) => {
     return <div>Login required (Auto-login failed)</div>;
   }
   const handleDeleteDiscount = async (id: string) => {
-    const response = await fetch(`https://cortexcart.com/crm/nexaloom-crm/api/discounts/${id}`, {
-      method: 'DELETE',
-      headers: { 'x-tenant-id': 'tenant-1' } // Don't forget your tenant header!
-    });
-  
-    if (response.ok) {
-      // Update the local state so the card disappears instantly
-      setDiscounts(prev => prev.filter(d => d.id !== id));
+    const tenantId = auth.tenant?.id;
+    if (!tenantId) {
+      alert("Session error: Tenant ID not found.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://cortexcart.com/crm/nexaloom-crm/api/discounts/${id}`, {
+        method: 'DELETE',
+        headers: { 
+          'x-tenant-id': tenantId,
+          'Content-Type': 'application/json'
+        }
+      });
+    
+      if (response.ok) {
+        setDiscounts(prev => prev.filter(d => d.id !== id));
+      }
+    } catch (err) {
+      console.error("Network error during delete:", err);
     }
   };
   const handleSyncCatalog = async () => {
-    // Call your existing fetch functions
-    await fetchProducts(); 
-    await fetchDiscounts();
-};
+    if (!auth.tenant?.id) {
+      console.warn("Sync attempted before tenant was loaded");
+      return;
+    }
+    await Promise.all([
+      loadProducts(auth.tenant.id),
+      loadDiscounts(auth.tenant.id)
+    ]);
+  };
   return (
     <>
       <Layout
