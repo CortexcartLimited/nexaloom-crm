@@ -560,6 +560,19 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto pb-20 custom-scrollbar">
            {discounts.map(discount => {
              const isExpired = discount.expiresAt ? new Date(discount.expiresAt) < new Date() : false;
+             const handleDelete = async (e: React.MouseEvent, id: string) => {
+              e.stopPropagation(); // Prevents clicking the card background
+              
+              if (window.confirm('Are you sure you want to delete this offer?')) {
+                try {
+                  await onDeleteDiscount(id);
+                  // The list should update automatically via your App.tsx state
+                } catch (error) {
+                  console.error("Delete failed:", error);
+                  alert("Failed to delete the discount. Please try again.");
+                }
+              }
+            };
              return (
              <div key={discount.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden group transition-colors relative">
                 {user.role === UserRole.ADMIN && (
@@ -571,11 +584,11 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
                             <Edit size={14} />
                         </button>
                         <button 
-                            onClick={(e) => handleDelete(e, discount.id)}
-                            className="p-1.5 bg-white dark:bg-gray-700 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 rounded-md shadow-sm border border-gray-200 dark:border-gray-600"
-                        >
-                            <Trash2 size={14} />
-                        </button>
+  onClick={(e) => handleDelete(e, discount.id)} // <--- Ensure this matches exactly
+  className="p-1.5 bg-white dark:bg-gray-700 text-gray-500 hover:text-red-600 ..."
+>
+  <Trash2 size={14} />
+</button>
                     </div>
                 )}
                 

@@ -522,7 +522,17 @@ const handleAddInteraction = async (interaction: Interaction) => {
   if (!auth.isAuthenticated || !auth.user || !auth.tenant) {
     return <div>Login required (Auto-login failed)</div>;
   }
-
+  const handleDeleteDiscount = async (id: string) => {
+    const response = await fetch(`https://cortexcart.com/crm/nexaloom-crm/api/discounts/${id}`, {
+      method: 'DELETE',
+      headers: { 'x-tenant-id': 'tenant-1' } // Don't forget your tenant header!
+    });
+  
+    if (response.ok) {
+      // Update the local state so the card disappears instantly
+      setDiscounts(prev => prev.filter(d => d.id !== id));
+    }
+  };
   return (
     <>
       <Layout
