@@ -122,6 +122,12 @@ app.patch('/api/leads/:id', async (req, res) => {
 app.post('/api/interactions', async (req, res) => {
     const { id, tenantId, leadId, userId, type, notes, date, metadata, productId } = req.body;
     
+    // Convert '2026-01-04T11:36:41.196Z' to '2026-01-04 11:36:41'
+    const formattedDate = (date ? new Date(date) : new Date())
+        .toISOString()
+        .slice(0, 19)
+        .replace('T', ' ');
+
     try {
         await pool.query(
             `INSERT INTO interactions (id, tenantId, leadId, userId, type, notes, date, metadata, productId) 
@@ -133,14 +139,14 @@ app.post('/api/interactions', async (req, res) => {
                 userId || null, 
                 type, 
                 notes, 
-                date || new Date().toISOString().slice(0, 19).replace('T', ' '), 
-                JSON.stringify(metadata || {}), // Must be a string for MySQL JSON/TEXT
+                formattedDate, // Use the cleaned-up date here
+                JSON.stringify(metadata || {}), 
                 productId || null
             ]
         );
         res.status(201).json({ success: true });
     } catch (err) {
-        console.error("SQL Error in Interactions:", err.message);
+        console.error("SQL ERROR:", err.message);
         res.status(500).json({ error: err.message });
     }
 });
