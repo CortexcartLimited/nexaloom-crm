@@ -120,19 +120,30 @@ app.patch('/api/leads/:id', async (req, res) => {
 
 // ROUTE: Create Interaction (Save Notes/Emails)
 app.post('/api/interactions', async (req, res) => {
-    const { id, tenantId, leadId, type, notes, date, metadata } = req.body;
+    const { id, tenantId, leadId, userId, type, notes, date, metadata, productId } = req.body;
+    
     try {
         await pool.query(
-            `INSERT INTO interactions (id, tenantId, leadId, type, notes, date, metadata) 
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [id, tenantId, leadId, type, notes, date, JSON.stringify(metadata || {})]
+            `INSERT INTO interactions (id, tenantId, leadId, userId, type, notes, date, metadata, productId) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                id || uuidv4(), 
+                tenantId, 
+                leadId, 
+                userId || null, 
+                type, 
+                notes, 
+                date || new Date().toISOString().slice(0, 19).replace('T', ' '), 
+                JSON.stringify(metadata || {}), // Must be a string for MySQL JSON/TEXT
+                productId || null
+            ]
         );
         res.status(201).json({ success: true });
     } catch (err) {
+        console.error("SQL Error in Interactions:", err.message);
         res.status(500).json({ error: err.message });
     }
 });
-
 // --- DISCOUNTS ROUTES ---
 app.get('/api/discounts', async (req, res) => {
     const { tenantId } = req.query;
