@@ -566,6 +566,7 @@ const handleAddInteraction = async (interaction: Interaction) => {
         {activeTab === 'leads' && (
           <LeadsBoard 
             leads={filteredLeads} 
+            products={products}
             onStatusChange={handleStatusChange}
             onAddLead={handleAddLead}
             onAddLeads={handleAddLeads}
