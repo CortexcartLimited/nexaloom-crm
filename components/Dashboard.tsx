@@ -13,7 +13,11 @@ interface DashboardProps {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 export const Dashboard: React.FC<DashboardProps> = ({ leads, interactions, onNavigate }) => {
-  const totalValue = leads.reduce((sum, lead) => sum + lead.value, 0);
+  const totalPipelineValue = leads.reduce((acc, lead) => {
+    // Use Number() to ensure it's not treated as a string
+    const val = Number(lead.value) || 0; 
+    return acc + val;
+  }, 0);
   const totalLeads = leads.length;
   
   const statusData = leads.reduce((acc: any, lead) => {
@@ -62,13 +66,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ leads, interactions, onNav
       </div>
       
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
-          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Total Pipeline Value</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-            ${totalValue.toLocaleString()}
-          </p>
-        </div>
+      <div className="text-2xl font-bold text-gray-900 dark:text-white">
+  {/* toLocaleString adds commas and fixes the decimals */}
+  ${totalPipelineValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+</div>
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
           <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Active Leads</p>
           <p className="text-3xl font-bold text-blue-600 dark:text-blue-400 mt-2">
