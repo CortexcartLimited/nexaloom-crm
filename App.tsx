@@ -54,34 +54,6 @@ const App: React.FC = () => {
 
   const processedRemindersRef = useRef<Set<string>>(new Set());
 
-  // --- NEW: REUSABLE FETCH FUNCTIONS ---
-  const loadProducts = async (tenantId: string) => {
-    try {
-      const fetchedProducts = await api.getProducts(tenantId);
-      setProducts(fetchedProducts);
-    } catch (e) {
-      console.error("Error loading products:", e);
-    }
-  };
-
-  const loadDiscounts = async (tenantId: string) => {
-    try {
-      const fetchedDiscounts = await api.getDiscounts(tenantId);
-      setDiscounts(fetchedDiscounts);
-    } catch (e) {
-      console.error("Error loading discounts:", e);
-    }
-  };
-
-  const handleSyncCatalog = async () => {
-    if (!auth.tenant) return;
-    await Promise.all([
-      loadProducts(auth.tenant.id),
-      loadDiscounts(auth.tenant.id)
-    ]);
-    console.log("Catalog synced successfully");
-  };
-
   useEffect(() => {
     const init = async () => {
       const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
@@ -98,7 +70,7 @@ const App: React.FC = () => {
 
       const { user, tenant } = { 
         user: { id: 'u1', name: "Demo User", email: "demo@nexaloom.com", role: 'ADMIN', preferences: { theme: 'light' } }, 
-        tenant: { id: 'tenant-1', name: "Nexaloom Demo" } 
+        tenant: { id: 't1', name: "Nexaloom Demo" } 
       }; 
       
       if (user.preferences) {
@@ -115,16 +87,17 @@ const App: React.FC = () => {
       setAuth({ user, tenant, isAuthenticated: true });
       
       if (tenant) {
-        // Using extracted functions here to maintain consistency
-        const [fetchedLeads, fetchedInteractions, fetchedTasks] = await Promise.all([
+        const [fetchedLeads, fetchedProducts, fetchedDiscounts, fetchedInteractions, fetchedTasks] = await Promise.all([
           api.getLeads(tenant.id),
+          api.getProducts(tenant.id),
+          api.getDiscounts(tenant.id),
           api.getInteractions(tenant.id),
           api.getTasks(tenant.id),
         ]);
         
         setLeads(fetchedLeads);
-        await loadProducts(tenant.id);
-        await loadDiscounts(tenant.id);
+        setProducts(fetchedProducts);
+        setDiscounts(fetchedDiscounts);
         setInteractions(fetchedInteractions);
         setTasks(fetchedTasks);
       }
@@ -260,7 +233,6 @@ const App: React.FC = () => {
   };
 
   const handleAddDiscount = async (discountData: any) => {
-    if (!auth.tenant) return;
     const newDiscount = {
       ...discountData,
       id: `disc-${Date.now()}`,
@@ -268,7 +240,7 @@ const App: React.FC = () => {
     };
   
     try {
-      const success = await api.addDiscount(newDiscount);
+      const success = await api.addDiscount(newDiscount); // Make sure this matches your api.ts function name
       if (success) {
         setDiscounts(prev => [...prev, newDiscount]);
       }
@@ -279,28 +251,6 @@ const App: React.FC = () => {
 
   const handleEditDiscount = async (id: string, updates: Partial<Discount>) => {
     setDiscounts(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d));
-  };
-
-  const handleDeleteDiscount = async (id: string) => {
-    if (!auth.tenant) return;
-    try {
-      const response = await fetch(`https://cortexcart.com/crm/nexaloom-crm/api/discounts/${id}`, {
-        method: 'DELETE',
-        headers: { 
-          'x-tenant-id': auth.tenant.id,
-          'Content-Type': 'application/json'
-        }
-      });
-    
-      if (response.ok) {
-        setDiscounts(prev => prev.filter(d => d.id !== id));
-      } else {
-        const errorData = await response.json();
-        console.error("Delete failed on server:", errorData);
-      }
-    } catch (err) {
-      console.error("Network error during delete:", err);
-    }
   };
 
   const handleAddDocument = async (docData: Omit<Document, 'id' | 'createdAt' | 'tenantId' | 'uploaderId' | 'uploaderName'>) => {
@@ -454,39 +404,53 @@ const App: React.FC = () => {
       };
       setArticles(prev => [newArticle, ...prev]);
   };
+// App.tsx
 
-  const handleUpdateLead = async (id: string, updates: Partial<Lead>) => {
-    try {
-      const success = await api.updateLead(id, updates);
-      if (success) {
-        setLeads(prev => prev.map(lead => 
-          lead.id === id ? { ...lead, ...updates } : lead
-        ));
-      }
-    } catch (error) {
-      console.error("Failed to update lead:", error);
+// 1. Handle Updating Contact Details (The "Edit" button)
+const handleUpdateLead = async (id: string, updates: Partial<Lead>) => {
+  try {
+    const success = await api.updateLead(id, updates);
+    if (success) {
+      // Update local state so UI reflects changes immediately
+      setLeads(prev => prev.map(lead => 
+        lead.id === id ? { ...lead, ...updates } : lead
+      ));
     }
-  };
+  } catch (error) {
+    console.error("Failed to update lead:", error);
+    alert("Error updating contact information.");
+  }
+};
+const handleToggleTheme = () => {
+  const newTheme = theme === 'light' ? 'dark' : 'light';
+  setTheme(newTheme);
+  
+  localStorage.setItem('theme', newTheme);
+  
+  // Directly toggle the class on the html element
+  if (newTheme === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+};
 
-  const handleToggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
-  };
-
-  const handleAddInteraction = async (interaction: Interaction) => {
-    try {
-      const payload = { ...interaction, tenantId: auth.tenant?.id };
-      const success = await api.createInteraction(payload);
-      if (success) {
-        setInteractions(prev => [payload, ...prev]);
-      }
-    } catch (error) {
-      console.error("Failed to save interaction:", error);
+// 2. Handle Adding Interactions (Notes, Emails, Calls)
+const handleAddInteraction = async (interaction: Interaction) => {
+  try {
+    // Ensure tenantId is included
+    const payload = { ...interaction, tenantId: auth.tenant?.id };
+    
+    const success = await api.createInteraction(payload);
+    if (success) {
+      // Add to local state to refresh the Timeline instantly
+      setInteractions(prev => [payload, ...prev]);
     }
-  };
-
+  } catch (error) {
+    console.error("Failed to save interaction:", error);
+    alert("Error saving note to timeline.");
+  }
+};
   const handleUpdateArticle = async (id: string, updates: Partial<KnowledgeBaseArticle>) => {
       setArticles(prev => prev.map(a => a.id === id ? { ...a, ...updates, updatedAt: new Date().toISOString() } : a));
   };
@@ -507,6 +471,7 @@ const App: React.FC = () => {
 
   const handleUpdateUser = async (id: string, updates: Partial<User>) => {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
+    
     if (auth.user?.id === id) {
       setAuth(prev => ({ ...prev, user: { ...prev.user!, ...updates } }));
     }
@@ -553,7 +518,22 @@ const App: React.FC = () => {
   if (!auth.isAuthenticated || !auth.user || !auth.tenant) {
     return <div>Login required (Auto-login failed)</div>;
   }
-
+  const handleDeleteDiscount = async (id: string) => {
+    const response = await fetch(`https://cortexcart.com/crm/nexaloom-crm/api/discounts/${id}`, {
+      method: 'DELETE',
+      headers: { 'x-tenant-id': 'tenant-1' } // Don't forget your tenant header!
+    });
+  
+    if (response.ok) {
+      // Update the local state so the card disappears instantly
+      setDiscounts(prev => prev.filter(d => d.id !== id));
+    }
+  };
+  const handleSyncCatalog = async () => {
+    // Call your existing fetch functions
+    await fetchProducts(); 
+    await fetchDiscounts();
+};
   return (
     <>
       <Layout
@@ -607,15 +587,16 @@ const App: React.FC = () => {
         )}
         
        {activeTab === 'contacts' && auth.user && (
-          <ContactsView 
-            contacts={leads}
-            interactions={interactions}
-            onUpdateLead={handleUpdateLead}
-            onAddInteraction={handleAddInteraction}
-            onOpenDialer={handleOpenDialer}
-            user={auth.user} 
-          />
-        )}
+  <ContactsView 
+    contacts={leads}
+    interactions={interactions}
+    onUpdateLead={handleUpdateLead}
+    onAddInteraction={handleAddInteraction}
+    onOpenDialer={handleOpenDialer}
+    user={auth.user} // Changed from user to auth.user
+  />
+  
+)}
 
         {activeTab === 'catalog' && (
           <CatalogView 
