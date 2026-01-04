@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Lead, LeadStatus, Document } from '../types';
 import { 
-  MoreHorizontal, Plus, Sparkles, MessageSquare, X, Wand2, Upload, 
+  MoreHorizontal, ShoppingBag, Plus, Sparkles, MessageSquare, X, Wand2, Upload, 
   FileSpreadsheet, AlertCircle, ArrowRight, CheckCircle, ArrowLeft, 
   User, DollarSign, Building, Mail, Phone, Copy, Paperclip, File, Search 
 } from 'lucide-react';
