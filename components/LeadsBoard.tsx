@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Lead, LeadStatus, Document } from '../types';
 import { 
   MoreHorizontal, Plus, Sparkles, MessageSquare, X, Wand2, Upload, 
