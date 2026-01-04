@@ -122,19 +122,48 @@ export const Dashboard: React.FC<DashboardProps> = ({ leads, interactions, onNav
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 h-80 flex flex-col transition-colors">
           <h3 className="text-lg font-semibold mb-4 shrink-0 dark:text-white">Pipeline Value Breakdown</h3>
           <div className="flex-1 min-h-0 w-full min-w-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={valueByStatus}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" className="dark:stroke-gray-700" />
-                <XAxis dataKey="name" fontSize={12} stroke="#6b7280" className="dark:text-gray-400" />
-                <YAxis fontSize={12} stroke="#6b7280" className="dark:text-gray-400" />
-                <Tooltip 
-                    formatter={(value) => `$${value.toLocaleString()}`} 
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                    cursor={{fill: 'rgba(0,0,0,0.05)'}}
-                />
-                <Bar dataKey="amount" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%">
+  <BarChart data={valueByStatus}>
+    {/* Use a subtle grid */}
+    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" opacity={0.1} />
+    
+    <XAxis 
+      dataKey="name" 
+      fontSize={12} 
+      tick={{fill: 'currentColor'}} 
+      axisLine={false} 
+      tickLine={false} 
+    />
+    
+    <YAxis 
+      fontSize={12} 
+      tick={{fill: 'currentColor'}} 
+      axisLine={false} 
+      tickLine={false}
+      tickFormatter={(value) => `$${value}`} 
+    />
+    
+    <Tooltip 
+      formatter={(value: number) => [`$${value.toLocaleString()}`, "Total Value"]} 
+      contentStyle={{ 
+        borderRadius: '12px', 
+        border: 'none', 
+        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+        backgroundColor: 'var(--tw-bg-opacity)',
+        color: 'currentColor'
+      }}
+      cursor={{fill: 'currentColor', opacity: 0.1}}
+    />
+    
+    <Bar 
+      dataKey="amount" 
+      fill="#3b82f6" 
+      radius={[6, 6, 0, 0]} 
+      // Add a nice animation
+      animationDuration={1500}
+    />
+  </BarChart>
+</ResponsiveContainer>
           </div>
         </div>
       </div>
