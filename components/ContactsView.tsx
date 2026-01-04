@@ -198,20 +198,77 @@ if (!contacts || contacts.length === 0) {
       </div>
       
       {/* Contact Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-y-auto pb-20 pr-2 custom-scrollbar">
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto pb-20 pr-2 custom-scrollbar">
+        {viewMode === 'GRID' ? (
+          /* GRID VIEW */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {contacts.map(contact => (
-            <div key={contact.id} onClick={() => setSelectedContact(contact)} className={`bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border transition-all cursor-pointer group relative overflow-hidden ${selectedContact?.id === contact.id ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-100 dark:border-gray-700 hover:shadow-md'}`}>
+              <div 
+                key={contact.id} 
+                onClick={() => setSelectedContact(contact)} 
+                className={`bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border transition-all cursor-pointer group relative overflow-hidden ${selectedContact?.id === contact.id ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-100 dark:border-gray-700 hover:shadow-md'}`}
+              >
                 <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-500"><UserIcon size={24} /></div>
-                        <div><h3 className="font-semibold text-gray-900 dark:text-white truncate">{contact.name}</h3><p className="text-sm text-gray-500 truncate">{contact.company}</p></div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-500">
+                      <UserIcon size={24} />
                     </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 dark:text-white truncate">{contact.name}</h3>
+                      <p className="text-sm text-gray-500 truncate">{contact.company}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-400 mt-4">Click to view profile</div>
-            </div>
+                <div className="text-xs text-gray-400 mt-4 font-medium flex items-center gap-1">
+                  View Profile <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
             ))}
+          </div>
+        ) : (
+          /* LIST VIEW */
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700">
+                  <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Contact</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Company</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Phone</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+                {contacts.map(contact => (
+                  <tr 
+                    key={contact.id} 
+                    onClick={() => setSelectedContact(contact)}
+                    className="hover:bg-blue-50/50 dark:hover:bg-blue-900/10 cursor-pointer transition-colors group"
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
+                          {contact.name.charAt(0)}
+                        </div>
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">{contact.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{contact.company}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{contact.email || '—'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{contact.phone || '—'}</td>
+                    <td className="px-6 py-4 text-right">
+                      <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
+                        <MoreHorizontal size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-
       {/* Profile Details Sidebar */}
       {selectedContact && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex justify-end z-50 animate-in fade-in duration-200" onClick={() => { setSelectedContact(null); setIsEditing(false); }}>
