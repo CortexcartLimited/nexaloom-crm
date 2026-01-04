@@ -30,24 +30,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ leads, interactions, onNav
     return acc;
   }, []);
 
-  const valueByStatus = useMemo(() => {
-    // Define your status buckets
-    const statuses = [
-      { name: 'New', status: LeadStatus.NEW },
-      { name: 'Contacted', status: LeadStatus.CONTACTED },
-      { name: 'Proposal', status: LeadStatus.PROPOSAL },
-      { name: 'Won', status: LeadStatus.WON }
-    ];
-  
-    return statuses.map(s => ({
-      name: s.name,
-      // CRITICAL: Use Number() and ensure we add, not concatenate
-      amount: leads
-        .filter(l => l.status === s.status)
-        .reduce((sum, lead) => sum + (Number(lead.value) || 0), 0) 
-    }));
-  }, [leads]);
-  
+  const valueByStatus = leads.reduce((acc: any, lead) => {
+    const existing = acc.find((item: any) => item.name === lead.status);
+    if (existing) {
+      existing.amount += lead.value;
+    } else {
+      acc.push({ name: lead.status, amount: lead.value });
+    }
+    return acc;
+  }, []);
+
   const newLeads = leads
     .filter(lead => lead.status === LeadStatus.NEW)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
