@@ -10,6 +10,7 @@ import { generateEmailDraft, analyzeLeadPotential } from '../services/geminiServ
 interface LeadsBoardProps {
   leads: Lead[];
   documents?: Document[];
+  products: any[];
   onStatusChange: (id: string, newStatus: LeadStatus) => void;
   onAddLead: (leadData?: Partial<Lead>) => Promise<void>;
   onAddLeads: (leads: Omit<Lead, 'id' | 'tenantId' | 'status' | 'createdAt' | 'value'>[]) => Promise<void>;
@@ -179,6 +180,26 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
                     <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2"><User size={18} className="text-blue-500" /> New Lead</h3>
                     <button onClick={() => setIsAddModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
                 </div>
+                <select 
+    className="..."
+    value={newLeadData.productId}
+    onChange={e => {
+        const selectedProd = products.find(p => p.id === e.target.value);
+        setNewLeadData({
+            ...newLeadData, 
+            productId: e.target.value,
+            // Automatically set the value if product is found
+            value: selectedProd ? selectedProd.price : 0 
+        });
+    }}
+>
+    <option value="">-- Select from Catalog --</option>
+    {products.map(prod => (
+        <option key={prod.id} value={prod.id}>
+            {prod.name} (${prod.price})
+        </option>
+    ))}
+</select>
                 <form onSubmit={handleManualSubmit} className="p-6 space-y-4">
                     <div className="space-y-3">
                         <input required type="text" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" value={newLeadData.name} onChange={e => setNewLeadData({...newLeadData, name: e.target.value})} placeholder="Prospect Name" />
