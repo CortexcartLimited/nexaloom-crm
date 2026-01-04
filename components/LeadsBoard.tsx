@@ -219,9 +219,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
             value={newLeadData.productId}
             onChange={e => setNewLeadData({...newLeadData, productId: e.target.value})}
           >
-           <option value="">
-    {products.length === 0 ? '-- No Products Loaded --' : `-- Select Product (${products.length} found) --`}
-  </option> <option value="">-- Select Product --</option>
+            <option value="">-- Select Product --</option>
             {products.map(prod => (
               <option key={prod.id} value={prod.id}>
                 {prod.name} (${prod.price}/{prod.billingCycle.toLowerCase()})
