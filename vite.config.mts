@@ -27,17 +27,20 @@ export default defineConfig(({ mode }) => {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'global': 'window',
     },
-    optimizeDeps: {
-      // This tells Vite: "Expect this library and bundle it for the browser"
-      include: ['@hello-pangea/dnd']
-    },
+    // Fixed resolve section
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
-        // These lines "kill" the backend imports if they leak into the frontend
+        // Add this line to tell Vite exactly where the DND code lives
+        '@hello-pangea/dnd': path.resolve(__dirname, 'node_modules/@hello-pangea/dnd/dist/dnd.esm.js'),
+        
+        // Backend polyfills
         'mysql2/promise': path.resolve(__dirname, 'empty-module.js'),
         'mysql2': path.resolve(__dirname, 'empty-module.js'),
       },
+    },
+    optimizeDeps: {
+      include: ['@hello-pangea/dnd']
     },
   };
 });
