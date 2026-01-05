@@ -3,8 +3,11 @@ const API_BASE = '/crm/nexaloom-crm/api';
 const getHeaders = () => {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const token = localStorage.getItem('nexaloom_token');
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+  } else {
+    console.warn("API Request: No token found in localStorage (nexaloom_token)");
   }
   return headers;
 };
