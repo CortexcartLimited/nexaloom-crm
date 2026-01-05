@@ -103,6 +103,8 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
             createdBy: user.name
         };
 
+        console.log('Saving Proposal:', proposal);
+
         await onAddProposal(proposal);
         setView('LIST');
     };
