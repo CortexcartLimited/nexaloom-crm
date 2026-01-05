@@ -87,12 +87,17 @@ const App: React.FC = () => {
       setAuth({ user, tenant, isAuthenticated: true });
 
       if (tenant) {
-        const [fetchedLeads, fetchedProducts, fetchedDiscounts, fetchedInteractions, fetchedTasks] = await Promise.all([
+        const [fetchedLeads, fetchedProducts, fetchedDiscounts, fetchedInteractions, fetchedTasks, fetchedProposals, fetchedArticles, fetchedTickets] = await Promise.all([
           api.getLeads(tenant.id),
           api.getProducts(tenant.id),
           api.getDiscounts(tenant.id),
           api.getInteractions(tenant.id),
           api.getTasks(tenant.id),
+          api.getProposals(tenant.id),
+          api.getArticles(tenant.id),
+          api.getTickets(tenant.id),
+          api.getUsers(tenant.id),
+          api.getSettings(tenant.id),
         ]);
 
         setLeads(fetchedLeads);
@@ -100,6 +105,12 @@ const App: React.FC = () => {
         setDiscounts(fetchedDiscounts);
         setInteractions(fetchedInteractions);
         setTasks(fetchedTasks);
+        setProposals(fetchedProposals);
+        setKbArticles(fetchedArticles);
+        setTickets(fetchedTickets);
+        setUsers(fetchedUsers);
+        // Tenant is already set, but we could update it if settings changed
+        setAuth(prev => prev.tenant ? { ...prev, tenant: fetchedSettings } : prev);
       }
 
       setLoading(false);
@@ -133,10 +144,6 @@ const App: React.FC = () => {
     localStorage.setItem('nexaloom_bg_theme', id);
   };
 
-  const handleUpdateTenant = async (updates: Partial<Tenant>) => {
-    if (!auth.tenant) return;
-    setAuth(prev => ({ ...prev, tenant: { ...prev.tenant!, ...updates } }));
-  };
 
   const handleStatusChange = async (leadId: string, newStatus: LeadStatus) => {
     const oldLead = leads.find(l => l.id === leadId);
@@ -444,30 +451,66 @@ const App: React.FC = () => {
 
   const handleAddProposal = async (proposal: Proposal) => {
     if (!auth.tenant) return;
-    setProposals(prev => [proposal, ...prev]);
+    try {
+      const createdProposal = await api.createProposal(proposal);
+      // If the backend returns just the ID or partial, merge it, but our route returns full body + id
+      // Ensure items are included in state
+      setProposals(prev => [createdProposal, ...prev]);
+    } catch (e) {
+      console.error("Failed to create proposal", e);
+    }
   };
 
   const handleUpdateProposal = async (id: string, updates: Partial<Proposal>) => {
     setProposals(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    try {
+      await api.updateProposal(id, updates);
+    } catch (e) {
+      console.error("Failed to update proposal", e);
+    }
   };
 
   const handleDeleteProposal = async (id: string) => {
     setProposals(prev => prev.filter(p => p.id !== id));
+    try {
+      await api.deleteProposal(id);
+    } catch (e) {
+      console.error("Failed to delete proposal", e);
+    }
   };
 
-  const handleAddArticle = async (articleData: Omit<KnowledgeBaseArticle, 'id' | 'createdAt' | 'updatedAt'>) => {
-    if (!auth.tenant) return;
-    const newArticle: KnowledgeBaseArticle = {
-      ...articleData,
-      id: `kb-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    setArticles(prev => [newArticle, ...prev]);
-  };
   // App.tsx
 
   // 1. Handle Updating Contact Details (The "Edit" button)
+  const handleAddArticle = async (articleData: Omit<KnowledgeBaseArticle, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!auth.tenant || !auth.user) return;
+    const newArticle = { ...articleData, tenantId: auth.tenant.id, authorId: auth.user.id, authorName: auth.user.name };
+    try {
+      const created = await api.createArticle(newArticle);
+      setArticles(prev => [created, ...prev]);
+    } catch (e) {
+      console.error("Failed to create article", e);
+    }
+  };
+
+  const handleUpdateArticle = async (id: string, updates: Partial<KnowledgeBaseArticle>) => {
+    setArticles(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
+    try {
+      await api.updateArticle(id, updates);
+    } catch (e) {
+      console.error("Failed to update article", e);
+    }
+  };
+
+  const handleDeleteArticle = async (id: string) => {
+    setArticles(prev => prev.filter(a => a.id !== id));
+    try {
+      await api.deleteArticle(id);
+    } catch (e) {
+      console.error("Failed to delete article", e);
+    }
+  };
+
   const handleUpdateLead = async (id: string, updates: Partial<Lead>) => {
     try {
       const success = await api.updateLead(id, updates);
@@ -512,34 +555,48 @@ const App: React.FC = () => {
       alert("Error saving note to timeline.");
     }
   };
-  const handleUpdateArticle = async (id: string, updates: Partial<KnowledgeBaseArticle>) => {
-    setArticles(prev => prev.map(a => a.id === id ? { ...a, ...updates, updatedAt: new Date().toISOString() } : a));
-  };
-
-  const handleDeleteArticle = async (id: string) => {
-    setArticles(prev => prev.filter(a => a.id !== id));
-  };
 
   const handleAddUser = async (userData: Omit<User, 'id' | 'tenantId'>) => {
     if (!auth.tenant) return;
-    const newUser: User = {
-      ...userData,
-      id: `user-${Date.now()}`,
-      tenantId: auth.tenant.id,
-    };
-    setUsers(prev => [...prev, newUser]);
+    try {
+      const createdUser = await api.createUser({ ...userData, tenantId: auth.tenant.id });
+      setUsers(prev => [...prev, createdUser]);
+    } catch (e) {
+      console.error("Failed to create user", e);
+    }
   };
 
   const handleUpdateUser = async (id: string, updates: Partial<User>) => {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
-
     if (auth.user?.id === id) {
       setAuth(prev => ({ ...prev, user: { ...prev.user!, ...updates } }));
+    }
+    try {
+      await api.updateUser(id, updates);
+    } catch (e) {
+      console.error("Failed to update user", e);
     }
   };
 
   const handleDeleteUser = async (id: string) => {
     setUsers(prev => prev.filter(u => u.id !== id));
+    try {
+      await api.deleteUser(id);
+    } catch (e) {
+      console.error("Failed to delete user", e);
+    }
+  };
+
+  const handleUpdateTenant = async (updates: Partial<Tenant>) => {
+    if (auth.tenant) {
+      const updatedTenant = { ...auth.tenant, ...updates };
+      setAuth(prev => ({ ...prev, tenant: updatedTenant }));
+      try {
+        await api.updateSettings({ ...updates, tenantId: auth.tenant.id });
+      } catch (e) {
+        console.error("Failed to update settings", e);
+      }
+    }
   };
 
   const handleOpenDialer = (phone?: string, leadId?: string) => {

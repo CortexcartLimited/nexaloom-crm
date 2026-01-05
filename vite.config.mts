@@ -10,10 +10,17 @@ export default defineConfig(({ mode }) => {
   return {
     base: '/crm/nexaloom-crm/',
     plugins: [react(), tailwindcss()],
-    
+
     server: {
       port: 3006,
       host: '0.0.0.0',
+      proxy: {
+        '/crm/nexaloom-crm/api': {
+          target: 'http://localhost:5000',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/crm\/nexaloom-crm\/api/, '/api')
+        }
+      }
     },
     content: [
       "./index.html",

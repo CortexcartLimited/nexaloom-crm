@@ -257,7 +257,23 @@ app.use('/api/tasks', require('./routes/tasks')(pool));
 
 // --- DOCUMENTS ROUTES ---
 app.use('/api/documents', require('./routes/documents')(pool));
+app.use('/api/documents', require('./routes/documents')(pool));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// --- PROPOSALS ROUTES ---
+app.use('/api/proposals', require('./routes/proposals')(pool));
+
+// --- KNOWLEDGE BASE ROUTES ---
+app.use('/api/knowledge-base', require('./routes/knowledge-base')(pool));
+
+// --- TICKETS ROUTES ---
+app.use('/api/tickets', require('./routes/tickets')(pool));
+
+// --- USERS ROUTES ---
+app.use('/api/users', require('./routes/users')(pool));
+
+// --- SETTINGS ROUTES ---
+app.use('/api/settings', require('./routes/settings')(pool));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
