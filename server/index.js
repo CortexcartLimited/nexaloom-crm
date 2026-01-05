@@ -214,11 +214,17 @@ app.delete('/api/discounts/:id', async (req, res) => {
     const { id } = req.params;
     const tenantId = req.headers['x-tenant-id'];
 
-    // FIX: Changed 'db' to 'pool' (or whatever your working routes use)
-    pool.query('DELETE FROM discounts WHERE id = ? AND tenantId = ?', [id, tenantId], (err, result) => {
-        if (err) return res.status(500).json(err);
-        res.json({ message: "Deleted successfully" });
-    });
+    try {
+        // Use [result] destructuring and await, just like your other working routes
+        const [result] = await pool.query(
+            'DELETE FROM discounts WHERE id = ? AND tenantId = ?',
+            [id, tenantId]
+        );
+        res.json({ message: "Deleted successfully", affectedRows: result.affectedRows });
+    } catch (err) {
+        console.error("DELETE ERROR:", err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // --- INTERACTIONS ROUTES ---
