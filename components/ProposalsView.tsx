@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { Proposal, ProposalItem, ProposalStatus, Lead, Product, User, Interaction } from '../types';
+import { api } from '../services/api';
 import { ScrollText, Plus, User as UserIcon, Calendar, CheckCircle, FileText, Download, Send, Eye, X, Edit, Trash2, ArrowRight } from 'lucide-react';
 
 interface ProposalsViewProps {
@@ -16,6 +17,8 @@ interface ProposalsViewProps {
 
 export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, products, user, onAddProposal, onUpdateProposal, onDeleteProposal, onAddInteraction }) => {
     const [view, setView] = useState<'LIST' | 'BUILDER'>('LIST');
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [editingProposal, setEditingProposal] = useState<Partial<Proposal> | null>(null);
     const [builderStep, setBuilderStep] = useState(1);
     const [activeProposal, setActiveProposal] = useState<Partial<Proposal>>({
         items: [],
@@ -107,6 +110,31 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
 
         await onAddProposal(proposal);
         setView('LIST');
+    };
+
+    const handleViewProposal = async (id: string) => {
+        try {
+            // Fetch proposal details including items from backend
+            const proposal = await api.getProposal(id);
+            setEditingProposal(proposal);
+            setIsDrawerOpen(true);
+        } catch (error) {
+            console.error("Failed to fetch proposal details", error);
+            // Fallback to local data if fetch fails
+            const found = proposals.find(p => p.id === id);
+            if (found) {
+                setEditingProposal({ ...found });
+                setIsDrawerOpen(true);
+            }
+        }
+    };
+
+    const handleUpdateActiveProposal = async () => {
+        if (!editingProposal || !editingProposal.id) return;
+
+        await onUpdateProposal(editingProposal.id, editingProposal);
+        setIsDrawerOpen(false);
+        setEditingProposal(null);
     };
 
     const handleSendProposal = async (proposalId: string) => {
@@ -411,7 +439,11 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
                             </div>
 
                             <div className="flex items-center gap-2 border-l border-gray-100 dark:border-gray-700 pl-6">
-                                <button className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors" title="Preview PDF">
+                                <button
+                                    onClick={() => handleViewProposal(prop.id)}
+                                    className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                    title="View & Edit"
+                                >
                                     <Eye size={18} />
                                 </button>
                                 {prop.status === ProposalStatus.DRAFT && (
@@ -439,6 +471,138 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
                     <ScrollText size={48} className="opacity-20 mb-4" />
                     <p className="font-medium">No proposals generated yet.</p>
                     <p className="text-sm">Click 'Create Proposal' to start your first quote.</p>
+                </div>
+            )}
+            {/* Slide-out Drawer */}
+            {isDrawerOpen && editingProposal && (
+                <div className="fixed inset-0 z-50 flex justify-end">
+                    {/* Backdrop */}
+                    <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setIsDrawerOpen(false)}></div>
+
+                    {/* Drawer */}
+                    <div className="relative w-full max-w-2xl bg-white dark:bg-gray-800 h-full shadow-2xl overflow-y-auto flex flex-col animate-in slide-in-from-right duration-300">
+                        <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50 sticky top-0 z-10 backdrop-blur">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Edit Proposal</h2>
+                                <p className="text-sm text-gray-500">#{editingProposal.id?.substring(0, 8)}</p>
+                            </div>
+                            <button onClick={() => setIsDrawerOpen(false)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors">
+                                <X size={20} className="text-gray-500" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-8 flex-1">
+                            {/* Drawer Content - Reusing Builder Inputs */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-bold uppercase text-gray-400 dark:text-gray-500 tracking-wider">Details</h3>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Proposal Name</label>
+                                    <input
+                                        type="text"
+                                        className="w-full p-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={editingProposal.name || ''}
+                                        onChange={(e) => setEditingProposal({ ...editingProposal, name: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Valid Until</label>
+                                        <input
+                                            type="date"
+                                            className="w-full p-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                            value={typeof editingProposal.validUntil === 'string' ? editingProposal.validUntil.split('T')[0] : ''}
+                                            onChange={(e) => setEditingProposal({ ...editingProposal, validUntil: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+                                        <select
+                                            className="w-full p-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                            value={editingProposal.status}
+                                            onChange={(e) => setEditingProposal({ ...editingProposal, status: e.target.value as ProposalStatus })}
+                                        >
+                                            {Object.values(ProposalStatus).map(s => (
+                                                <option key={s} value={s}>{s}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-bold uppercase text-gray-400 dark:text-gray-500 tracking-wider">Line Items</h3>
+                                {/* Add Item Logic for Drawer */}
+                                <div className="flex gap-2">
+                                    <select
+                                        className="flex-1 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                        value={selectedProductId}
+                                        onChange={(e) => setSelectedProductId(e.target.value)}
+                                    >
+                                        <option value="">-- Add Product --</option>
+                                        {products.map(p => (
+                                            <option key={p.id} value={p.id}>{p.name} (${p.price})</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        onClick={() => {
+                                            if (!selectedProductId) return;
+                                            const product = products.find(p => p.id === selectedProductId);
+                                            if (!product) return;
+                                            const newItem: ProposalItem = {
+                                                id: `item-${Date.now()}`,
+                                                productId: product.id,
+                                                name: product.name,
+                                                quantity: 1,
+                                                price: product.price,
+                                                description: product.description
+                                            };
+                                            const updatedItems = [...(editingProposal.items || []), newItem];
+                                            setEditingProposal({ ...editingProposal, items: updatedItems, totalValue: calculateTotal(updatedItems) });
+                                            setSelectedProductId('');
+                                        }}
+                                        disabled={!selectedProductId}
+                                        className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                                    >
+                                        <Plus size={20} />
+                                    </button>
+                                </div>
+
+                                <div className="space-y-2">
+                                    {editingProposal.items?.map((item) => (
+                                        <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                                            <div>
+                                                <p className="font-medium text-sm text-gray-900 dark:text-white">{item.name}</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">${Number(item.price || 0).toFixed(2)} x {item.quantity}</p>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    const updatedItems = (editingProposal.items || []).filter(i => i.id !== item.id);
+                                                    setEditingProposal({ ...editingProposal, items: updatedItems, totalValue: calculateTotal(updatedItems) });
+                                                }}
+                                                className="text-gray-400 hover:text-red-500 p-1"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-bold uppercase text-gray-400 dark:text-gray-500 tracking-wider">Terms</h3>
+                                <textarea
+                                    className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm h-24 resize-none"
+                                    value={editingProposal.terms}
+                                    onChange={(e) => setEditingProposal({ ...editingProposal, terms: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="p-6 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 sticky bottom-0 z-10 backdrop-blur flex justify-end gap-3">
+                            <button onClick={() => setIsDrawerOpen(false)} className="px-4 py-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white font-medium">Cancel</button>
+                            <button onClick={handleUpdateActiveProposal} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-md">Update Proposal</button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

@@ -34,6 +34,23 @@ module.exports = (pool) => {
         }
     });
 
+    // GET /api/proposals/:id (Single)
+    router.get('/:id', async (req, res) => {
+        const { id } = req.params;
+        try {
+            const [rows] = await pool.query('SELECT * FROM proposals WHERE id = ?', [id]);
+            if (rows.length === 0) return res.status(404).json({ error: 'Proposal not found' });
+
+            const proposal = rows[0];
+            const [items] = await pool.query('SELECT * FROM proposal_items WHERE proposalId = ?', [id]);
+            proposal.items = items;
+
+            res.json(proposal);
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     // POST /api/proposals (Create)
     router.post('/', async (req, res) => {
         console.log('Proposal Body:', req.body);
@@ -87,13 +104,13 @@ module.exports = (pool) => {
         }
     });
 
-    // PUT /api/proposals/:id (Update Status/Details)
+    // PUT /api/proposals/:id (Update)
     router.put('/:id', async (req, res) => {
         const { id } = req.params;
         const updates = req.body;
+        const items = updates.items;
 
-        // Exclude items from simple updates for now, primarily for status changes
-        // If full edit is needed, it would require diffing items or wiping and re-inserting
+        // Remove items from main table update object
         delete updates.items;
 
         // Sanitize date if present
@@ -101,17 +118,48 @@ module.exports = (pool) => {
             updates.validUntil = new Date(updates.validUntil).toISOString().slice(0, 19).replace('T', ' ');
         }
 
+        const connection = await pool.getConnection();
         try {
+            await connection.beginTransaction();
+
             const fields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
             const values = Object.values(updates);
 
             if (fields.length > 0) {
-                await pool.query(`UPDATE proposals SET ${fields} WHERE id = ?`, [...values, id]);
+                await connection.query(`UPDATE proposals SET ${fields} WHERE id = ?`, [...values, id]);
             }
 
+            // Sync Items if provided
+            if (items) {
+                // Delete old items
+                await connection.query('DELETE FROM proposal_items WHERE proposalId = ?', [id]);
+
+                // Insert new items
+                if (items.length > 0) {
+                    const itemValues = items.map(item => [
+                        item.id || uuidv4(),
+                        id,
+                        item.productId || null,
+                        item.name,
+                        item.quantity,
+                        item.price,
+                        item.description
+                    ]);
+
+                    await connection.query(
+                        `INSERT INTO proposal_items (id, proposalId, productId, name, quantity, price, description) VALUES ?`,
+                        [itemValues]
+                    );
+                }
+            }
+
+            await connection.commit();
             res.json({ success: true });
         } catch (err) {
+            await connection.rollback();
             res.status(500).json({ error: err.message });
+        } finally {
+            connection.release();
         }
     });
 

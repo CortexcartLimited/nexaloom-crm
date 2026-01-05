@@ -202,6 +202,11 @@ export const api = {
     if (!response.ok) throw new Error('Failed to fetch proposals');
     return response.json();
   },
+  getProposal: async (id: string) => {
+    const response = await req(`/proposals/${id}`);
+    if (!response.ok) throw new Error('Failed to fetch proposal');
+    return response.json();
+  },
   createProposal: async (proposal: any) => {
     const response = await req(`/proposals`, {
       method: 'POST',
