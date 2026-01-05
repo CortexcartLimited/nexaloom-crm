@@ -19,6 +19,9 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
     const [view, setView] = useState<'LIST' | 'BUILDER'>('LIST');
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [editingProposal, setEditingProposal] = useState<Partial<Proposal> | null>(null);
+    // New state for file attachments
+    const [availableDocuments, setAvailableDocuments] = useState<{ id: string, name: string }[]>([]);
+    const [attachedDocIds, setAttachedDocIds] = useState<string[]>([]);
     const [builderStep, setBuilderStep] = useState(1);
     const [activeProposal, setActiveProposal] = useState<Partial<Proposal>>({
         items: [],
@@ -114,16 +117,23 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
 
     const handleViewProposal = async (id: string) => {
         try {
-            // Fetch proposal details including items from backend
-            const proposal = await api.getProposal(id);
+            // Fetch proposal details and available documents
+            const [proposal, docs] = await Promise.all([
+                api.getProposal(id),
+                api.getDocuments(user.tenantId)
+            ]);
+
             setEditingProposal(proposal);
+            setAvailableDocuments(docs as any[]); // Type cast if needed depending on return type
+            setAttachedDocIds(proposal.files ? proposal.files.map((f: any) => f.id) : []);
             setIsDrawerOpen(true);
         } catch (error) {
-            console.error("Failed to fetch proposal details", error);
-            // Fallback to local data if fetch fails
+            console.error("Failed to fetch data", error);
+            // Fallback
             const found = proposals.find(p => p.id === id);
             if (found) {
                 setEditingProposal({ ...found });
+                setAttachedDocIds([]);
                 setIsDrawerOpen(true);
             }
         }
@@ -133,6 +143,16 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
         if (!editingProposal || !editingProposal.id) return;
 
         await onUpdateProposal(editingProposal.id, editingProposal);
+
+        // Save file attachments
+        if (attachedDocIds) {
+            try {
+                await api.updateProposalFiles(editingProposal.id, attachedDocIds);
+            } catch (e) {
+                console.error("Failed to save attachments", e);
+            }
+        }
+
         setIsDrawerOpen(false);
         setEditingProposal(null);
     };
@@ -595,6 +615,53 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
                                     value={editingProposal.terms}
                                     onChange={(e) => setEditingProposal({ ...editingProposal, terms: e.target.value })}
                                 />
+                            </div>
+
+                            {/* File Attachments Section */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-bold uppercase text-gray-400 dark:text-gray-500 tracking-wider">Attachments</h3>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Documents</label>
+                                    <select
+                                        className="w-full p-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val && !attachedDocIds.includes(val)) {
+                                                setAttachedDocIds([...attachedDocIds, val]);
+                                            }
+                                        }}
+                                        value=""
+                                    >
+                                        <option value="">-- Add Attachment --</option>
+                                        {availableDocuments.map(doc => (
+                                            <option key={doc.id} value={doc.id} disabled={attachedDocIds.includes(doc.id)}>
+                                                {doc.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    {attachedDocIds.map(docId => {
+                                        const doc = availableDocuments.find(d => d.id === docId) || editingProposal.files?.find(f => f.id === docId);
+                                        return (
+                                            <div key={docId} className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
+                                                <div className="flex items-center gap-2">
+                                                    <FileText size={16} className="text-blue-500" />
+                                                    <span className="text-sm font-medium text-gray-900 dark:text-white">{doc?.name || 'Unknown Document'}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => setAttachedDocIds(attachedDocIds.filter(id => id !== docId))}
+                                                    className="text-gray-400 hover:text-red-500 p-1"
+                                                >
+                                                    <X size={16} />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                    {attachedDocIds.length === 0 && (
+                                        <p className="text-sm text-gray-400 italic">No documents attached.</p>
+                                    )}
+                                </div>
                             </div>
                         </div>
 

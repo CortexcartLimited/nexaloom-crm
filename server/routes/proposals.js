@@ -45,6 +45,13 @@ module.exports = (pool) => {
             const [items] = await pool.query('SELECT * FROM proposal_items WHERE proposalId = ?', [id]);
             proposal.items = items;
 
+            const [files] = await pool.query(`
+                SELECT pf.documentId as id, d.name 
+                FROM proposal_files pf 
+                JOIN documents d ON pf.documentId = d.id 
+                WHERE pf.proposalId = ?`, [id]);
+            proposal.files = files;
+
             res.json(proposal);
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -172,6 +179,34 @@ module.exports = (pool) => {
             res.json({ success: true });
         } catch (err) {
             res.status(500).json({ error: err.message });
+        }
+    });
+
+    // POST /api/proposals/:id/files (Update Attachments)
+    router.post('/:id/files', async (req, res) => {
+        const { id } = req.params;
+        const { documentIds } = req.body;
+
+        const connection = await pool.getConnection();
+        try {
+            await connection.beginTransaction();
+
+            // Clear existing files
+            await connection.query('DELETE FROM proposal_files WHERE proposalId = ?', [id]);
+
+            // Insert new files
+            if (documentIds && documentIds.length > 0) {
+                const values = documentIds.map(docId => [uuidv4(), id, docId]);
+                await connection.query('INSERT INTO proposal_files (id, proposalId, documentId) VALUES ?', [values]);
+            }
+
+            await connection.commit();
+            res.json({ success: true });
+        } catch (err) {
+            await connection.rollback();
+            res.status(500).json({ error: err.message });
+        } finally {
+            connection.release();
         }
     });
 

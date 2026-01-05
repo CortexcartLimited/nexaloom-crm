@@ -230,6 +230,14 @@ export const api = {
     if (!response.ok) throw new Error('Failed to delete proposal');
     return response.json();
   },
+  updateProposalFiles: async (id: string, documentIds: string[]) => {
+    const response = await req(`/proposals/${id}/files`, {
+      method: 'POST',
+      body: JSON.stringify({ documentIds }),
+    });
+    if (!response.ok) throw new Error('Failed to update proposal files');
+    return response.json();
+  },
 
   // Knowledge Base
   getArticles: async (tenantId: string) => {

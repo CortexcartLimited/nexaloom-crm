@@ -197,6 +197,7 @@ export interface Proposal {
   terms?: string;
   createdAt: string;
   createdBy: string;
+  files?: { id: string; name: string }[];
 }
 
 export interface DocumentVersion {
