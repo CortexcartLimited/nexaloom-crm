@@ -5,6 +5,11 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
 require('dotenv').config({ path: path.join(__dirname, '.env.production') })
+console.log('DB Config Check:', {
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    db: process.env.DB_NAME
+});
 
 const app = express();
 app.use(cors());
