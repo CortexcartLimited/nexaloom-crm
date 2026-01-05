@@ -38,7 +38,7 @@ module.exports = (pool) => {
 
     // GET /api/proposals/:id (Single)
     router.get('/:id', async (req, res) => {
-        const { id } = req.params;
+        const id = parseInt(req.params.id, 10);
         try {
             const [rows] = await pool.query('SELECT * FROM proposals WHERE id = ?', [id]);
             if (rows.length === 0) return res.status(404).json({ error: 'Proposal not found' });
@@ -62,29 +62,27 @@ module.exports = (pool) => {
 
     // POST /api/proposals (Create)
     router.post('/', async (req, res) => {
-        console.log('Proposal Body:', req.body);
-        const { id, tenantId, name, leadId, leadName, leadCompany, items, totalValue, status, validUntil, terms, createdBy } = req.body;
+        const { tenantId, name, leadId, leadName, leadCompany, items, totalValue, status, validUntil, terms, createdBy } = req.body;
 
         const connection = await pool.getConnection();
         try {
             await connection.beginTransaction();
 
-            const proposalId = id || uuidv4();
             const validUntilDate = validUntil ? new Date(validUntil).toISOString().slice(0, 19).replace('T', ' ') : null;
 
-            // 1. Insert Proposal
-            await connection.query(
-                `INSERT INTO proposals (id, tenantId, name, leadId, leadName, leadCompany, totalValue, status, validUntil, terms, createdBy, createdAt) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-                [proposalId, tenantId, name, leadId, leadName, leadCompany, totalValue, status, validUntilDate, terms, createdBy]
+            // 1. Insert Proposal (Let DB auto-increment ID)
+            const [result] = await connection.query(
+                `INSERT INTO proposals (tenantId, name, leadId, leadName, leadCompany, totalValue, status, validUntil, terms, createdBy, createdAt) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+                [tenantId, name, leadId, leadName, leadCompany, totalValue, status, validUntilDate, terms, createdBy]
             );
+
+            const proposalId = result.insertId;
 
             // 2. Insert Items
             if (items && items.length > 0) {
-                console.log('Inserting Items:', JSON.stringify(items, null, 2));
-
                 const itemValues = items.map(item => [
-                    item.id || uuidv4(),
+                    item.id && !item.id.toString().startsWith('item-') ? item.id : uuidv4(),
                     proposalId,
                     item.productId || null,
                     item.name,
@@ -92,8 +90,6 @@ module.exports = (pool) => {
                     item.price,
                     item.description
                 ]);
-
-                console.log('Item Values to Insert:', JSON.stringify(itemValues, null, 2));
 
                 await connection.query(
                     `INSERT INTO proposal_items (id, proposalId, productId, name, quantity, price, description) VALUES ?`,
@@ -115,7 +111,7 @@ module.exports = (pool) => {
 
     // PUT /api/proposals/:id (Update)
     router.put('/:id', async (req, res) => {
-        const { id } = req.params;
+        const id = parseInt(req.params.id, 10);
         const updates = req.body;
         const items = updates.items;
 
@@ -174,7 +170,7 @@ module.exports = (pool) => {
 
     // DELETE /api/proposals/:id
     router.delete('/:id', async (req, res) => {
-        const { id } = req.params;
+        const id = parseInt(req.params.id, 10);
         try {
             await pool.query('DELETE FROM proposals WHERE id = ?', [id]);
             // Items filtered by CASCADE foreign key
@@ -186,7 +182,7 @@ module.exports = (pool) => {
 
     // POST /api/proposals/:id/files (Update Attachments)
     router.post('/:id/files', async (req, res) => {
-        const { id } = req.params;
+        const id = parseInt(req.params.id, 10);
         const { documentIds } = req.body;
 
         const connection = await pool.getConnection();
@@ -214,7 +210,7 @@ module.exports = (pool) => {
 
     // POST /api/proposals/:id/send (Email Proposal)
     router.post('/:id/send', async (req, res) => {
-        const { id } = req.params;
+        const id = parseInt(req.params.id, 10);
 
         const connection = await pool.getConnection();
         try {

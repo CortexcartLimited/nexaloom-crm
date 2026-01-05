@@ -520,14 +520,16 @@ const App: React.FC = () => {
   };
 
   const handleAddProposal = async (proposal: Proposal) => {
-    if (!auth.tenant) return;
+    if (!auth.tenant) throw new Error("Tenant ID missing"); // Throwing allows caller to catch
     try {
       const createdProposal = await api.createProposal(proposal);
       // If the backend returns just the ID or partial, merge it, but our route returns full body + id
       // Ensure items are included in state
       setProposals(prev => [createdProposal, ...prev]);
+      return createdProposal;
     } catch (e) {
       console.error("Failed to create proposal", e);
+      throw e;
     }
   };
 

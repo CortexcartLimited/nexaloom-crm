@@ -9,7 +9,7 @@ interface ProposalsViewProps {
     leads: Lead[];
     products: Product[];
     user: User;
-    onAddProposal: (proposal: Proposal) => Promise<void>;
+    onAddProposal: (proposal: Proposal) => Promise<Proposal>;
     onUpdateProposal: (id: string, updates: Partial<Proposal>) => Promise<void>;
     onDeleteProposal: (id: string) => Promise<void>;
     onAddInteraction: (interaction: Interaction) => Promise<void>;
@@ -86,6 +86,30 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
         });
     };
 
+    const handleViewProposal = async (id: string) => {
+        try {
+            // Fetch proposal details and available documents
+            const [proposal, docs] = await Promise.all([
+                api.getProposal(id),
+                api.getDocuments(user.tenantId)
+            ]);
+
+            setEditingProposal(proposal);
+            setAvailableDocuments(docs as any[]); // Type cast if needed depending on return type
+            setAttachedDocIds(proposal.files ? proposal.files.map((f: any) => f.id) : []);
+            setIsDrawerOpen(true);
+        } catch (error) {
+            console.error("Failed to fetch data", error);
+            // Fallback
+            const found = proposals.find(p => p.id === id);
+            if (found) {
+                setEditingProposal({ ...found });
+                setAttachedDocIds([]);
+                setIsDrawerOpen(true);
+            }
+        }
+    };
+
     const handleSaveProposal = async () => {
         if (!selectedLeadId) {
             alert('Please select a lead first.');
@@ -112,31 +136,15 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
 
         console.log('Saving Proposal:', proposal);
 
-        await onAddProposal(proposal);
+        // Capture the server-returned proposal (with real integer ID)
+        const savedProposal = await onAddProposal(proposal);
+
+        // Switch to List view, but then open the Drawer for the new proposal
         setView('LIST');
-    };
 
-    const handleViewProposal = async (id: string) => {
-        try {
-            // Fetch proposal details and available documents
-            const [proposal, docs] = await Promise.all([
-                api.getProposal(id),
-                api.getDocuments(user.tenantId)
-            ]);
-
-            setEditingProposal(proposal);
-            setAvailableDocuments(docs as any[]); // Type cast if needed depending on return type
-            setAttachedDocIds(proposal.files ? proposal.files.map((f: any) => f.id) : []);
-            setIsDrawerOpen(true);
-        } catch (error) {
-            console.error("Failed to fetch data", error);
-            // Fallback
-            const found = proposals.find(p => p.id === id);
-            if (found) {
-                setEditingProposal({ ...found });
-                setAttachedDocIds([]);
-                setIsDrawerOpen(true);
-            }
+        // Immediately view the new proposal so user can attach files/send email
+        if (savedProposal && savedProposal.id) {
+            await handleViewProposal(savedProposal.id.toString());
         }
     };
 
