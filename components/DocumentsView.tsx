@@ -240,9 +240,9 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ documents, user, o
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2">
                                             <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 flex items-center justify-center text-xs font-bold">
-                                                {doc.uploaderName.charAt(0)}
+                                                {(doc.uploaderName || 'Unknown').charAt(0)}
                                             </div>
-                                            <span className="text-sm text-gray-600 dark:text-gray-300">{doc.uploaderId === user.id ? 'You' : doc.uploaderName}</span>
+                                            <span className="text-sm text-gray-600 dark:text-gray-300">{doc.uploaderId === user.id ? 'You' : (doc.uploaderName || 'Unknown')}</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 font-mono">
