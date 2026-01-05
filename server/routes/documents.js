@@ -30,19 +30,34 @@ module.exports = (pool) => {
         const { tenantId, leadId } = req.query;
         if (!tenantId) return res.status(400).json({ error: "tenantId is required" });
 
-        let query = 'SELECT * FROM documents WHERE tenantId = ?';
+        // Map DB columns to frontend Document interface
+        // fileName -> name, fileSize -> size
+        let query = `
+            SELECT d.id, d.tenantId, d.leadId, d.fileName as name, d.fileUrl, d.fileSize as size, 
+                   d.visibility, d.type, d.uploaderId, d.createdAt,
+                   u.name as uploaderName
+            FROM documents d
+            LEFT JOIN users u ON d.uploaderId = u.id
+            WHERE d.tenantId = ?`;
+
         const params = [tenantId];
 
         if (leadId) {
-            query += ' AND leadId = ?';
+            query += ' AND d.leadId = ?';
             params.push(leadId);
         }
 
-        query += ' ORDER BY createdAt DESC';
+        query += ' ORDER BY d.createdAt DESC';
 
         try {
             const [rows] = await pool.query(query, params);
-            res.json(rows);
+            // Transform rows to match Document interface (add empty versions array if missing)
+            const documents = rows.map(row => ({
+                ...row,
+                isPublic: row.visibility === 'PUBLIC',
+                versions: [] // TODO: Implement versions table if needed
+            }));
+            res.json(documents);
         } catch (err) {
             res.status(500).json({ error: err.message });
         }

@@ -684,9 +684,11 @@ const App: React.FC = () => {
 
   const filteredLeads = leads.filter(lead => {
     const query = searchQuery.toLowerCase();
+    const name = lead.name || '';
+    const company = lead.company || '';
     return (
-      lead.name.toLowerCase().includes(query) ||
-      lead.company.toLowerCase().includes(query) ||
+      name.toLowerCase().includes(query) ||
+      company.toLowerCase().includes(query) ||
       (lead.email && lead.email.toLowerCase().includes(query))
     );
   });

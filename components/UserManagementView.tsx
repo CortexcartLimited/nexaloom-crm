@@ -25,8 +25,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ users, c
   const isTeamLeader = currentUser.role === UserRole.TEAM_LEADER;
 
   const filteredUsers = users.filter(u =>
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchQuery.toLowerCase())
+    (u.name && u.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (u.email && u.email.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const handleOpenModal = (user?: User) => {
