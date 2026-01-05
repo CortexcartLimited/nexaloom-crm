@@ -230,6 +230,18 @@ app.get('/api/interactions', async (req, res) => {
         query += ' AND leadId = ?';
         params.push(leadId);
     }
+
+    // Optional date filtering for Calendar
+    const { startDate, endDate } = req.query;
+    if (startDate) {
+        query += ' AND date >= ?';
+        params.push(startDate);
+    }
+    if (endDate) {
+        query += ' AND date <= ?';
+        params.push(endDate);
+    }
+
     query += ' ORDER BY date DESC';
 
     try {

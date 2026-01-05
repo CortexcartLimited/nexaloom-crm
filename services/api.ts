@@ -1,10 +1,7 @@
 const API_BASE = '/crm/nexaloom-crm/api';
 
 export const api = {
-  getTasks: async (tenantId: string) => {
-    // Mock data for now
-    return [];
-  },
+  // getTasks removed (mock)
   updateLead: async (id: string, updates: any) => {
     const response = await fetch(`${API_BASE}/leads/${id}`, {
       method: 'PATCH', // Using PATCH for partial updates
