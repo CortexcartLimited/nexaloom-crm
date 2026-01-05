@@ -44,6 +44,7 @@ const sendProposalEmail = async (to, leadName, proposalName, attachments = []) =
         const mailOptions = {
             from: process.env.SMTP_FROM || '"Nexaloom CRM" <no-reply@nexaloom.com>',
             to: to,
+            bcc: process.env.SMTP_USER,
             subject: `Proposal: ${proposalName}`,
             html: generateProposalEmail(leadName, proposalName),
             attachments: attachments
