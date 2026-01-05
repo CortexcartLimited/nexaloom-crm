@@ -83,6 +83,10 @@ module.exports = (pool) => {
                 [id, tenantId, leadId || null, req.file.originalname, fileUrl, req.file.size, visibility || 'PRIVATE', type || 'OTHER', uploaderId]
             );
 
+            // Fetch uploader name to return complete object
+            const [userRows] = await pool.query('SELECT name FROM users WHERE id = ?', [uploaderId]);
+            const uploaderName = userRows.length > 0 ? userRows[0].name : 'Unknown';
+
             res.status(201).json({
                 success: true,
                 document: {
@@ -96,6 +100,7 @@ module.exports = (pool) => {
                     isPublic: (visibility || 'PRIVATE') === 'PUBLIC',
                     type: type || 'OTHER',
                     uploaderId,
+                    uploaderName, // Return the fetched name
                     createdAt: new Date(),
                     versions: []
                 }
