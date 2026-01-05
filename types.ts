@@ -186,6 +186,7 @@ export interface ProposalItem {
 export interface Proposal {
   id: string;
   tenantId: string;
+  title: string;
   leadId: string;
   leadName: string;
   leadCompany: string;

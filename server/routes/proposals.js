@@ -36,7 +36,8 @@ module.exports = (pool) => {
 
     // POST /api/proposals (Create)
     router.post('/', async (req, res) => {
-        const { id, tenantId, leadId, leadName, leadCompany, items, totalValue, status, validUntil, terms, createdBy } = req.body;
+        console.log('Proposal Body:', req.body);
+        const { id, tenantId, title, leadId, leadName, leadCompany, items, totalValue, status, validUntil, terms, createdBy } = req.body;
 
         const connection = await pool.getConnection();
         try {
@@ -47,9 +48,9 @@ module.exports = (pool) => {
 
             // 1. Insert Proposal
             await connection.query(
-                `INSERT INTO proposals (id, tenantId, leadId, totalValue, status, validUntil, terms, createdBy, createdAt) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-                [proposalId, tenantId, leadId, totalValue, status, validUntilDate, terms, createdBy]
+                `INSERT INTO proposals (id, tenantId, title, leadId, leadName, leadCompany, totalValue, status, validUntil, terms, createdBy, createdAt) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+                [proposalId, tenantId, title, leadId, leadName, leadCompany, totalValue, status, validUntilDate, terms, createdBy]
             );
 
             // 2. Insert Items
