@@ -36,10 +36,8 @@ module.exports = (pool) => {
         }
     });
 
-    // GET /api/proposals/:id (Single)
     router.get('/:id', async (req, res) => {
         const { id } = req.params;
-        console.log('DEBUG: Querying ID:', id, 'Type:', typeof id);
         try {
             const [rows] = await pool.query('SELECT * FROM proposals WHERE id = ?', [id]);
             if (rows.length === 0) return res.status(404).json({ error: 'Proposal not found' });
@@ -129,7 +127,7 @@ module.exports = (pool) => {
         try {
             await connection.beginTransaction();
 
-            const fields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
+            const fields = Object.keys(updates).map(key => `\`${key}\` = ?`).join(', ');
             const values = Object.values(updates);
 
             if (fields.length > 0) {
@@ -213,7 +211,6 @@ module.exports = (pool) => {
     // POST /api/proposals/:id/send (Email Proposal)
     router.post('/:id/send', async (req, res) => {
         const { id } = req.params;
-        console.log('DEBUG: Querying ID:', id, 'Type:', typeof id);
 
         const connection = await pool.getConnection();
         try {
