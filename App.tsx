@@ -959,6 +959,5 @@ return (
     />
   </>
 );
-  };
 
 export default App;
