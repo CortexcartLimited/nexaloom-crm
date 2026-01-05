@@ -89,13 +89,15 @@ module.exports = (pool) => {
                     id,
                     tenantId,
                     leadId,
-                    fileName: req.file.originalname,
+                    name: req.file.originalname, // Frontend expects 'name'
                     fileUrl,
-                    fileSize: req.file.size,
+                    size: req.file.size, // Frontend expects 'size'
                     visibility: visibility || 'PRIVATE',
+                    isPublic: (visibility || 'PRIVATE') === 'PUBLIC',
                     type: type || 'OTHER',
                     uploaderId,
-                    createdAt: new Date()
+                    createdAt: new Date(),
+                    versions: []
                 }
             });
         } catch (err) {

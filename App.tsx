@@ -338,7 +338,13 @@ const App: React.FC = () => {
 
       // Optimistically add the new doc (or use the response if it returns the full doc object)
       if (response.success && response.document) {
-        setDocuments([response.document, ...documents]);
+        // ENHANCEMENT: Ensure we have all required fields for the UI to prevent crashes
+        const newDoc = {
+          ...response.document,
+          uploaderName: auth.user.name, // Inject current user name as uploader
+          versions: response.document.versions || [] // Ensure versions array exists
+        };
+        setDocuments([newDoc, ...documents]);
       }
     } catch (e) {
       console.error("Failed to upload document", e);
