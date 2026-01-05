@@ -55,6 +55,8 @@ module.exports = (pool) => {
 
             // 2. Insert Items
             if (items && items.length > 0) {
+                console.log('Inserting Items:', JSON.stringify(items, null, 2));
+
                 const itemValues = items.map(item => [
                     item.id || uuidv4(),
                     proposalId,
@@ -64,6 +66,8 @@ module.exports = (pool) => {
                     item.price,
                     item.description
                 ]);
+
+                console.log('Item Values to Insert:', JSON.stringify(itemValues, null, 2));
 
                 await connection.query(
                     `INSERT INTO proposal_items (id, proposalId, productId, name, quantity, price, description) VALUES ?`,
