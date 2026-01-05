@@ -30,7 +30,7 @@ CREATE TABLE interactions (
     FOREIGN KEY (userId) REFERENCES users(id)
 );
 
-CREATE TABLE tasks (
+CREATE TABLE IF NOT EXISTS tasks (
     id VARCHAR(255) PRIMARY KEY,
     tenantId VARCHAR(255) NOT NULL,
     leadId VARCHAR(255) NOT NULL,
@@ -45,7 +45,7 @@ CREATE TABLE tasks (
     FOREIGN KEY (leadId) REFERENCES leads(id) ON DELETE CASCADE
 );
 
-CREATE TABLE documents (
+CREATE TABLE IF NOT EXISTS documents (
     id VARCHAR(255) PRIMARY KEY,
     tenantId VARCHAR(255) NOT NULL,
     leadId VARCHAR(255),
