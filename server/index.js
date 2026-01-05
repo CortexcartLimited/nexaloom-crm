@@ -26,7 +26,7 @@ app.get('/api/leads', async (req, res) => {
 
     try {
         const [rows] = await pool.query(
-            'SELECT * FROM leads WHERE tenantId = ? ORDER BY createdAt DESC', 
+            'SELECT * FROM leads WHERE tenantId = ? ORDER BY createdAt DESC',
             [tenantId]
         );
         res.json(rows);
@@ -39,7 +39,7 @@ app.get('/api/leads', async (req, res) => {
 app.post('/api/leads', async (req, res) => {
     const { tenantId, name, company, email, phone, value, status } = req.body;
     const id = uuidv4();
-    
+
     try {
         await pool.query(
             `INSERT INTO leads (id, tenantId, name, company, email, phone, value, status, createdAt) 
@@ -102,12 +102,12 @@ app.post('/api/products', async (req, res) => {
 app.patch('/api/leads/:id', async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
-    
+
     try {
         // Dynamically build the update query based on provided fields
         const fields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
         const values = Object.values(updates);
-        
+
         await pool.query(
             `UPDATE leads SET ${fields} WHERE id = ?`,
             [...values, id]
@@ -121,7 +121,7 @@ app.patch('/api/leads/:id', async (req, res) => {
 // ROUTE: Create Interaction (Save Notes/Emails)
 app.post('/api/interactions', async (req, res) => {
     const { id, tenantId, leadId, userId, type, notes, date, metadata, productId } = req.body;
-    
+
     // Convert '2026-01-04T11:36:41.196Z' to '2026-01-04 11:36:41'
     const formattedDate = (date ? new Date(date) : new Date())
         .toISOString()
@@ -133,14 +133,14 @@ app.post('/api/interactions', async (req, res) => {
             `INSERT INTO interactions (id, tenantId, leadId, userId, type, notes, date, metadata, productId) 
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-                id || uuidv4(), 
-                tenantId, 
-                leadId, 
-                userId || null, 
-                type, 
-                notes, 
+                id || uuidv4(),
+                tenantId,
+                leadId,
+                userId || null,
+                type,
+                notes,
                 formattedDate, // Use the cleaned-up date here
-                JSON.stringify(metadata || {}), 
+                JSON.stringify(metadata || {}),
                 productId || null
             ]
         );
@@ -155,7 +155,7 @@ app.get('/api/discounts', async (req, res) => {
     const { tenantId } = req.query;
     try {
         const [rows] = await pool.query('SELECT * FROM discounts WHERE tenantId = ?', [tenantId]);
-        
+
         // This part is the "Magic Fix" for the disappearing discounts
         const sanitizedRows = rows.map(row => ({
             ...row,
@@ -171,11 +171,11 @@ app.get('/api/discounts', async (req, res) => {
 
 app.post('/api/discounts', async (req, res) => {
     const { id, tenantId, name, code, type, value, applicableProductIds, expiresAt, contractTerm, isManagerOnly } = req.body;
-    
+
     try {
         // Stringify the array for MySQL TEXT column
         const productsJson = JSON.stringify(applicableProductIds || ['ALL']);
-        
+
         // Format date for MySQL or use NULL
         const mysqlExpiresAt = expiresAt ? new Date(expiresAt).toISOString().slice(0, 19).replace('T', ' ') : null;
 
@@ -186,15 +186,15 @@ app.post('/api/discounts', async (req, res) => {
         `;
 
         await pool.query(query, [
-            id, 
-            tenantId, 
-            name, 
-            code, 
-            type, 
-            value, 
-            productsJson, 
-            mysqlExpiresAt, 
-            contractTerm || null, 
+            id,
+            tenantId,
+            name,
+            code,
+            type,
+            value,
+            productsJson,
+            mysqlExpiresAt,
+            contractTerm || null,
             isManagerOnly ? 1 : 0
         ]);
 
@@ -208,21 +208,21 @@ app.post('/api/discounts', async (req, res) => {
 app.delete('/api/discounts/:id', async (req, res) => {
     const { id } = req.params;
     const tenantId = req.headers['x-tenant-id'];
-  
+
     // FIX: Changed 'db' to 'pool' (or whatever your working routes use)
     pool.query('DELETE FROM discounts WHERE id = ? AND tenantId = ?', [id, tenantId], (err, result) => {
-      if (err) return res.status(500).json(err);
-      res.json({ message: "Deleted successfully" });
+        if (err) return res.status(500).json(err);
+        res.json({ message: "Deleted successfully" });
     });
-  });
+});
 
 // --- INTERACTIONS ROUTES ---
 app.get('/api/interactions', async (req, res) => {
     const { leadId, tenantId } = req.query;
-    if(!tenantId){
+    if (!tenantId) {
         return res.status(400).json({ error: 'tenantId is required' });
     }
-    
+
     let query = 'SELECT * FROM interactions WHERE tenantId = ?';
     const params = [tenantId];
 
@@ -239,6 +239,13 @@ app.get('/api/interactions', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+// --- TASKS ROUTES ---
+app.use('/api/tasks', require('./routes/tasks')(pool));
+
+// --- DOCUMENTS ROUTES ---
+app.use('/api/documents', require('./routes/documents')(pool));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
