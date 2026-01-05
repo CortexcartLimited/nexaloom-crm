@@ -1,9 +1,9 @@
 
 export enum UserRole {
   ADMIN = 'ADMIN',
-  TEAM_LEAD = 'TEAM_LEAD',
-  SALES_AGENT = 'SALES_AGENT',
-  RELATIONSHIP_AGENT = 'RELATIONSHIP_AGENT'
+  TEAM_LEADER = 'TEAM_LEADER',
+  SERVICE_AGENT = 'SERVICE_AGENT',
+  SALES_AGENT = 'SALES_AGENT'
 }
 
 export enum LeadStatus {
@@ -98,6 +98,7 @@ export interface Interaction {
   id: string;
   tenantId: string;
   leadId: string;
+  userId?: string;
   type: 'CALL' | 'EMAIL' | 'MEETING' | 'NOTE';
   notes: string;
   date: string;
@@ -166,7 +167,7 @@ export interface Discount {
   name: string;
   code: string;
   type: DiscountType;
-  value: number; 
+  value: number;
   contractTerm?: 6 | 12;
   isManagerOnly?: boolean;
   applicableProductIds: string[];

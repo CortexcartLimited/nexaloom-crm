@@ -1,25 +1,78 @@
 const API_BASE = '/crm/nexaloom-crm/api';
 
+const getHeaders = () => {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const token = localStorage.getItem('nexaloom_token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
+
+// Helper for requests
+const req = async (endpoint: string, options: RequestInit = {}) => {
+  const config = {
+    ...options,
+    headers: {
+      ...getHeaders(),
+      ...options.headers,
+    },
+  };
+  // Ensure content-type provided for POST/PUT if body exists and not FormData
+  if (config.body && typeof config.body === 'string' && !config.headers['Content-Type']) {
+    config.headers['Content-Type'] = 'application/json';
+  }
+
+  // For FormData, remove Content-Type to let browser set boundary
+  if (config.body instanceof FormData) {
+    const { 'Content-Type': ct, ...rest } = config.headers as any;
+    config.headers = rest;
+  }
+
+  const response = await fetch(`${API_BASE}${endpoint}`, config);
+  if (response.status === 401) {
+    // Handle unauthorized (optional: dispatch event or redirect)
+    console.warn('Unauthorized access. Token might be invalid.');
+  }
+  return response;
+};
+
 export const api = {
+  // Auth
+  login: async (credentials: any) => {
+    const response = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials),
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Login failed');
+    }
+    return response.json();
+  },
+  getMe: async () => {
+    const response = await req('/auth/me');
+    if (!response.ok) throw new Error('Failed to fetch user');
+    return response.json();
+  },
   // getTasks removed (mock)
   updateLead: async (id: string, updates: any) => {
-    const response = await fetch(`${API_BASE}/leads/${id}`, {
-      method: 'PATCH', // Using PATCH for partial updates
-      headers: { 'Content-Type': 'application/json' },
+    const response = await req(`/leads/${id}`, {
+      method: 'PATCH',
       body: JSON.stringify(updates),
     });
     return response.ok;
   },
 
   getLeads: async (tenantId: string) => {
-    const response = await fetch(`${API_BASE}/leads?tenantId=${tenantId}`);
+    const response = await req(`/leads?tenantId=${tenantId}`);
     if (!response.ok) return [];
     return response.json();
   },
   createLead: async (lead: any) => {
-    const response = await fetch(`${API_BASE}/leads`, {
+    const response = await req(`/leads`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(lead),
     });
     if (!response.ok) {
@@ -29,9 +82,8 @@ export const api = {
     return response.json();
   },
   updateLeadStatus: async (leadId: string, status: string) => {
-    const response = await fetch(`${API_BASE}/leads/${leadId}/status`, {
+    const response = await req(`/leads/${leadId}/status`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     });
     if (!response.ok) {
@@ -43,14 +95,13 @@ export const api = {
 
   // Products
   getProducts: async (tenantId: string) => {
-    const response = await fetch(`${API_BASE}/products?tenantId=${tenantId}`);
+    const response = await req(`/products?tenantId=${tenantId}`);
     if (!response.ok) throw new Error('Failed to fetch products');
     return response.json();
   },
   createProduct: async (product: any) => {
-    const response = await fetch(`${API_BASE}/products`, {
+    const response = await req(`/products`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(product),
     });
     if (!response.ok) throw new Error('Failed to create product');
@@ -59,14 +110,13 @@ export const api = {
 
   // Discounts
   getDiscounts: async (tenantId: string) => {
-    const response = await fetch(`${API_BASE}/discounts?tenantId=${tenantId}`);
+    const response = await req(`/discounts?tenantId=${tenantId}`);
     if (!response.ok) throw new Error('Failed to fetch discounts');
     return response.json();
   },
   addDiscount: async (discount: any) => {
-    const response = await fetch(`${API_BASE}/discounts`, {
+    const response = await req(`/discounts`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(discount),
     });
     return response.ok;
@@ -74,18 +124,17 @@ export const api = {
 
   // Interactions
   getInteractions: async (tenantId: string, leadId?: string) => {
-    let url = `${API_BASE}/interactions?tenantId=${tenantId}`;
+    let url = `/interactions?tenantId=${tenantId}`;
     if (leadId) {
       url += `&leadId=${leadId}`;
     }
-    const response = await fetch(url);
+    const response = await req(url);
     if (!response.ok) throw new Error('Failed to fetch interactions');
     return response.json();
   },
   createInteraction: async (interaction: any) => {
-    const response = await fetch(`${API_BASE}/interactions`, {
+    const response = await req(`/interactions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(interaction),
     });
     if (!response.ok) throw new Error('Failed to create interaction');
@@ -94,30 +143,28 @@ export const api = {
 
   // Tasks
   getTasks: async (tenantId: string) => {
-    const response = await fetch(`${API_BASE}/tasks?tenantId=${tenantId}`);
+    const response = await req(`/tasks?tenantId=${tenantId}`);
     if (!response.ok) throw new Error('Failed to fetch tasks');
     return response.json();
   },
   createTask: async (task: any) => {
-    const response = await fetch(`${API_BASE}/tasks`, {
+    const response = await req(`/tasks`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(task),
     });
     if (!response.ok) throw new Error('Failed to create task');
     return response.json();
   },
   updateTask: async (id: string, updates: any) => {
-    const response = await fetch(`${API_BASE}/tasks/${id}`, {
+    const response = await req(`/tasks/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
     });
     if (!response.ok) throw new Error('Failed to update task');
     return response.json();
   },
   deleteTask: async (id: string, tenantId?: string) => {
-    const response = await fetch(`${API_BASE}/tasks/${id}${tenantId ? `?tenantId=${tenantId}` : ''}`, {
+    const response = await req(`/tasks/${id}${tenantId ? `?tenantId=${tenantId}` : ''}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete task');
@@ -126,20 +173,20 @@ export const api = {
 
   // Documents
   getDocuments: async (tenantId: string) => {
-    const response = await fetch(`${API_BASE}/documents?tenantId=${tenantId}`);
+    const response = await req(`/documents?tenantId=${tenantId}`);
     if (!response.ok) throw new Error('Failed to fetch documents');
     return response.json();
   },
   uploadDocument: async (formData: FormData) => {
-    const response = await fetch(`${API_BASE}/documents/upload`, {
+    const response = await req(`/documents/upload`, {
       method: 'POST',
-      body: formData, // fetch automatically sets Content-Type to multipart/form-data
+      body: formData,
     });
     if (!response.ok) throw new Error('Failed to upload document');
     return response.json();
   },
   deleteDocument: async (id: string) => {
-    const response = await fetch(`${API_BASE}/documents/${id}`, {
+    const response = await req(`/documents/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete document');
@@ -148,30 +195,28 @@ export const api = {
 
   // Proposals
   getProposals: async (tenantId: string) => {
-    const response = await fetch(`${API_BASE}/proposals?tenantId=${tenantId}`);
+    const response = await req(`/proposals?tenantId=${tenantId}`);
     if (!response.ok) throw new Error('Failed to fetch proposals');
     return response.json();
   },
   createProposal: async (proposal: any) => {
-    const response = await fetch(`${API_BASE}/proposals`, {
+    const response = await req(`/proposals`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(proposal),
     });
     if (!response.ok) throw new Error('Failed to create proposal');
     return response.json();
   },
   updateProposal: async (id: string, updates: any) => {
-    const response = await fetch(`${API_BASE}/proposals/${id}`, {
+    const response = await req(`/proposals/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
     });
     if (!response.ok) throw new Error('Failed to update proposal');
     return response.json();
   },
   deleteProposal: async (id: string) => {
-    const response = await fetch(`${API_BASE}/proposals/${id}`, {
+    const response = await req(`/proposals/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete proposal');
@@ -180,30 +225,28 @@ export const api = {
 
   // Knowledge Base
   getArticles: async (tenantId: string) => {
-    const response = await fetch(`${API_BASE}/knowledge-base?tenantId=${tenantId}`);
+    const response = await req(`/knowledge-base?tenantId=${tenantId}`);
     if (!response.ok) throw new Error('Failed to fetch articles');
     return response.json();
   },
   createArticle: async (article: any) => {
-    const response = await fetch(`${API_BASE}/knowledge-base`, {
+    const response = await req(`/knowledge-base`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(article),
     });
     if (!response.ok) throw new Error('Failed to create article');
     return response.json();
   },
   updateArticle: async (id: string, updates: any) => {
-    const response = await fetch(`${API_BASE}/knowledge-base/${id}`, {
+    const response = await req(`/knowledge-base/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
     });
     if (!response.ok) throw new Error('Failed to update article');
     return response.json();
   },
   deleteArticle: async (id: string) => {
-    const response = await fetch(`${API_BASE}/knowledge-base/${id}`, {
+    const response = await req(`/knowledge-base/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete article');
@@ -212,30 +255,28 @@ export const api = {
 
   // Tickets
   getTickets: async (tenantId: string) => {
-    const response = await fetch(`${API_BASE}/tickets?tenantId=${tenantId}`);
+    const response = await req(`/tickets?tenantId=${tenantId}`);
     if (!response.ok) throw new Error('Failed to fetch tickets');
     return response.json();
   },
   createTicket: async (ticket: any) => {
-    const response = await fetch(`${API_BASE}/tickets`, {
+    const response = await req(`/tickets`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(ticket),
     });
     if (!response.ok) throw new Error('Failed to create ticket');
     return response.json();
   },
   updateTicket: async (id: string, updates: any) => {
-    const response = await fetch(`${API_BASE}/tickets/${id}`, {
+    const response = await req(`/tickets/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
     });
     if (!response.ok) throw new Error('Failed to update ticket');
     return response.json();
   },
   deleteTicket: async (id: string) => {
-    const response = await fetch(`${API_BASE}/tickets/${id}`, {
+    const response = await req(`/tickets/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete ticket');
@@ -244,30 +285,28 @@ export const api = {
 
   // Users
   getUsers: async (tenantId: string) => {
-    const response = await fetch(`${API_BASE}/users?tenantId=${tenantId}`);
+    const response = await req(`/users?tenantId=${tenantId}`);
     if (!response.ok) throw new Error('Failed to fetch users');
     return response.json();
   },
   createUser: async (user: any) => {
-    const response = await fetch(`${API_BASE}/users`, {
+    const response = await req(`/users`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(user),
     });
     if (!response.ok) throw new Error('Failed to create user');
     return response.json();
   },
   updateUser: async (id: string, updates: any) => {
-    const response = await fetch(`${API_BASE}/users/${id}`, {
+    const response = await req(`/users/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
     });
     if (!response.ok) throw new Error('Failed to update user');
     return response.json();
   },
   deleteUser: async (id: string) => {
-    const response = await fetch(`${API_BASE}/users/${id}`, {
+    const response = await req(`/users/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete user');
@@ -276,23 +315,21 @@ export const api = {
 
   // Settings
   getSettings: async (tenantId: string) => {
-    const response = await fetch(`${API_BASE}/settings?tenantId=${tenantId}`);
+    const response = await req(`/settings?tenantId=${tenantId}`);
     if (!response.ok) throw new Error('Failed to fetch settings');
     return response.json();
   },
   updateSettings: async (updates: any) => {
-    const response = await fetch(`${API_BASE}/settings`, {
+    const response = await req(`/settings`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
     });
     if (!response.ok) throw new Error('Failed to update settings');
     return response.json();
   },
   initTenant: async (id: string, name: string) => {
-    await fetch(`${API_BASE}/settings/init`, {
+    await req(`/settings/init`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, name }),
     });
   }

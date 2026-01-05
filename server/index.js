@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
+const { authenticateToken } = require('./middleware/authMiddleware');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env.production') })
 console.log('DB Config Check:', {
     host: process.env.DB_HOST,
@@ -21,6 +22,14 @@ const pool = mysql.createPool({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
 });
+
+// --- AUTH ROUTES ---
+app.use('/api/auth', require('./routes/auth')(pool));
+
+// Apply Auth Middleware to all API routes below
+// NOTE: We exclude /api/auth (defined above) and maybe public endpoints if any.
+// For now, protecting everything else.
+app.use('/api', authenticateToken);
 
 // --- LEADS ROUTES ---
 

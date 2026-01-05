@@ -13,12 +13,15 @@ import { CalendarView } from './components/CalendarView';
 import { TasksView } from './components/TasksView';
 import { TicketsView } from './components/TicketsView';
 import { DemoAccountsView } from './components/DemoAccountsView';
+// Helper to render user management if needed within settings or separate
 import { UserManagementView } from './components/UserManagementView';
 import { DialerPanel } from './components/DialerPanel';
-import { AuthState, Lead, LeadStatus, Product, Discount, Document, DocumentVersion, Interaction, Task, Tenant, Ticket, DemoAccount, Proposal, KnowledgeBaseArticle, User } from './types';
+import { AuthState, User, Lead, LeadStatus, Product, Discount, Document, DocumentVersion, Interaction, Task, Tenant, Ticket, DemoAccount, Proposal, KnowledgeBaseArticle, UserRole } from './types';
 import { Hexagon, Bell, X, ArrowRight } from 'lucide-react';
 import './index.css';
 import { api } from './services/api';
+import { Login } from './components/Login';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -54,6 +57,22 @@ const App: React.FC = () => {
 
   const processedRemindersRef = useRef<Set<string>>(new Set());
 
+  // Define allowed tabs per role
+  const getTabsForRole = (role?: UserRole): string[] => {
+    if (!role) return [];
+    switch (role) {
+      case UserRole.ADMIN:
+      case UserRole.TEAM_LEADER:
+        return ['dashboard', 'leads', 'contacts', 'tasks', 'calendar', 'proposals', 'catalog', 'documents', 'kb', 'tickets', 'demos', 'users', 'schema', 'settings'];
+      case UserRole.SALES_AGENT:
+        return ['dashboard', 'leads', 'contacts', 'tasks', 'calendar', 'proposals', 'catalog', 'kb']; // No settings, no global reports (assuming dashboard is personal or limited)
+      case UserRole.SERVICE_AGENT:
+        return ['tickets', 'documents', 'kb', 'tasks', 'contacts']; // Primarily support
+      default:
+        return ['dashboard'];
+    }
+  };
+
   useEffect(() => {
     const init = async () => {
       const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
@@ -68,55 +87,98 @@ const App: React.FC = () => {
       const savedBg = localStorage.getItem('nexaloom_bg_theme');
       if (savedBg) setBackgroundId(savedBg);
 
-      const { user, tenant } = {
-        user: { id: 'u1', name: "Demo User", email: "demo@nexaloom.com", role: 'ADMIN', preferences: { theme: 'light' } },
-        tenant: { id: 't1', name: "Nexaloom Demo" }
-      };
+      const token = localStorage.getItem('nexaloom_token');
+      if (token) {
+        try {
+          const user = await api.getMe();
+          // Fetch tenant info - assuming user object has tenantId or we fetch settings
+          const settings = await api.getSettings(user.tenantId).catch(() => ({ id: user.tenantId, name: 'My Company' }));
 
-      if (user.preferences) {
-        setTheme(user.preferences.theme);
-        document.documentElement.classList.toggle('dark', user.preferences.theme === 'dark');
-        localStorage.setItem('theme', user.preferences.theme);
+          setAuth({
+            user,
+            tenant: settings as Tenant,
+            isAuthenticated: true
+          });
 
-        if (user.preferences.backgroundId) {
-          setBackgroundId(user.preferences.backgroundId);
-          localStorage.setItem('nexaloom_bg_theme', user.preferences.backgroundId);
+          // Set Theme from preferences
+          if (user.preferences) {
+            if (user.preferences.theme) {
+              setTheme(user.preferences.theme);
+              document.documentElement.classList.toggle('dark', user.preferences.theme === 'dark');
+            }
+            if (user.preferences.backgroundId) {
+              setBackgroundId(user.preferences.backgroundId);
+            }
+          }
+
+          // Load Data
+          await loadData(user.tenantId);
+
+          // Set initial tab based on role
+          const allowed = getTabsForRole(user.role);
+          if (!allowed.includes('dashboard') && allowed.length > 0) {
+            setActiveTab(allowed[0]);
+          }
+
+        } catch (e) {
+          console.error("Auth Failed:", e);
+          localStorage.removeItem('nexaloom_token');
+          setAuth({ user: null, tenant: null, isAuthenticated: false });
         }
-      }
-
-      setAuth({ user, tenant, isAuthenticated: true });
-
-      if (tenant) {
-        const [fetchedLeads, fetchedProducts, fetchedDiscounts, fetchedInteractions, fetchedTasks, fetchedProposals, fetchedArticles, fetchedTickets, fetchedUsers, fetchedSettings] = await Promise.all([
-          api.getLeads(tenant.id).catch(() => []),
-          api.getProducts(tenant.id).catch(() => []),
-          api.getDiscounts(tenant.id).catch(() => []),
-          api.getInteractions(tenant.id).catch(() => []),
-          api.getTasks(tenant.id).catch(() => []),
-          api.getProposals(tenant.id).catch(() => []),
-          api.getArticles(tenant.id).catch(() => []),
-          api.getTickets(tenant.id).catch(() => []),
-          api.getUsers(tenant.id).catch(() => []),
-          api.getSettings(tenant.id).catch(() => ({})),
-        ]);
-
-        setLeads(fetchedLeads);
-        setProducts(fetchedProducts);
-        setDiscounts(fetchedDiscounts);
-        setInteractions(fetchedInteractions);
-        setTasks(fetchedTasks);
-        setProposals(fetchedProposals);
-        setArticles(fetchedArticles);
-        setTickets(fetchedTickets);
-        setUsers(fetchedUsers);
-        // Tenant is already set, but we could update it if settings changed
-        setAuth(prev => prev.tenant ? { ...prev, tenant: { ...prev.tenant, ...fetchedSettings } } : prev);
       }
 
       setLoading(false);
     };
     init();
   }, []);
+
+  const loadData = async (tenantId: string) => {
+    const [fetchedLeads, fetchedProducts, fetchedDiscounts, fetchedInteractions, fetchedTasks, fetchedProposals, fetchedArticles, fetchedTickets, fetchedUsers, fetchedDocuments] = await Promise.all([
+      api.getLeads(tenantId).catch(() => []),
+      api.getProducts(tenantId).catch(() => []),
+      api.getDiscounts(tenantId).catch(() => []),
+      api.getInteractions(tenantId).catch(() => []),
+      api.getTasks(tenantId).catch(() => []),
+      api.getProposals(tenantId).catch(() => []),
+      api.getArticles(tenantId).catch(() => []),
+      api.getTickets(tenantId).catch(() => []),
+      api.getUsers(tenantId).catch(() => []),
+      api.getDocuments(tenantId).catch(() => []),
+    ]);
+
+    setLeads(fetchedLeads);
+    setProducts(fetchedProducts);
+    setDiscounts(fetchedDiscounts);
+    setInteractions(fetchedInteractions);
+    setTasks(fetchedTasks);
+    setProposals(fetchedProposals);
+    setArticles(fetchedArticles);
+    setTickets(fetchedTickets);
+    setUsers(fetchedUsers);
+    setDocuments(fetchedDocuments);
+  };
+
+  const handleLoginSuccess = async (token: string, user: any) => {
+    localStorage.setItem('nexaloom_token', token);
+    setLoading(true);
+    try {
+      const settings = await api.getSettings(user.tenantId).catch(() => ({ id: user.tenantId, name: 'My Company' }));
+      setAuth({ user, tenant: settings as Tenant, isAuthenticated: true });
+
+      // Load data
+      await loadData(user.tenantId);
+
+      // Redirect logic
+      const allowed = getTabsForRole(user.role);
+      if (allowed.includes('dashboard')) setActiveTab('dashboard');
+      else if (allowed.length > 0) setActiveTab(allowed[0]);
+
+    } catch (e) {
+      console.error("Post-login load failed", e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (loading || !auth.isAuthenticated) return;
@@ -540,10 +602,15 @@ const App: React.FC = () => {
   };
 
   // 2. Handle Adding Interactions (Notes, Emails, Calls)
-  const handleAddInteraction = async (interaction: Interaction) => {
+  const handleAddInteraction = async (interactionData: Omit<Interaction, 'id' | 'date'>) => {
     try {
-      // Ensure tenantId is included
-      const payload = { ...interaction, tenantId: auth.tenant?.id };
+      // Ensure tenantId is included and add missing fields
+      const payload: Interaction = {
+        ...interactionData,
+        tenantId: auth.tenant?.id || '',
+        id: `int-${Date.now()}`,
+        date: new Date().toISOString()
+      };
 
       const success = await api.createInteraction(payload);
       if (success) {
@@ -634,7 +701,7 @@ const App: React.FC = () => {
   }
 
   if (!auth.isAuthenticated || !auth.user || !auth.tenant) {
-    return <div>Login required (Auto-login failed)</div>;
+    return <Login onLoginSuccess={handleLoginSuccess} />;
   }
   const handleDeleteDiscount = async (id: string) => {
     const tenantId = auth.tenant?.id;
@@ -801,7 +868,7 @@ const App: React.FC = () => {
             onAddInteraction={handleAddInteraction}
           />
         )}
-        {activeTab === 'users' && auth.user.role === 'ADMIN' && (
+        {activeTab === 'users' && (auth.user.role === 'ADMIN' || auth.user.role === 'TEAM_LEADER') && (
           <UserManagementView
             users={users}
             currentUser={auth.user}
