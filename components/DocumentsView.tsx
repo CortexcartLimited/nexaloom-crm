@@ -37,7 +37,8 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ documents, user, o
     const [editIsPublic, setEditIsPublic] = useState(true);
 
     const filteredDocs = documents.filter(doc => {
-        const matchesSearch = doc.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const docName = doc.name || '';
+        const matchesSearch = docName.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesFilter = filter === 'ALL' ? true : (!doc.isPublic && doc.uploaderId === user.id);
         return matchesSearch && matchesFilter;
     });
