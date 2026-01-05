@@ -736,6 +736,15 @@ const App: React.FC = () => {
       loadDiscounts(auth.tenant.id)
     ]);
   };
+  const handleLogout = () => {
+    localStorage.removeItem('nexaloom_token');
+    setAuth({ user: null, tenant: null, isAuthenticated: false });
+    // Optional: Only reload if you want to clear all react state completely, 
+    // but clearing auth state usually triggers the login screen which is cleaner.
+    // If you prefer a hard reset:
+    window.location.href = '/';
+  };
+
   return (
     <>
       <Layout
@@ -743,7 +752,7 @@ const App: React.FC = () => {
         onTabChange={setActiveTab}
         user={auth.user}
         tenant={auth.tenant}
-        onLogout={() => window.location.reload()}
+        onLogout={handleLogout}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         theme={theme}

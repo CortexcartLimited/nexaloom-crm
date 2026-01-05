@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'nexaloom_secret_key_change_me';
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_development_only';
 
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
