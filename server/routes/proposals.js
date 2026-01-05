@@ -38,7 +38,7 @@ module.exports = (pool) => {
 
     // GET /api/proposals/:id (Single)
     router.get('/:id', async (req, res) => {
-        const id = parseInt(req.params.id, 10);
+        const { id } = req.params;
         try {
             const [rows] = await pool.query('SELECT * FROM proposals WHERE id = ?', [id]);
             if (rows.length === 0) return res.status(404).json({ error: 'Proposal not found' });
@@ -62,7 +62,7 @@ module.exports = (pool) => {
 
     // POST /api/proposals (Create)
     router.post('/', async (req, res) => {
-        const { tenantId, name, leadId, leadName, leadCompany, items, totalValue, status, validUntil, terms, createdBy } = req.body;
+        const { id, tenantId, name, leadId, leadName, leadCompany, items, totalValue, status, validUntil, terms, createdBy } = req.body;
 
         const connection = await pool.getConnection();
         try {
@@ -70,14 +70,15 @@ module.exports = (pool) => {
 
             const validUntilDate = validUntil ? new Date(validUntil).toISOString().slice(0, 19).replace('T', ' ') : null;
 
-            // 1. Insert Proposal (Let DB auto-increment ID)
-            const [result] = await connection.query(
-                `INSERT INTO proposals (tenantId, name, leadId, leadName, leadCompany, totalValue, status, validUntil, terms, createdBy, createdAt) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-                [tenantId, name, leadId, leadName, leadCompany, totalValue, status, validUntilDate, terms, createdBy]
+            // 1. Insert Proposal
+            const proposalId = id || uuidv4();
+            await connection.query(
+                `INSERT INTO proposals (id, tenantId, name, leadId, leadName, leadCompany, totalValue, status, validUntil, terms, createdBy, createdAt) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+                [proposalId, tenantId, name, leadId, leadName, leadCompany, totalValue, status, validUntilDate, terms, createdBy]
             );
 
-            const proposalId = result.insertId;
+
 
             // 2. Insert Items
             if (items && items.length > 0) {
@@ -111,7 +112,7 @@ module.exports = (pool) => {
 
     // PUT /api/proposals/:id (Update)
     router.put('/:id', async (req, res) => {
-        const id = parseInt(req.params.id, 10);
+        const { id } = req.params;
         const updates = req.body;
         const items = updates.items;
 
@@ -170,7 +171,7 @@ module.exports = (pool) => {
 
     // DELETE /api/proposals/:id
     router.delete('/:id', async (req, res) => {
-        const id = parseInt(req.params.id, 10);
+        const { id } = req.params;
         try {
             await pool.query('DELETE FROM proposals WHERE id = ?', [id]);
             // Items filtered by CASCADE foreign key
@@ -182,7 +183,7 @@ module.exports = (pool) => {
 
     // POST /api/proposals/:id/files (Update Attachments)
     router.post('/:id/files', async (req, res) => {
-        const id = parseInt(req.params.id, 10);
+        const { id } = req.params;
         const { documentIds } = req.body;
 
         const connection = await pool.getConnection();
@@ -210,7 +211,7 @@ module.exports = (pool) => {
 
     // POST /api/proposals/:id/send (Email Proposal)
     router.post('/:id/send', async (req, res) => {
-        const id = parseInt(req.params.id, 10);
+        const { id } = req.params;
 
         const connection = await pool.getConnection();
         try {
