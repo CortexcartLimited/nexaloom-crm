@@ -33,9 +33,9 @@ module.exports = (pool) => {
         // Map DB columns to frontend Document interface
         // fileName -> name, fileSize -> size
         let query = `
-            SELECT d.id, d.tenantId, d.leadId, d.fileName as name, d.fileUrl, d.fileSize as size, 
-                   d.visibility, d.type, d.uploaderId, d.createdAt,
-                   u.name as uploaderName
+            SELECT d.id, d.tenantId, d.leadId, d.fileName as name, d.fileUrl, d.fileUrl as file_path, d.fileSize as size, 
+            d.visibility, d.type, d.uploaderId, d.createdAt,
+            u.name as uploaderName
             FROM documents d
             LEFT JOIN users u ON d.uploaderId = u.id
             WHERE d.tenantId = ?`;

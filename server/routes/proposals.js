@@ -46,7 +46,7 @@ module.exports = (pool) => {
             proposal.items = items;
 
             const [files] = await pool.query(`
-                SELECT pf.documentId as id, d.name 
+                SELECT pf.documentId as id, d.fileName as name 
                 FROM proposal_files pf 
                 JOIN documents d ON pf.documentId = d.id 
                 WHERE pf.proposalId = ?`, [id]);
