@@ -238,6 +238,14 @@ export const api = {
     if (!response.ok) throw new Error('Failed to update proposal files');
     return response.json();
   },
+  sendProposal: async (id: string, email?: string) => {
+    const response = await req(`/proposals/${id}/send`, {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+    if (!response.ok) throw new Error('Failed to send proposal');
+    return response.json();
+  },
 
   // Knowledge Base
   getArticles: async (tenantId: string) => {

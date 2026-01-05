@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
+const path = require('path');
+const { sendProposalEmail } = require('../services/emailService');
 
 module.exports = (pool) => {
     // GET /api/proposals (List)
@@ -205,6 +207,61 @@ module.exports = (pool) => {
         } catch (err) {
             await connection.rollback();
             res.status(500).json({ error: err.message });
+        } finally {
+            connection.release();
+        }
+    });
+
+    // POST /api/proposals/:id/send (Email Proposal)
+    router.post('/:id/send', async (req, res) => {
+        const { id } = req.params;
+
+        const connection = await pool.getConnection();
+        try {
+            // 1. Fetch Proposal & Lead Info
+            const [rows] = await connection.query(`
+                SELECT p.name as proposalName, p.leadId, p.tenantId, p.totalValue, l.name as leadName, l.email as leadEmail 
+                FROM proposals p
+                JOIN leads l ON p.leadId = l.id
+                WHERE p.id = ?
+            `, [id]);
+
+            if (rows.length === 0) return res.status(404).json({ error: 'Proposal not found' });
+            const { proposalName, leadName, leadEmail, tenantId, leadId, totalValue } = rows[0];
+
+            if (!leadEmail) return res.status(400).json({ error: 'Lead has no email address' });
+
+            // 2. Fetch Attached Files
+            const [files] = await connection.query(`
+                SELECT d.fileName, d.fileUrl 
+                FROM proposal_files pf 
+                JOIN documents d ON pf.documentId = d.id 
+                WHERE pf.proposalId = ?
+            `, [id]);
+
+            // 3. Prepare Attachments
+            const attachments = files.map(f => ({
+                filename: f.fileName,
+                path: path.join(__dirname, '../../', f.fileUrl) // Resolve absolute path from project root
+            }));
+
+            // 4. Send Email
+            await sendProposalEmail(leadEmail, leadName, proposalName, attachments);
+
+            // 5. Update Status
+            await connection.query('UPDATE proposals SET status = ? WHERE id = ?', ['Sent', id]);
+
+            // 6. Log Interaction
+            const interactionId = uuidv4();
+            await connection.query(`
+                INSERT INTO interactions (id, tenantId, leadId, type, notes, date)
+                VALUES (?, ?, ?, 'EMAIL', ?, NOW())
+            `, [interactionId, tenantId, leadId, `PROPOSAL SENT via Email. Value: $${totalValue}`]);
+
+            res.json({ success: true });
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Failed to send email: ' + err.message });
         } finally {
             connection.release();
         }

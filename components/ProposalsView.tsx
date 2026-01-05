@@ -22,6 +22,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
     // New state for file attachments
     const [availableDocuments, setAvailableDocuments] = useState<{ id: string, name: string }[]>([]);
     const [attachedDocIds, setAttachedDocIds] = useState<string[]>([]);
+    const [isSending, setIsSending] = useState(false);
     const [builderStep, setBuilderStep] = useState(1);
     const [activeProposal, setActiveProposal] = useState<Partial<Proposal>>({
         items: [],
@@ -158,21 +159,26 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
     };
 
     const handleSendProposal = async (proposalId: string) => {
-        await onUpdateProposal(proposalId, { status: ProposalStatus.SENT });
+        setIsSending(true);
+        try {
+            await api.sendProposal(proposalId);
+            await onUpdateProposal(proposalId, { status: ProposalStatus.SENT });
 
-        const proposal = proposals.find(p => p.id === proposalId);
-        if (proposal) {
-            // Log interaction
-            const interaction: Interaction = {
-                id: `int-prop-${Date.now()}`,
-                tenantId: user.tenantId,
-                leadId: proposal.leadId,
-                type: 'EMAIL',
-                notes: `PROPOSAL SENT: Proposal #${proposal.id.substring(0, 6).toUpperCase()} sent to client. Value: $${proposal.totalValue}`,
-                date: new Date().toISOString()
-            };
-            await onAddInteraction(interaction);
-            alert('Proposal sent successfully!');
+            // Update local state if editing
+            if (editingProposal && editingProposal.id === proposalId) {
+                setEditingProposal({ ...editingProposal, status: ProposalStatus.SENT });
+            }
+
+            const proposal = proposals.find(p => p.id === proposalId);
+            if (proposal) {
+                // Log interaction handled by backend now, but we can do UI alert
+                alert('Proposal sent successfully!');
+            }
+        } catch (error) {
+            console.error("Failed to send proposal", error);
+            alert("Failed to send proposal. Please check server logs.");
+        } finally {
+            setIsSending(false);
         }
     };
 
@@ -665,9 +671,23 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
                             </div>
                         </div>
 
-                        <div className="p-6 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 sticky bottom-0 z-10 backdrop-blur flex justify-end gap-3">
-                            <button onClick={() => setIsDrawerOpen(false)} className="px-4 py-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white font-medium">Cancel</button>
-                            <button onClick={handleUpdateActiveProposal} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-md">Update Proposal</button>
+                        <div className="p-6 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 sticky bottom-0 z-10 backdrop-blur flex justify-between items-center gap-3">
+                            <div>
+                                {editingProposal.status !== ProposalStatus.SENT && editingProposal.status !== ProposalStatus.ACCEPTED && (
+                                    <button
+                                        onClick={() => handleSendProposal(editingProposal.id!)}
+                                        disabled={isSending}
+                                        className="px-4 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 shadow-md flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                        <Send size={16} />
+                                        {isSending ? 'Sending...' : 'Send to Client'}
+                                    </button>
+                                )}
+                            </div>
+                            <div className="flex gap-3">
+                                <button onClick={() => setIsDrawerOpen(false)} className="px-4 py-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white font-medium">Cancel</button>
+                                <button onClick={handleUpdateActiveProposal} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-md">Update Proposal</button>
+                            </div>
                         </div>
                     </div>
                 </div>
