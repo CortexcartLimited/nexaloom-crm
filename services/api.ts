@@ -145,4 +145,155 @@ export const api = {
     if (!response.ok) throw new Error('Failed to delete document');
     return response.json();
   },
+
+  // Proposals
+  getProposals: async (tenantId: string) => {
+    const response = await fetch(`${API_BASE}/proposals?tenantId=${tenantId}`);
+    if (!response.ok) throw new Error('Failed to fetch proposals');
+    return response.json();
+  },
+  createProposal: async (proposal: any) => {
+    const response = await fetch(`${API_BASE}/proposals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(proposal),
+    });
+    if (!response.ok) throw new Error('Failed to create proposal');
+    return response.json();
+  },
+  updateProposal: async (id: string, updates: any) => {
+    const response = await fetch(`${API_BASE}/proposals/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (!response.ok) throw new Error('Failed to update proposal');
+    return response.json();
+  },
+  deleteProposal: async (id: string) => {
+    const response = await fetch(`${API_BASE}/proposals/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete proposal');
+    return response.json();
+  },
+
+  // Knowledge Base
+  getArticles: async (tenantId: string) => {
+    const response = await fetch(`${API_BASE}/knowledge-base?tenantId=${tenantId}`);
+    if (!response.ok) throw new Error('Failed to fetch articles');
+    return response.json();
+  },
+  createArticle: async (article: any) => {
+    const response = await fetch(`${API_BASE}/knowledge-base`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(article),
+    });
+    if (!response.ok) throw new Error('Failed to create article');
+    return response.json();
+  },
+  updateArticle: async (id: string, updates: any) => {
+    const response = await fetch(`${API_BASE}/knowledge-base/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (!response.ok) throw new Error('Failed to update article');
+    return response.json();
+  },
+  deleteArticle: async (id: string) => {
+    const response = await fetch(`${API_BASE}/knowledge-base/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete article');
+    return response.json();
+  },
+
+  // Tickets
+  getTickets: async (tenantId: string) => {
+    const response = await fetch(`${API_BASE}/tickets?tenantId=${tenantId}`);
+    if (!response.ok) throw new Error('Failed to fetch tickets');
+    return response.json();
+  },
+  createTicket: async (ticket: any) => {
+    const response = await fetch(`${API_BASE}/tickets`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ticket),
+    });
+    if (!response.ok) throw new Error('Failed to create ticket');
+    return response.json();
+  },
+  updateTicket: async (id: string, updates: any) => {
+    const response = await fetch(`${API_BASE}/tickets/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (!response.ok) throw new Error('Failed to update ticket');
+    return response.json();
+  },
+  deleteTicket: async (id: string) => {
+    const response = await fetch(`${API_BASE}/tickets/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete ticket');
+    return response.json();
+  },
+
+  // Users
+  getUsers: async (tenantId: string) => {
+    const response = await fetch(`${API_BASE}/users?tenantId=${tenantId}`);
+    if (!response.ok) throw new Error('Failed to fetch users');
+    return response.json();
+  },
+  createUser: async (user: any) => {
+    const response = await fetch(`${API_BASE}/users`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(user),
+    });
+    if (!response.ok) throw new Error('Failed to create user');
+    return response.json();
+  },
+  updateUser: async (id: string, updates: any) => {
+    const response = await fetch(`${API_BASE}/users/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (!response.ok) throw new Error('Failed to update user');
+    return response.json();
+  },
+  deleteUser: async (id: string) => {
+    const response = await fetch(`${API_BASE}/users/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete user');
+    return response.json();
+  },
+
+  // Settings
+  getSettings: async (tenantId: string) => {
+    const response = await fetch(`${API_BASE}/settings?tenantId=${tenantId}`);
+    if (!response.ok) throw new Error('Failed to fetch settings');
+    return response.json();
+  },
+  updateSettings: async (updates: any) => {
+    const response = await fetch(`${API_BASE}/settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (!response.ok) throw new Error('Failed to update settings');
+    return response.json();
+  },
+  initTenant: async (id: string, name: string) => {
+    await fetch(`${API_BASE}/settings/init`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, name }),
+    });
+  }
 };

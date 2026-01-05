@@ -87,17 +87,17 @@ const App: React.FC = () => {
       setAuth({ user, tenant, isAuthenticated: true });
 
       if (tenant) {
-        const [fetchedLeads, fetchedProducts, fetchedDiscounts, fetchedInteractions, fetchedTasks, fetchedProposals, fetchedArticles, fetchedTickets] = await Promise.all([
-          api.getLeads(tenant.id),
-          api.getProducts(tenant.id),
-          api.getDiscounts(tenant.id),
-          api.getInteractions(tenant.id),
-          api.getTasks(tenant.id),
-          api.getProposals(tenant.id),
-          api.getArticles(tenant.id),
-          api.getTickets(tenant.id),
-          api.getUsers(tenant.id),
-          api.getSettings(tenant.id),
+        const [fetchedLeads, fetchedProducts, fetchedDiscounts, fetchedInteractions, fetchedTasks, fetchedProposals, fetchedArticles, fetchedTickets, fetchedUsers, fetchedSettings] = await Promise.all([
+          api.getLeads(tenant.id).catch(() => []),
+          api.getProducts(tenant.id).catch(() => []),
+          api.getDiscounts(tenant.id).catch(() => []),
+          api.getInteractions(tenant.id).catch(() => []),
+          api.getTasks(tenant.id).catch(() => []),
+          api.getProposals(tenant.id).catch(() => []),
+          api.getArticles(tenant.id).catch(() => []),
+          api.getTickets(tenant.id).catch(() => []),
+          api.getUsers(tenant.id).catch(() => []),
+          api.getSettings(tenant.id).catch(() => ({})),
         ]);
 
         setLeads(fetchedLeads);
@@ -106,11 +106,11 @@ const App: React.FC = () => {
         setInteractions(fetchedInteractions);
         setTasks(fetchedTasks);
         setProposals(fetchedProposals);
-        setKbArticles(fetchedArticles);
+        setArticles(fetchedArticles);
         setTickets(fetchedTickets);
         setUsers(fetchedUsers);
         // Tenant is already set, but we could update it if settings changed
-        setAuth(prev => prev.tenant ? { ...prev, tenant: fetchedSettings } : prev);
+        setAuth(prev => prev.tenant ? { ...prev, tenant: { ...prev.tenant, ...fetchedSettings } } : prev);
       }
 
       setLoading(false);
