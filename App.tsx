@@ -336,15 +336,10 @@ const App: React.FC = () => {
 
       const response = await api.uploadDocument(formData);
 
-      // Optimistically add the new doc (or use the response if it returns the full doc object)
-      if (response.success && response.document) {
-        // ENHANCEMENT: Ensure we have all required fields for the UI to prevent crashes
-        const newDoc = {
-          ...response.document,
-          uploaderName: auth.user.name, // Inject current user name as uploader
-          versions: response.document.versions || [] // Ensure versions array exists
-        };
-        setDocuments([newDoc, ...documents]);
+      if (response.success) {
+        // REFACTOR: Fetch fresh data to ensure we have the correct join data (uploaderName, etc.)
+        // This prevents the "blank page" crash caused by incomplete local objects
+        await fetchDocuments();
       }
     } catch (e) {
       console.error("Failed to upload document", e);
