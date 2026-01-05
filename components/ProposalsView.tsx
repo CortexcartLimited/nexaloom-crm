@@ -19,7 +19,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
     const [builderStep, setBuilderStep] = useState(1);
     const [activeProposal, setActiveProposal] = useState<Partial<Proposal>>({
         items: [],
-        title: 'New Proposal',
+        name: 'New Proposal',
         totalValue: 0,
         status: ProposalStatus.DRAFT,
         validUntil: new Date(Date.now() + 1209600000).toISOString().split('T')[0], // 14 days
@@ -36,7 +36,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
     const handleStartBuilder = () => {
         setActiveProposal({
             items: [],
-            title: 'New Proposal',
+            name: 'New Proposal',
             totalValue: 0,
             status: ProposalStatus.DRAFT,
             validUntil: new Date(Date.now() + 1209600000).toISOString().split('T')[0],
@@ -90,7 +90,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
         const proposal: Proposal = {
             id: `prop-${Date.now()}`,
             tenantId: user.tenantId,
-            title: activeProposal.title || 'Untitled Proposal',
+            name: activeProposal.name || 'Untitled Proposal',
             leadId: lead.id,
             leadName: lead.name,
             leadCompany: lead.company,
@@ -157,12 +157,12 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
                         <div className="space-y-4">
                             <h3 className="text-sm font-bold uppercase text-gray-400 dark:text-gray-500 tracking-wider">1. Recipient Details</h3>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Proposal Title</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Proposal Name</label>
                                 <input
                                     type="text"
                                     className="w-full p-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={activeProposal.title || ''}
-                                    onChange={(e) => setActiveProposal({ ...activeProposal, title: e.target.value })}
+                                    value={activeProposal.name || ''}
+                                    onChange={(e) => setActiveProposal({ ...activeProposal, name: e.target.value })}
                                     placeholder="e.g. Q3 Marketing Services"
                                 />
                             </div>
@@ -264,7 +264,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
                         <div className="flex justify-between items-start mb-12 border-b border-gray-200 pb-8">
                             <div>
                                 <h1 className="text-3xl font-bold text-gray-800 tracking-tight">PROPOSAL</h1>
-                                <p className="text-xl font-medium text-gray-600 mt-2">{activeProposal.title}</p>
+                                <p className="text-xl font-medium text-gray-600 mt-2">{activeProposal.name}</p>
                                 <p className="text-gray-500 mt-1">#{Date.now().toString().slice(-6)}</p>
                             </div>
                             <div className="text-right">
@@ -392,7 +392,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                                        {prop.title}
+                                        {prop.name}
                                         <span className={`text-[10px] uppercase px-2 py-0.5 rounded-full font-bold ${getStatusColor(prop.status)}`}>
                                             {prop.status}
                                         </span>
