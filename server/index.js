@@ -137,8 +137,9 @@ app.post('/api/leads/:id/email', async (req, res) => {
 
         // 3. Send Email (Imported dynamically to ensure freshness, though top-level is better for perf)
         // We require it here to ensure we get the latest version if files changed without restart (in dev), 
-        // but for correctness we await it explicitly.
-        const { sendOutreachEmail } = require('./services/emailService');
+        // but for correctness we await it explicitly. 
+        // CORRECT PATH: Go up one level from 'server' to root, then into 'services'
+        const { sendOutreachEmail } = require('../services/emailService');
 
         console.log(`Attempting to send outreach email to ${lead.email} for lead ${lead.id}...`);
 
