@@ -23,23 +23,35 @@ const transporter = nodemailer.createTransport({
 
 /**
  * Helper to construct a clean 'From' address.
- * Safely handles SMTP_FROM variable whether it includes brackets or not.
+ * aggressive sanitization to prevent 501 syntax errors.
  */
 const getCleanFromAddress = (brandingCompanyName) => {
-    const rawEnvFrom = process.env.SMTP_FROM || '';
+    // 1. Determine the Name
+    // Fallback to 'Nexaloom CRM' if no company name is provided
+    let safeName = (brandingCompanyName || 'Nexaloom CRM').replace(/["<>]/g, '').trim();
 
-    // Case 1: .env has brackets (e.g. "My Company <support@example.com>")
-    // Return exactly as is to respect the user's specific identity config.
-    if (rawEnvFrom.includes('<') && rawEnvFrom.includes('>')) {
-        return rawEnvFrom;
+    // 2. Determine the Email
+    // Trust SMTP_USER as the canonical email if available, otherwise check SMTP_FROM
+    let rawEmail = process.env.SMTP_USER;
+
+    // If SMTP_USER is just a username (no @), try to extract from SMTP_FROM
+    if (!rawEmail || !rawEmail.includes('@')) {
+        const potentialFrom = process.env.SMTP_FROM || '';
+        // Regex to find email inside brackets or just an email
+        const match = potentialFrom.match(/<([^>]+)>/) || potentialFrom.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/);
+        if (match) {
+            rawEmail = match[1] || match[0];
+        }
     }
 
-    // Case 2: .env is just an email or empty. Construct using branding name.
-    // Fallback to SMTP_USER if SMTP_FROM is missing.
-    const emailPart = rawEnvFrom.trim() || process.env.SMTP_USER;
-    const cleanName = (brandingCompanyName || 'Nexaloom CRM').replace(/[^a-zA-Z0-9 ]/g, '');
+    // Fallback if we still have no email (shouldn't happen with valid config)
+    if (!rawEmail || !rawEmail.includes('@')) {
+        console.warn('Warning: Could not determine valid sender email from env. Using fallback.');
+        rawEmail = 'no-reply@example.com';
+    }
 
-    return `"${cleanName}" <${emailPart}>`;
+    // 3. Construct strictly formatted string
+    return `"${safeName}" <${rawEmail.trim()}>`;
 };
 
 const sendProposalEmail = async (to, leadName, proposalName, attachments, branding = {}, proposalDetails = {}) => {
