@@ -111,12 +111,13 @@ module.exports = (pool) => {
 
     // PUT /api/proposals/:id (Update)
     router.put('/:id', async (req, res) => {
-        const { id } = req.params;
-        const updates = req.body;
+        const { id } = req.params; // This is your 'prop-176...' string
+        const updates = { ...req.body };
         const items = updates.items;
 
-        // Remove items from main table update object
+        // Remove items and id from the main table update object
         delete updates.items;
+        delete updates.id;
 
         // Sanitize date if present
         if (updates.validUntil) {
@@ -127,22 +128,22 @@ module.exports = (pool) => {
         try {
             await connection.beginTransaction();
 
+            // FIX: Added backticks ` around keys to prevent syntax errors with reserved words like 'status' or 'name'
             const fields = Object.keys(updates).map(key => `\`${key}\` = ?`).join(', ');
             const values = Object.values(updates);
 
             if (fields.length > 0) {
+                // The ? handles the string ID 'prop-176...' safely
                 await connection.query(`UPDATE proposals SET ${fields} WHERE id = ?`, [...values, id]);
             }
 
-            // Sync Items if provided
+            // Sync Items
             if (items) {
-                // Delete old items
                 await connection.query('DELETE FROM proposal_items WHERE proposalId = ?', [id]);
 
-                // Insert new items
                 if (items.length > 0) {
                     const itemValues = items.map(item => [
-                        item.id || uuidv4(),
+                        item.id && !item.id.toString().startsWith('item-') ? item.id : uuidv4(),
                         id,
                         item.productId || null,
                         item.name,
@@ -162,6 +163,7 @@ module.exports = (pool) => {
             res.json({ success: true });
         } catch (err) {
             await connection.rollback();
+            console.error("Update Error:", err);
             res.status(500).json({ error: err.message });
         } finally {
             connection.release();
