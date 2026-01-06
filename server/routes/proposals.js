@@ -112,17 +112,13 @@ module.exports = (pool) => {
     // PUT /api/proposals/:id (Update)
     router.put('/:id', async (req, res) => {
         const { id } = req.params; // This is your 'prop-176...' string
-        const updates = { ...req.body };
-        const items = updates.items;
-        const files = updates.files; // Extract the files
+        // Destructure items and files out of req.body to prevent them from hitting the main table
+        const { items, files, ...updates } = req.body;
 
-        delete updates.items; // Don't try to save items in the proposals table
-        delete updates.files; // Don't try to save files in the proposals table
-        delete updates.id;    // Don't try to save the ID in the proposals table
-
-        // Remove items and id from the main table update object
-        delete updates.items;
+        // Ensure these definitely aren't in the updates object
         delete updates.id;
+        delete updates.items;
+        delete updates.files;
 
         // Sanitize date if present
         if (updates.validUntil) {
@@ -133,7 +129,8 @@ module.exports = (pool) => {
         try {
             await connection.beginTransaction();
 
-            // FIX: Added backticks ` around keys to prevent syntax errors with reserved words like 'status' or 'name'
+            // 1. Update Proposal Fields
+            // Use backticks ` around keys to prevent syntax errors with reserved words like 'status'
             const fields = Object.keys(updates).map(key => `\`${key}\` = ?`).join(', ');
             const values = Object.values(updates);
 
@@ -142,7 +139,7 @@ module.exports = (pool) => {
                 await connection.query(`UPDATE proposals SET ${fields} WHERE id = ?`, [...values, id]);
             }
 
-            // Sync Items
+            // 2. Sync Items
             if (items) {
                 await connection.query('DELETE FROM proposal_items WHERE proposalId = ?', [id]);
 
@@ -161,6 +158,29 @@ module.exports = (pool) => {
                         `INSERT INTO proposal_items (id, proposalId, productId, name, quantity, price, description) VALUES ?`,
                         [itemValues]
                     );
+                }
+            }
+
+            // 3. Sync Files
+            if (files) {
+                await connection.query('DELETE FROM proposal_files WHERE proposalId = ?', [id]);
+
+                if (files.length > 0) {
+                    // Map files to the correct structure for proposal_files
+                    // Expecting files to be an array of objects ({id: 'doc-X', name: '...'}) or just IDs
+                    const fileValues = files.map(f => {
+                        // If f is a string, assume it's the documentId
+                        // If f is an object, look for id or documentId property
+                        const docId = typeof f === 'string' ? f : (f.id || f.documentId);
+                        return [uuidv4(), id, docId];
+                    });
+
+                    if (fileValues.length > 0) {
+                        await connection.query(
+                            'INSERT INTO proposal_files (id, proposalId, documentId) VALUES ?',
+                            [fileValues]
+                        );
+                    }
                 }
             }
 
