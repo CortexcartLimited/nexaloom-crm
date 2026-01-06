@@ -112,6 +112,48 @@ app.post('/api/products', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+// ROUTE: Send Email Outreach to Lead
+app.post('/api/leads/:id/email', async (req, res) => {
+    const { id } = req.params;
+    const { subject, body } = req.body;
+    const { tenantId } = req.query; // Assuming passed in query or body, but let's look up lead first.
+
+    if (!subject || !body) return res.status(400).json({ error: 'Subject and Body are required' });
+
+    try {
+        // 1. Fetch Lead Details
+        const [leads] = await pool.query('SELECT * FROM leads WHERE id = ?', [id]);
+        if (leads.length === 0) return res.status(404).json({ error: 'Lead not found' });
+        const lead = leads[0];
+
+        // 2. Fetch Tenant Branding
+        const [tenants] = await pool.query('SELECT logoUrl, name, companyName, companyAddress, emailSignature, smtpConfig FROM tenants WHERE id = ?', [lead.tenantId]);
+        const branding = tenants[0] || { companyName: 'Nexaloom' };
+
+        // 3. Send Email
+        const { sendOutreachEmail } = require('./services/emailService');
+        await sendOutreachEmail(lead.email, lead.name, subject, body, {
+            companyName: branding.companyName || branding.name,
+            companyAddress: branding.companyAddress,
+            logoUrl: branding.logoUrl,
+            emailSignature: branding.emailSignature
+        });
+
+        // 4. Update Interactions Log
+        const interactionId = uuidv4();
+        await pool.query(
+            `INSERT INTO interactions (id, tenantId, leadId, type, notes, date, metadata) VALUES (?, ?, ?, 'EMAIL', ?, NOW(), ?)`,
+            [interactionId, lead.tenantId, id, `Outreach: ${subject}`, JSON.stringify({ sentTo: lead.email, subject })]
+        );
+
+        res.json({ success: true, message: 'Email sent successfully' });
+
+    } catch (err) {
+        console.error('Email Outreach Error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ROUTE: Update Lead (Edit Profile)
 app.patch('/api/leads/:id', async (req, res) => {
     const { id } = req.params;

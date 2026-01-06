@@ -156,4 +156,88 @@ const sendProposalEmail = async (to, leadName, proposalName, attachments, brandi
     }
 };
 
-module.exports = { sendProposalEmail };
+const sendOutreachEmail = async (to, leadName, subject, bodyContent, branding = {}) => {
+    const { companyName = 'Nexaloom CRM', companyAddress, logoUrl, emailSignature } = branding;
+
+    const fromName = companyName.replace(/[^a-zA-Z0-9 ]/g, '');
+    const fromAddress = `${fromName} <${process.env.SMTP_FROM.split('<')[1] || process.env.SMTP_FROM}>`;
+
+    let htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f7; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+            <td style="padding: 20px 0 30px 0;">
+                <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="border-collapse: collapse; border: 1px solid #e1e4e8; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                    <!-- Header -->
+                    <tr>
+                        <td align="center" style="padding: 30px; background-color: #ffffff; border-bottom: 1px solid #eeeeee;">
+                             ${logoUrl
+            ? `<img src="${logoUrl}" alt="${companyName}" style="display: block; max-height: 60px; max-width: 200px; height: auto;" />`
+            : `<h1 style="margin: 0; font-size: 24px; font-weight: bold; color: #333333;">${companyName}</h1>`
+        }
+                        </td>
+                    </tr>
+
+                    <!-- Body Content -->
+                    <tr>
+                        <td style="padding: 30px 40px;">
+                            <h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 22px;">${subject}</h2>
+                            <p style="margin: 0 0 15px 0; font-size: 16px; line-height: 24px; color: #555555;">Hello ${leadName},</p>
+                            
+                            <div style="font-size: 16px; line-height: 24px; color: #555555; white-space: pre-wrap; margin-bottom: 25px;">${bodyContent}</div>
+
+                            <p style="margin: 0 0 5px 0; font-size: 16px; color: #555555;">Best regards,</p>
+                            <p style="margin: 0; font-size: 16px; font-weight: bold; color: #333333;">${companyName}</p>
+                            
+                            <!-- Signature (Dynamic) -->
+                            ${emailSignature ? `
+                                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eeeeee; color: #777777; font-size: 14px; line-height: 22px;">
+                                    ${emailSignature.replace(/\n/g, '<br>')}
+                                </div>
+                            ` : ''}
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                         <td style="padding: 20px 30px; background-color: #f8f9fa; border-top: 1px solid #eeeeee; text-align: center;">
+                            <p style="margin: 0; font-size: 12px; line-height: 18px; color: #999999;">
+                                <strong>${companyName}</strong><br>
+                                ${companyAddress ? companyAddress.replace(/\n/g, ', ') : ''}
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+                <div style="height: 40px;"></div>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+    `;
+
+    const mailOptions = {
+        from: fromAddress,
+        to: to,
+        subject: subject,
+        html: htmlContent
+    };
+
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Outreach Email sent successfully:', info.messageId);
+        return info;
+    } catch (error) {
+        console.error('Nodemailer Error:', error);
+        throw error;
+    }
+};
+
+module.exports = { sendProposalEmail, sendOutreachEmail };

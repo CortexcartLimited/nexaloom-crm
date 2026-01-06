@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Lead, LeadStatus, Document } from '../types';
-import { 
-  MoreHorizontal, ShoppingBag, Plus, Sparkles, MessageSquare, X, Wand2, Upload, 
-  FileSpreadsheet, AlertCircle, ArrowRight, CheckCircle, ArrowLeft, 
-  User, DollarSign, Building, Mail, Phone, Copy, Paperclip, File, Search 
+import {
+  MoreHorizontal, ShoppingBag, Plus, Sparkles, MessageSquare, X, Wand2, Upload,
+  FileSpreadsheet, AlertCircle, ArrowRight, CheckCircle, ArrowLeft,
+  User, DollarSign, Building, Mail, Phone, Copy, Paperclip, File, Search
 } from 'lucide-react';
 import { generateEmailDraft, analyzeLeadPotential } from '../services/geminiService';
 
@@ -19,25 +19,27 @@ interface LeadsBoardProps {
 
 const COLUMNS = Object.values(LeadStatus);
 
-export const LeadsBoard: React.FC<LeadsBoardProps> = ({ 
-  leads, 
-  onStatusChange, 
-  onAddLead, 
-  onAddLeads, 
-  documents = [], 
+export const LeadsBoard: React.FC<LeadsBoardProps> = ({
+  leads,
+  onStatusChange,
+  onAddLead,
+  onAddLeads,
+  documents = [],
   onOpenDialer,
   products = [] // FIX 1: Added products to destructuring with a default empty array
 }) => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [modalMode, setModalMode] = useState<'EMAIL' | 'ANALYSIS' | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [aiDraft, setAiDraft] = useState('');
+  const [emailSubject, setEmailSubject] = useState('');
   const [emailContext, setEmailContext] = useState('Schedule a discovery call');
-  const [aiAnalysis, setAiAnalysis] = useState<{score: number, reasoning: string} | null>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<{ score: number, reasoning: string } | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  const [newLeadData, setNewLeadData] = useState<Partial<Lead & { productId: string, discount: number }>>({ 
+  const [newLeadData, setNewLeadData] = useState<Partial<Lead & { productId: string, discount: number }>>({
     name: '', company: '', email: '', phone: '', value: 0, status: LeadStatus.NEW, productId: '', discount: 0
   });
 
@@ -63,6 +65,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
     setSelectedLead(lead);
     setModalMode('EMAIL');
     setAiDraft('');
+    setEmailSubject(`Discovery: ${lead.company}`);
   };
 
   const handleGenerateDraft = async () => {
@@ -75,14 +78,14 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
 
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // 1. Find the product object to get its price
     const selectedProd = products.find(p => p.id === newLeadData.productId);
-    
+
     // 2. Ensure we are working with numbers (database values can sometimes be strings)
     const basePrice = selectedProd ? Number(selectedProd.price) : 0;
     const discount = Number(newLeadData.discount) || 0;
-    
+
     // 3. Calculate the final value
     const finalLeadValue = Math.max(0, basePrice - discount);
 
@@ -98,25 +101,56 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
 
     // 5. Cleanup
     setIsAddModalOpen(false);
-    setNewLeadData({ 
-      name: '', 
-      company: '', 
-      email: '', 
-      phone: '', 
-      value: 0, 
-      status: LeadStatus.NEW, 
-      productId: '', 
-      discount: 0 
+    setNewLeadData({
+      name: '',
+      company: '',
+      email: '',
+      phone: '',
+      value: 0,
+      status: LeadStatus.NEW,
+      productId: '',
+      discount: 0
     });
   };
-  
+
+  const handleSendEmail = async () => {
+    if (!selectedLead || !aiDraft || !emailSubject) return;
+    setIsSending(true);
+    try {
+      // Assume 'api' is available globally or imported. 
+      // Since it's not in props, we'll fetch directly.
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/leads/${selectedLead.id}/email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ subject: emailSubject, body: aiDraft })
+      });
+
+      if (!response.ok) throw new Error('Failed to send email');
+
+      // Success
+      setSelectedLead(null);
+      setModalMode(null);
+      // Optional: Show toast
+      console.log("Email sent!");
+    } catch (error) {
+      console.error(error);
+      alert("Failed to send email. Please try again.");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const handleOpenAnalysis = async (lead: Lead) => {
     setSelectedLead(lead);
     setModalMode('ANALYSIS');
     setIsGenerating(true);
     setAiAnalysis(null);
     try {
-      const analysis = await analyzeLeadPotential(lead, []); 
+      const analysis = await analyzeLeadPotential(lead, []);
       setAiAnalysis(analysis);
     } catch (error) {
       setAiAnalysis({ score: 0, reasoning: "Analysis unavailable." });
@@ -140,8 +174,8 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
           const totalValue = columnLeads.reduce((sum, lead) => sum + (Number(lead.value) || 0), 0);
 
           return (
-            <div 
-              key={status} 
+            <div
+              key={status}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, status)}
               className="flex-shrink-0 w-80 bg-gray-50/50 dark:bg-gray-800/40 rounded-xl p-3 flex flex-col h-full border border-gray-200 dark:border-gray-700"
@@ -160,7 +194,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
 
               <div className="flex-1 overflow-y-auto space-y-3 p-1 rounded-lg min-h-[150px]">
                 {columnLeads.map((lead) => (
-                  <div 
+                  <div
                     key={lead.id}
                     draggable
                     onDragStart={(e) => handleDragStart(e, lead.id)}
@@ -176,9 +210,9 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
                         ${(Number(lead.value) || 0).toLocaleString()}
                       </span>
                       <div className="flex gap-1">
-                          <button onClick={() => onOpenDialer(lead.phone, lead.id)} className="p-1.5 text-gray-400 hover:text-green-500"><Phone size={14} /></button>
-                          <button onClick={() => handleOpenAnalysis(lead)} className="p-1.5 text-gray-400 hover:text-purple-500"><Sparkles size={14} /></button>
-                          <button onClick={() => handleOpenEmail(lead)} className="p-1.5 text-gray-400 hover:text-blue-500"><Wand2 size={14} /></button>
+                        <button onClick={() => onOpenDialer(lead.phone, lead.id)} className="p-1.5 text-gray-400 hover:text-green-500"><Phone size={14} /></button>
+                        <button onClick={() => handleOpenAnalysis(lead)} className="p-1.5 text-gray-400 hover:text-purple-500"><Sparkles size={14} /></button>
+                        <button onClick={() => handleOpenEmail(lead)} className="p-1.5 text-gray-400 hover:text-blue-500"><Wand2 size={14} /></button>
                       </div>
                     </div>
                   </div>
@@ -192,82 +226,82 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
       {/* Manual Add Lead Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-                <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
-                    <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2"><User size={18} className="text-blue-500" /> New Lead</h3>
-                    <button onClick={() => setIsAddModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
-                </div>
-                
-                <form onSubmit={handleManualSubmit} className="p-6 space-y-4">
-  {/* SECTION 1: CONTACT INFO */}
-  <div className="space-y-3">
-    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contact Information</p>
-    <input required type="text" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none" value={newLeadData.name} onChange={e => setNewLeadData({...newLeadData, name: e.target.value})} placeholder="Full Name" />
-    <input type="text" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={newLeadData.company} onChange={e => setNewLeadData({...newLeadData, company: e.target.value})} placeholder="Company Name" />
-    <div className="grid grid-cols-2 gap-3">
-      <input type="email" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={newLeadData.email} onChange={e => setNewLeadData({...newLeadData, email: e.target.value})} placeholder="Email Address" />
-      <input type="tel" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={newLeadData.phone} onChange={e => setNewLeadData({...newLeadData, phone: e.target.value})} placeholder="Phone Number" />
-    </div>
-  </div>
-
-  {/* SECTION 2: DEAL INFO (CATALOG INTEGRATION) */}
-  <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
-    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Deal Details (From Catalog)</p>
-    <div className="space-y-4">
-      <div>
-        <label className="block text-[10px] text-gray-500 mb-1 font-bold uppercase">Target Product</label>
-        <div className="relative">
-          <ShoppingBag className="absolute left-3 top-2.5 text-gray-400" size={14} />
-          <select 
-            required
-            className="w-full pl-9 pr-3 py-2 rounded-lg border-gray-300 dark:border-gray-600 border text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white appearance-none focus:ring-2 focus:ring-blue-500 outline-none"
-            value={newLeadData.productId}
-            onChange={e => setNewLeadData({...newLeadData, productId: e.target.value})}
-          >
-           {products.map(prod => (
-  <option key={prod.id} value={prod.id}>
-    {/* Use optional chaining (?.) and a fallback string to prevent the crash */}
-    {prod.name} (${prod.price}/{prod.billingCycle?.toLowerCase() || 'unit'})
-  </option>
-))}
-          </select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-[10px] text-gray-500 mb-1 font-bold uppercase">Lead Status</label>
-          <select 
-            className="w-full px-3 py-2 rounded-lg border-gray-300 dark:border-gray-600 border text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            value={newLeadData.status}
-            onChange={e => setNewLeadData({...newLeadData, status: e.target.value as LeadStatus})}
-          >
-            {COLUMNS.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-[10px] text-gray-500 mb-1 font-bold uppercase">Intro Discount ($)</label>
-          <div className="relative">
-            <DollarSign className="absolute left-3 top-2.5 text-gray-400" size={14} />
-            <input 
-              type="number" 
-              className="w-full pl-9 pr-3 py-2 rounded-lg border-gray-300 dark:border-gray-600 border text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              value={newLeadData.discount}
-              onChange={e => setNewLeadData({...newLeadData, discount: parseFloat(e.target.value) || 0})}
-              placeholder="0.00"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div className="flex justify-end gap-3 pt-6">
-    <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 text-gray-500 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">Cancel</button>
-    <button type="submit" className="px-6 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg shadow-md hover:bg-blue-700 transition-all">Create & Value Lead</button>
-  </div>
-</form>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
+              <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2"><User size={18} className="text-blue-500" /> New Lead</h3>
+              <button onClick={() => setIsAddModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
             </div>
+
+            <form onSubmit={handleManualSubmit} className="p-6 space-y-4">
+              {/* SECTION 1: CONTACT INFO */}
+              <div className="space-y-3">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contact Information</p>
+                <input required type="text" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none" value={newLeadData.name} onChange={e => setNewLeadData({ ...newLeadData, name: e.target.value })} placeholder="Full Name" />
+                <input type="text" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={newLeadData.company} onChange={e => setNewLeadData({ ...newLeadData, company: e.target.value })} placeholder="Company Name" />
+                <div className="grid grid-cols-2 gap-3">
+                  <input type="email" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={newLeadData.email} onChange={e => setNewLeadData({ ...newLeadData, email: e.target.value })} placeholder="Email Address" />
+                  <input type="tel" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={newLeadData.phone} onChange={e => setNewLeadData({ ...newLeadData, phone: e.target.value })} placeholder="Phone Number" />
+                </div>
+              </div>
+
+              {/* SECTION 2: DEAL INFO (CATALOG INTEGRATION) */}
+              <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Deal Details (From Catalog)</p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] text-gray-500 mb-1 font-bold uppercase">Target Product</label>
+                    <div className="relative">
+                      <ShoppingBag className="absolute left-3 top-2.5 text-gray-400" size={14} />
+                      <select
+                        required
+                        className="w-full pl-9 pr-3 py-2 rounded-lg border-gray-300 dark:border-gray-600 border text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white appearance-none focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={newLeadData.productId}
+                        onChange={e => setNewLeadData({ ...newLeadData, productId: e.target.value })}
+                      >
+                        {products.map(prod => (
+                          <option key={prod.id} value={prod.id}>
+                            {/* Use optional chaining (?.) and a fallback string to prevent the crash */}
+                            {prod.name} (${prod.price}/{prod.billingCycle?.toLowerCase() || 'unit'})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] text-gray-500 mb-1 font-bold uppercase">Lead Status</label>
+                      <select
+                        className="w-full px-3 py-2 rounded-lg border-gray-300 dark:border-gray-600 border text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        value={newLeadData.status}
+                        onChange={e => setNewLeadData({ ...newLeadData, status: e.target.value as LeadStatus })}
+                      >
+                        {COLUMNS.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-gray-500 mb-1 font-bold uppercase">Intro Discount ($)</label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-2.5 text-gray-400" size={14} />
+                        <input
+                          type="number"
+                          className="w-full pl-9 pr-3 py-2 rounded-lg border-gray-300 dark:border-gray-600 border text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          value={newLeadData.discount}
+                          onChange={e => setNewLeadData({ ...newLeadData, discount: parseFloat(e.target.value) || 0 })}
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-6">
+                <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 text-gray-500 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">Cancel</button>
+                <button type="submit" className="px-6 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg shadow-md hover:bg-blue-700 transition-all">Create & Value Lead</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -276,10 +310,10 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col transition-colors">
             <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-purple-50/30 dark:bg-purple-900/10">
-                <h3 className="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-white">
-                  <Sparkles className="text-purple-500" /> Deal Intelligence
-                </h3>
-                <button onClick={() => setSelectedLead(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+              <h3 className="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-white">
+                <Sparkles className="text-purple-500" /> Deal Intelligence
+              </h3>
+              <button onClick={() => setSelectedLead(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
             </div>
             <div className="p-8">
               {isGenerating ? (
@@ -317,28 +351,49 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-blue-50/30 dark:bg-blue-900/10">
-                <h3 className="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-white"><Wand2 className="text-blue-500" /> AI Email Drafter</h3>
-                <button onClick={() => setSelectedLead(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+              <h3 className="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-white"><Wand2 className="text-blue-500" /> AI Email Drafter</h3>
+              <button onClick={() => setSelectedLead(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
             </div>
             <div className="p-6 overflow-y-auto space-y-4">
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-100 dark:border-blue-800">
-                    <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wider mb-1">Target</p>
-                    <p className="text-base font-bold text-gray-900 dark:text-white">{selectedLead.name} ({selectedLead.company})</p>
-                </div>
-                <div className="flex gap-2">
-                    <input type="text" value={emailContext} onChange={(e) => setEmailContext(e.target.value)} className="flex-1 rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none" placeholder="What is the goal of this email?" />
-                    <button onClick={handleGenerateDraft} disabled={isGenerating} className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-bold disabled:opacity-50 hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20">
-                        {isGenerating ? 'Drafting...' : 'Generate'}
-                    </button>
-                </div>
-                {aiDraft && (
-                    <div className="bg-gray-50 dark:bg-gray-900 p-5 rounded-2xl text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap border italic leading-relaxed shadow-inner">
-                        {aiDraft}
-                    </div>
-                )}
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-100 dark:border-blue-800">
+                <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wider mb-1">Target</p>
+                <p className="text-base font-bold text-gray-900 dark:text-white">{selectedLead.name} ({selectedLead.company})</p>
+              </div>
+              <div className="flex gap-2">
+                <input type="text" value={emailContext} onChange={(e) => setEmailContext(e.target.value)} className="flex-1 rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Context (e.g. Follow up on meeting)" />
+                <button onClick={handleGenerateDraft} disabled={isGenerating} className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-bold disabled:opacity-50 hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20">
+                  {isGenerating ? 'Drafting...' : 'Generate AI Draft'}
+                </button>
+              </div>
+              <div>
+                <input type="text" value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} className="w-full mb-2 rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-base font-bold bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Email Subject" />
+              </div>
+              {aiDraft && (
+                <textarea
+                  value={aiDraft}
+                  onChange={(e) => setAiDraft(e.target.value)}
+                  className="w-full h-48 bg-gray-50 dark:bg-gray-900 p-5 rounded-2xl text-sm text-gray-700 dark:text-gray-300 border focus:ring-2 focus:ring-blue-500 outline-none resize-none leading-relaxed shadow-inner"
+                />
+              )}
             </div>
-            <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex justify-end">
-                <button onClick={() => setSelectedLead(null)} className="px-6 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-bold rounded-lg transition-colors">Close</button>
+            <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+              <button onClick={() => setSelectedLead(null)} className="px-4 py-2 text-gray-500 hover:text-gray-700 font-medium">Cancel</button>
+              <button
+                onClick={handleSendEmail}
+                disabled={isSending || !aiDraft}
+                className="px-6 py-2 bg-green-600 text-white text-sm font-bold rounded-lg transition-colors flex items-center gap-2 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSending ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Mail size={16} /> Send Email
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
