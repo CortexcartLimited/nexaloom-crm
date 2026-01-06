@@ -184,6 +184,27 @@ const sendProposalEmail = async (to, leadName, proposalName, attachments, brandi
 </html>
     `;
 
+    // Strip HTML for plain text version
+    const textContent = `
+Proposal: ${proposalName}
+
+Hello ${leadName},
+
+We are pleased to submit the attached proposal for your review. Below is a detailed summary of the services and costs outlined.
+
+${items.map(item => `${item.name}: ${item.quantity} x ${formatMoney(item.price)} = ${formatMoney(item.price * item.quantity)}`).join('\n')}
+
+Total Value: ${formatMoney(totalValue)}
+
+${terms ? `\nTerms & Conditions:\n${terms}\n` : ''}
+
+Next Steps: Please review the attached document. To proceed, simply reply to this email.
+
+Best regards,
+${companyName}
+${emailSignature || ''}
+    `.trim();
+
     const mailOptions = {
         from: fromAddress,
         to: to,
@@ -265,7 +286,6 @@ const sendBasicEmail = async (to, leadName, subject, bodyContent, branding = {})
                 <div style="height: 40px;"></div>
             </td>
         </tr>
-    </table>
     </table>
 </body>
 </html>
