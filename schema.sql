@@ -80,6 +80,8 @@ CREATE TABLE IF NOT EXISTS tenants (
     smtpConfig JSON,
     stripeAccountId VARCHAR(255),
     stripePublicKey VARCHAR(255),
+    logoUrl TEXT,
+    emailSignature TEXT,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

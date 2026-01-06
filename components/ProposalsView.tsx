@@ -687,8 +687,17 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
                                         disabled={isSending}
                                         className="px-4 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 shadow-md flex items-center gap-2 disabled:opacity-50"
                                     >
-                                        <Send size={16} />
-                                        {isSending ? 'Sending...' : 'Send to Client'}
+                                        {isSending ? (
+                                            <>
+                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                Sending...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Send size={16} />
+                                                Send to Client
+                                            </>
+                                        )}
                                     </button>
                                 )}
                             </div>

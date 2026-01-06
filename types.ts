@@ -60,10 +60,12 @@ export interface SmtpConfig {
 export interface Tenant {
   id: string;
   name: string;
-  createdAt: string;
+  createdAt?: string;
   smtpConfig?: SmtpConfig;
   stripeAccountId?: string;
   stripePublicKey?: string;
+  logoUrl?: string;
+  emailSignature?: string;
 }
 
 export interface UserPreferences {
