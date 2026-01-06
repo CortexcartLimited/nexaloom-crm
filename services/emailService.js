@@ -31,23 +31,29 @@ const getCleanFromAddress = (brandingCompanyName) => {
     let safeName = (brandingCompanyName || 'Nexaloom CRM').replace(/["<>]/g, '').trim();
 
     // 2. Determine the Email
-    // Trust SMTP_USER as the canonical email if available, otherwise check SMTP_FROM
-    let rawEmail = process.env.SMTP_USER;
+    // We strictly look for a string containing '@'
+    let rawEmail = '';
 
-    // If SMTP_USER is just a username (no @), try to extract from SMTP_FROM
-    if (!rawEmail || !rawEmail.includes('@')) {
-        const potentialFrom = process.env.SMTP_FROM || '';
-        // Regex to find email inside brackets or just an email
+    // Priority 1: Check SMTP_FROM for an email
+    if (process.env.SMTP_FROM && process.env.SMTP_FROM.includes('@')) {
+        const potentialFrom = process.env.SMTP_FROM;
         const match = potentialFrom.match(/<([^>]+)>/) || potentialFrom.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/);
         if (match) {
             rawEmail = match[1] || match[0];
         }
     }
 
-    // Fallback if we still have no email (shouldn't happen with valid config)
+    // Priority 2: Check SMTP_USER if Priority 1 yielded nothing
+    if ((!rawEmail || !rawEmail.includes('@')) && process.env.SMTP_USER && process.env.SMTP_USER.includes('@')) {
+        rawEmail = process.env.SMTP_USER;
+    }
+
+    // Fallback: If we still don't have a valid email, synthesize one or use a dummy.
+    // This prevents <CortexCart Team> (no @) from crashing the server.
     if (!rawEmail || !rawEmail.includes('@')) {
-        console.warn('Warning: Could not determine valid sender email from env. Using fallback.');
-        rawEmail = 'no-reply@example.com';
+        console.warn('Warning: Could not determine valid sender email (with @) from env. Using fallback.');
+        const cleanDomain = safeName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'example';
+        rawEmail = `no-reply@${cleanDomain}.com`;
     }
 
     // 3. Construct strictly formatted string
@@ -264,7 +270,7 @@ const sendBasicEmail = async (to, leadName, subject, bodyContent, branding = {})
     `;
 
     const mailOptions = {
-        from: 'accounts@cortexcart.com', // Hardcoded for isolation testing
+        from: fromAddress,
         to: to,
         subject: subject,
         html: htmlContent
