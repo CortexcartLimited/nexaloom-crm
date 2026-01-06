@@ -21,14 +21,33 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+/**
+ * Helper to construct a clean 'From' address.
+ * Safely handles SMTP_FROM variable whether it includes brackets or not.
+ */
+const getCleanFromAddress = (brandingCompanyName) => {
+    const rawEnvFrom = process.env.SMTP_FROM || '';
+
+    // Case 1: .env has brackets (e.g. "My Company <support@example.com>")
+    // Return exactly as is to respect the user's specific identity config.
+    if (rawEnvFrom.includes('<') && rawEnvFrom.includes('>')) {
+        return rawEnvFrom;
+    }
+
+    // Case 2: .env is just an email or empty. Construct using branding name.
+    // Fallback to SMTP_USER if SMTP_FROM is missing.
+    const emailPart = rawEnvFrom.trim() || process.env.SMTP_USER;
+    const cleanName = (brandingCompanyName || 'Nexaloom CRM').replace(/[^a-zA-Z0-9 ]/g, '');
+
+    return `"${cleanName}" <${emailPart}>`;
+};
+
 const sendProposalEmail = async (to, leadName, proposalName, attachments, branding = {}, proposalDetails = {}) => {
     const { companyName = 'Nexaloom CRM', companyAddress, logoUrl, emailSignature } = branding;
     const { items = [], totalValue = 0, terms = '' } = proposalDetails;
 
-    const fromName = companyName.replace(/[^a-zA-Z0-9 ]/g, '');
-    // Clean the from email: extract strictly the email part
-    const rawFromEmail = (process.env.SMTP_FROM.split('<')[1] || process.env.SMTP_FROM).replace('>', '').trim();
-    const fromAddress = `"${fromName}" <${rawFromEmail}>`;
+    // Use helper to get safe address
+    const fromAddress = getCleanFromAddress(companyName);
 
     // --- Helper for formatting currency ---
     const formatMoney = (amount) => {
@@ -168,9 +187,8 @@ const sendProposalEmail = async (to, leadName, proposalName, attachments, brandi
 const sendBasicEmail = async (to, leadName, subject, bodyContent, branding = {}) => {
     const { companyName = 'Nexaloom CRM', companyAddress, logoUrl, emailSignature } = branding;
 
-    const fromName = companyName.replace(/[^a-zA-Z0-9 ]/g, '');
-    const rawFromEmail = (process.env.SMTP_FROM.split('<')[1] || process.env.SMTP_FROM).replace('>', '').trim();
-    const fromAddress = `"${fromName}" <${rawFromEmail}>`;
+    // Use helper to get safe address
+    const fromAddress = getCleanFromAddress(companyName);
 
     let htmlContent = `
 <!DOCTYPE html>
