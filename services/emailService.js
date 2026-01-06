@@ -189,6 +189,7 @@ const sendProposalEmail = async (to, leadName, proposalName, attachments, brandi
         to: to,
         subject: `New Proposal: ${proposalName}`,
         html: htmlContent,
+        text: textContent,
         attachments: attachments
     };
 
@@ -265,15 +266,35 @@ const sendBasicEmail = async (to, leadName, subject, bodyContent, branding = {})
             </td>
         </tr>
     </table>
+    </table>
 </body>
 </html>
     `;
+
+    // Strip HTML for plain text version
+    const textContent = `
+${subject}
+
+Hello ${leadName},
+
+${bodyContent}
+
+Best regards,
+${companyName}
+${emailSignature || ''}
+    `.trim();
+
+    // Verify 'to' is a string
+    if (typeof to !== 'string') {
+        console.warn('Warning: "to" address is not a string:', to);
+    }
 
     const mailOptions = {
         from: fromAddress,
         to: to,
         subject: subject,
-        html: htmlContent
+        html: htmlContent,
+        text: textContent
     };
 
     try {
