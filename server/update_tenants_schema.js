@@ -21,21 +21,21 @@ async function updateSchema() {
         if (!columnNames.includes('logoUrl')) {
             console.log("Adding logoUrl column...");
             await pool.query("ALTER TABLE tenants ADD COLUMN logoUrl TEXT");
-        } else {
-            console.log("logoUrl column exists.");
         }
-
         if (!columnNames.includes('emailSignature')) {
             console.log("Adding emailSignature column...");
             await pool.query("ALTER TABLE tenants ADD COLUMN emailSignature TEXT");
-        } else {
-            console.log("emailSignature column exists.");
         }
-
-        // companyName is usually 'name' in tenants table, but user asked for Company Name specifically. 
-        // We already have 'name' in tenants. We can assume that matches. 
-        // Or we can add specific 'companyName' if they want a separate overrides.
-        // Let's assume 'name' is the company name for the tenant.
+        if (!columnNames.includes('companyName')) {
+            console.log("Adding companyName column...");
+            // Default to existing name if possible, or just add column
+            await pool.query("ALTER TABLE tenants ADD COLUMN companyName VARCHAR(255)");
+            await pool.query("UPDATE tenants SET companyName = name");
+        }
+        if (!columnNames.includes('companyAddress')) {
+            console.log("Adding companyAddress column...");
+            await pool.query("ALTER TABLE tenants ADD COLUMN companyAddress TEXT");
+        }
 
         console.log("Schema update completed successfully.");
 

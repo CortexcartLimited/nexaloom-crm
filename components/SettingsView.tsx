@@ -14,6 +14,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ tenant, onUpdateTena
     // General State
     const [name, setName] = useState(tenant.name);
     const [companyName, setCompanyName] = useState(tenant.companyName || '');
+    const [companyAddress, setCompanyAddress] = useState(tenant.companyAddress || '');
     const [logoUrl, setLogoUrl] = useState(tenant.logoUrl || '');
     const [emailSignature, setEmailSignature] = useState(tenant.emailSignature || '');
 
@@ -37,7 +38,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ tenant, onUpdateTena
     const handleGeneralSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
-        await onUpdateTenant({ name, companyName, logoUrl, emailSignature });
+        await onUpdateTenant({ name, companyName, companyAddress, logoUrl, emailSignature });
         setIsSaving(false);
         setSuccessMessage('Organization settings updated successfully.');
         setTimeout(() => setSuccessMessage(''), 3000);
@@ -122,6 +123,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ tenant, onUpdateTena
                                     <input
                                         type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)}
                                         placeholder="e.g. Nexaloom Inc."
+                                        className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Company Address</label>
+                                    <textarea
+                                        value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)}
+                                        placeholder="1234 Tech Blvd, Suite 100&#10;San Francisco, CA 94105"
+                                        rows={3}
                                         className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all"
                                     />
                                 </div>

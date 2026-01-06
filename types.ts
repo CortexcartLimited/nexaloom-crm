@@ -67,6 +67,7 @@ export interface Tenant {
   logoUrl?: string;
   emailSignature?: string;
   companyName?: string;
+  companyAddress?: string;
 }
 
 export interface UserPreferences {

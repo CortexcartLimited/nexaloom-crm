@@ -15,7 +15,7 @@ const transporter = nodemailer.createTransport({
 });
 
 const sendProposalEmail = async (to, leadName, proposalName, attachments, branding = {}, proposalDetails = {}) => {
-    const { companyName = 'Nexaloom CRM', logoUrl, emailSignature } = branding;
+    const { companyName = 'Nexaloom CRM', companyAddress, logoUrl, emailSignature } = branding;
     const { items = [], totalValue = 0, terms = '' } = proposalDetails;
 
     const fromName = companyName.replace(/[^a-zA-Z0-9 ]/g, ''); // Simple sanitize
@@ -27,92 +27,116 @@ const sendProposalEmail = async (to, leadName, proposalName, attachments, brandi
     };
 
     // --- Build Item Rows ---
-    const rowsHtml = items.map(item => `
-        <tr style="border-bottom: 1px solid #eee;">
-            <td style="padding: 10px; color: #333;">
-                <div style="font-weight: bold;">${item.name}</div>
-                <div style="font-size: 0.85em; color: #777;">${item.description || ''}</div>
+    const rowsHtml = items.map((item, index) => `
+        <tr style="${index % 2 === 0 ? 'background-color: #ffffff;' : 'background-color: #fafafa;'}">
+            <td style="padding: 12px 15px; border-bottom: 1px solid #eeeeee; color: #333333; font-size: 14px;">
+                <div style="font-weight: 600; margin-bottom: 4px;">${item.name}</div>
+                ${item.description ? `<div style="font-size: 13px; color: #777777;">${item.description}</div>` : ''}
             </td>
-            <td style="padding: 10px; text-align: center; color: #333;">${item.quantity}</td>
-            <td style="padding: 10px; text-align: right; color: #333;">${formatMoney(item.price)}</td>
-            <td style="padding: 10px; text-align: right; font-weight: bold; color: #333;">${formatMoney(item.price * item.quantity)}</td>
+            <td style="padding: 12px 15px; border-bottom: 1px solid #eeeeee; text-align: center; color: #333333; font-size: 14px;">${item.quantity}</td>
+            <td style="padding: 12px 15px; border-bottom: 1px solid #eeeeee; text-align: right; color: #333333; font-size: 14px;">${formatMoney(item.price)}</td>
+            <td style="padding: 12px 15px; border-bottom: 1px solid #eeeeee; text-align: right; font-weight: 600; color: #333333; font-size: 14px;">${formatMoney(item.price * item.quantity)}</td>
         </tr>
     `).join('');
 
     // --- Build Full HTML ---
     let htmlContent = `
-        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
-    `;
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proposal from ${companyName}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f7; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+            <td style="padding: 20px 0 30px 0;">
+                <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="border-collapse: collapse; border: 1px solid #e1e4e8; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                    <!-- Header -->
+                    <tr>
+                        <td align="center" style="padding: 30px; background-color: #ffffff; border-bottom: 1px solid #eeeeee;">
+                            ${logoUrl
+            ? `<img src="${logoUrl}" alt="${companyName}" style="display: block; max-height: 60px; max-width: 200px; height: auto;" />`
+            : `<h1 style="margin: 0; font-size: 24px; font-weight: bold; color: #333333;">${companyName}</h1>`
+        }
+                        </td>
+                    </tr>
 
-    // 1. Header (Logo)
-    if (logoUrl) {
-        htmlContent += `
-            <div style="text-align: center; background-color: #f8f9fa; padding: 20px;">
-                <img src="${logoUrl}" alt="${companyName}" style="max-height: 60px; width: auto;">
-            </div>
-        `;
-    } else {
-        htmlContent += `
-             <div style="text-align: center; background-color: #f8f9fa; padding: 20px;">
-                <h2 style="margin:0; color: #333;">${companyName}</h2>
-            </div>
-        `;
-    }
+                    <!-- Body Content -->
+                    <tr>
+                        <td style="padding: 30px 40px;">
+                            <h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 22px;">Proposal: ${proposalName}</h2>
+                            <p style="margin: 0 0 15px 0; font-size: 16px; line-height: 24px; color: #555555;">Hello ${leadName},</p>
+                            <p style="margin: 0 0 25px 0; font-size: 16px; line-height: 24px; color: #555555;">
+                                We are pleased to submit the attached proposal for your review. Below is a detailed summary of the services and costs outlined.
+                            </p>
 
-    // 2. Greeting & Intro
-    htmlContent += `
-        <div style="padding: 30px;">
-            <h2 style="margin-top: 0; color: #2c3e50;">Proposal: ${proposalName}</h2>
-            <p>Hello ${leadName},</p>
-            <p>We are pleased to submit the attached proposal for your review. Below is a summary of the services and costs outlined.</p>
-            
-            <div style="margin: 30px 0;">
-                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-                    <thead>
-                        <tr style="background-color: #f1f1f1; text-align: left;">
-                            <th style="padding: 10px; border-radius: 4px 0 0 4px;">Description</th>
-                            <th style="padding: 10px; text-align: center;">Qty</th>
-                            <th style="padding: 10px; text-align: right;">Price</th>
-                            <th style="padding: 10px; text-align: right; border-radius: 0 4px 4px 0;">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${rowsHtml}
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="3" style="padding: 15px 10px; text-align: right; font-weight: bold; color: #555;">Total Value:</td>
-                            <td style="padding: 15px 10px; text-align: right; font-weight: bold; font-size: 1.1em; color: #2c3e50;">${formatMoney(totalValue)}</td>
-                        </tr>
-                    </tfoot>
+                            <!-- Items Table -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #eeeeee; border-radius: 6px; overflow: hidden; margin-bottom: 30px;">
+                                <thead>
+                                    <tr style="background-color: #f8f9fa;">
+                                        <th style="padding: 12px 15px; border-bottom: 2px solid #eeeeee; text-align: left; font-size: 13px; font-weight: 700; color: #555555; text-transform: uppercase;">Description</th>
+                                        <th style="padding: 12px 15px; border-bottom: 2px solid #eeeeee; text-align: center; font-size: 13px; font-weight: 700; color: #555555; text-transform: uppercase;">Qty</th>
+                                        <th style="padding: 12px 15px; border-bottom: 2px solid #eeeeee; text-align: right; font-size: 13px; font-weight: 700; color: #555555; text-transform: uppercase;">Price</th>
+                                        <th style="padding: 12px 15px; border-bottom: 2px solid #eeeeee; text-align: right; font-size: 13px; font-weight: 700; color: #555555; text-transform: uppercase;">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${rowsHtml}
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="3" style="padding: 15px; text-align: right; font-weight: 700; color: #333333; font-size: 16px; background-color: #fcfcfc; border-top: 1px solid #eeeeee;">Total Value:</td>
+                                        <td style="padding: 15px; text-align: right; font-weight: 700; color: #2c3e50; font-size: 18px; background-color: #fcfcfc; border-top: 1px solid #eeeeee;">${formatMoney(totalValue)}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+
+                            <!-- Terms -->
+                            ${terms ? `
+                            <div style="background-color: #f9fbfd; padding: 20px; border-radius: 6px; border: 1px solid #e1e4e8; margin-bottom: 25px;">
+                                <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #555555; text-transform: uppercase;">Terms & Conditions</h3>
+                                <p style="margin: 0; color: #666666; font-size: 13px; line-height: 20px; white-space: pre-wrap;">${terms}</p>
+                            </div>
+                            ` : ''}
+
+                            <!-- CTA / Next Steps -->
+                            <div style="background-color: #e8f4fd; padding: 15px; border-left: 4px solid #3498db; margin-bottom: 30px;">
+                                <p style="margin: 0; color: #34495e; font-size: 14px;"><strong>Next Steps:</strong> Please review the attached document. To proceed, simply reply to this email.</p>
+                            </div>
+
+                            <p style="margin: 0 0 5px 0; font-size: 16px; color: #555555;">Best regards,</p>
+                            <p style="margin: 0; font-size: 16px; font-weight: bold; color: #333333;">${companyName}</p>
+                            
+                            <!-- Signature (Dynamic) -->
+                            ${emailSignature ? `
+                                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eeeeee; color: #777777; font-size: 14px; line-height: 22px;">
+                                    ${emailSignature.replace(/\n/g, '<br>')}
+                                </div>
+                            ` : ''}
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px 30px; background-color: #f8f9fa; border-top: 1px solid #eeeeee; text-align: center;">
+                            <p style="margin: 0; font-size: 12px; line-height: 18px; color: #999999;">
+                                <strong>${companyName}</strong><br>
+                                ${companyAddress ? companyAddress.replace(/\n/g, ', ') : ''}
+                            </p>
+                        </td>
+                    </tr>
                 </table>
-            </div>
-
-            ${terms ? `
-            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 4px; font-size: 0.9em; margin-bottom: 20px;">
-                <strong style="display: block; margin-bottom: 5px; color: #555;">Terms & Conditions</strong>
-                <p style="margin: 0; color: #666; white-space: pre-wrap;">${terms}</p>
-            </div>
-            ` : ''}
-
-            <p>Please review the attached document for full details. If you have any questions or would like to proceed, simply reply to this email.</p>
-            
-            <br>
-            <p style="margin-bottom: 0;">Best regards,</p>
-            <p style="margin-top: 5px; font-weight: bold;">${companyName}</p>
-        </div>
+                
+                <!-- Spacer for bottom padding -->
+                <div style="height: 40px;"></div>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
     `;
-
-    // 3. Signature
-    if (emailSignature) {
-        htmlContent += `
-            <div style="background-color: #f8f9fa; padding: 20px; font-size: 0.85em; color: #777; border-top: 1px solid #e0e0e0;">
-                ${emailSignature.replace(/\n/g, '<br>')}
-            </div>
-        `;
-    }
-
-    htmlContent += `</div>`;
 
     const mailOptions = {
         from: fromAddress,

@@ -206,7 +206,7 @@ module.exports = (pool) => {
             `, [id]);
 
             // Fetch Branding
-            const [tenantRows] = await connection.query(`SELECT logoUrl, name, companyName, emailSignature FROM tenants WHERE id = ?`, [tenantId]);
+            const [tenantRows] = await connection.query(`SELECT logoUrl, name, companyName, companyAddress, emailSignature FROM tenants WHERE id = ?`, [tenantId]);
             const branding = tenantRows[0] || { companyName: 'Nexaloom' };
 
             // Fetch Items for Email Table
@@ -221,6 +221,7 @@ module.exports = (pool) => {
             // 4. Send Email
             await sendProposalEmail(leadEmail, leadName, proposalName, attachments, {
                 companyName: branding.companyName || branding.name,
+                companyAddress: branding.companyAddress,
                 logoUrl: branding.logoUrl,
                 emailSignature: branding.emailSignature
             }, {

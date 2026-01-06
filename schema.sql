@@ -82,6 +82,8 @@ CREATE TABLE IF NOT EXISTS tenants (
     stripePublicKey VARCHAR(255),
     logoUrl TEXT,
     emailSignature TEXT,
+    companyName VARCHAR(255),
+    companyAddress TEXT,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
