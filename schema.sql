@@ -106,6 +106,14 @@ CREATE TABLE IF NOT EXISTS proposal_items (
     FOREIGN KEY (proposalId) REFERENCES proposals(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS proposal_files (
+    id VARCHAR(50) PRIMARY KEY,
+    proposalId VARCHAR(50) NOT NULL,
+    documentId VARCHAR(255) NOT NULL,
+    FOREIGN KEY (proposalId) REFERENCES proposals(id) ON DELETE CASCADE,
+    FOREIGN KEY (documentId) REFERENCES documents(id) ON DELETE CASCADE
+);
+
 -- KNOWLEDGE BASE
 CREATE TABLE IF NOT EXISTS knowledge_base (
     id VARCHAR(255) PRIMARY KEY,
