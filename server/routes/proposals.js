@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
-const { sendProposalEmail } = require('../services/emailService');
+const { sendProposalEmail } = require('../../services/emailService');
 
 // Helper to format JavaScript ISO dates to MySQL format (removes T and Z)
 const formatSQLDate = (date) => {
