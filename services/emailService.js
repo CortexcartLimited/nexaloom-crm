@@ -2,8 +2,12 @@ const nodemailer = require('nodemailer');
 
 // Configure transporter
 const smtpPort = parseInt(process.env.SMTP_PORT);
-// Use secure: true only for port 465. For 587, use 'secure: false' which enables STARTTLS.
-const isSecure = smtpPort === 465;
+// Determine secure flag:
+// 1. Explicit env var (if string "true"/"false")
+// 2. Default logic: true for 465, false for others (25, 587)
+let isSecure = smtpPort === 465;
+if (process.env.SMTP_SECURE === 'true') isSecure = true;
+if (process.env.SMTP_SECURE === 'false') isSecure = false;
 
 console.log(`Initializing Email Service: Host=${process.env.SMTP_HOST} Port=${smtpPort} Secure=${isSecure} User=${process.env.SMTP_USER}`);
 
@@ -15,7 +19,7 @@ const transporter = nodemailer.createTransport({
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
     },
-    // This helps bypass issues with specific mail server certificates
+    // This helps bypass issues with specific mail server certificates, especially on localhost
     tls: {
         rejectUnauthorized: false
     }
