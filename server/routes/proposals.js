@@ -4,6 +4,14 @@ const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const { sendProposalEmail } = require('../services/emailService');
 
+// Helper to format JavaScript ISO dates to MySQL format (removes T and Z)
+const formatSQLDate = (date) => {
+    if (!date) return null;
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString().slice(0, 19).replace('T', ' ');
+};
+
 module.exports = (pool) => {
     // GET /api/proposals (List)
     router.get('/', async (req, res) => {
@@ -22,20 +30,17 @@ module.exports = (pool) => {
 
         try {
             const [proposals] = await pool.query(query, params);
-
-            // Fetch items for each proposal (Not efficiently, but functional for now)
-            // Ideally should be a JOIN or separate call, but for simplicity:
             for (let prop of proposals) {
                 const [items] = await pool.query('SELECT * FROM proposal_items WHERE proposalId = ?', [prop.id]);
                 prop.items = items;
             }
-
             res.json(proposals);
         } catch (err) {
             res.status(500).json({ error: err.message });
         }
     });
 
+    // GET /api/proposals/:id (Single)
     router.get('/:id', async (req, res) => {
         const { id } = req.params;
         try {
@@ -62,24 +67,19 @@ module.exports = (pool) => {
     // POST /api/proposals (Create)
     router.post('/', async (req, res) => {
         const { id, tenantId, name, leadId, leadName, leadCompany, items, totalValue, status, validUntil, terms, createdBy } = req.body;
-
         const connection = await pool.getConnection();
         try {
             await connection.beginTransaction();
 
-            const validUntilDate = validUntil ? new Date(validUntil).toISOString().slice(0, 19).replace('T', ' ') : null;
-
-            // 1. Insert Proposal
+            const validUntilDate = formatSQLDate(validUntil);
             const proposalId = id || uuidv4();
+
             await connection.query(
-                `INSERT INTO proposals (id, tenantId, name, leadId, leadName, leadCompany, totalValue, status, validUntil, terms, createdBy) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?`,
+                `INSERT INTO proposals (id, tenantId, name, leadId, leadName, leadCompany, totalValue, status, validUntil, terms, createdBy, createdAt) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
                 [proposalId, tenantId, name, leadId, leadName, leadCompany, totalValue, status, validUntilDate, terms, createdBy]
             );
 
-
-
-            // 2. Insert Items
             if (items && items.length > 0) {
                 const itemValues = items.map(item => [
                     item.id && !item.id.toString().startsWith('item-') ? item.id : uuidv4(),
@@ -90,7 +90,6 @@ module.exports = (pool) => {
                     item.price,
                     item.description
                 ]);
-
                 await connection.query(
                     `INSERT INTO proposal_items (id, proposalId, productId, name, quantity, price, description) VALUES ?`,
                     [itemValues]
@@ -99,10 +98,8 @@ module.exports = (pool) => {
 
             await connection.commit();
             res.status(201).json({ id: proposalId, ...req.body });
-
         } catch (err) {
             await connection.rollback();
-            console.error("Proposal Creation Error:", err);
             res.status(500).json({ error: err.message });
         } finally {
             connection.release();
@@ -111,38 +108,34 @@ module.exports = (pool) => {
 
     // PUT /api/proposals/:id (Update)
     router.put('/:id', async (req, res) => {
-        const { id } = req.params; // This is your 'prop-176...' string
-        // Destructure items and files out of req.body to prevent them from hitting the main table
-        const { items, files, ...updates } = req.body;
+        const { id } = req.params;
+        const updates = { ...req.body };
+        const items = updates.items;
+        const files = updates.files;
 
-        // Ensure these definitely aren't in the updates object
-        delete updates.id;
+        // Clean up the updates object so it only contains columns in the 'proposals' table
         delete updates.items;
         delete updates.files;
+        delete updates.id;
+        delete updates.createdAt;
 
-        // Sanitize date if present
         if (updates.validUntil) {
-            updates.validUntil = new Date(updates.validUntil).toISOString().slice(0, 19).replace('T', ' ');
+            updates.validUntil = formatSQLDate(updates.validUntil);
         }
 
         const connection = await pool.getConnection();
         try {
             await connection.beginTransaction();
 
-            // 1. Update Proposal Fields
-            // Use backticks ` around keys to prevent syntax errors with reserved words like 'status'
             const fields = Object.keys(updates).map(key => `\`${key}\` = ?`).join(', ');
             const values = Object.values(updates);
 
             if (fields.length > 0) {
-                // The ? handles the string ID 'prop-176...' safely
                 await connection.query(`UPDATE proposals SET ${fields} WHERE id = ?`, [...values, id]);
             }
 
-            // 2. Sync Items
             if (items) {
                 await connection.query('DELETE FROM proposal_items WHERE proposalId = ?', [id]);
-
                 if (items.length > 0) {
                     const itemValues = items.map(item => [
                         item.id && !item.id.toString().startsWith('item-') ? item.id : uuidv4(),
@@ -153,34 +146,7 @@ module.exports = (pool) => {
                         item.price,
                         item.description
                     ]);
-
-                    await connection.query(
-                        `INSERT INTO proposal_items (id, proposalId, productId, name, quantity, price, description) VALUES ?`,
-                        [itemValues]
-                    );
-                }
-            }
-
-            // 3. Sync Files
-            if (files) {
-                await connection.query('DELETE FROM proposal_files WHERE proposalId = ?', [id]);
-
-                if (files.length > 0) {
-                    // Map files to the correct structure for proposal_files
-                    // Expecting files to be an array of objects ({id: 'doc-X', name: '...'}) or just IDs
-                    const fileValues = files.map(f => {
-                        // If f is a string, assume it's the documentId
-                        // If f is an object, look for id or documentId property
-                        const docId = typeof f === 'string' ? f : (f.id || f.documentId);
-                        return [uuidv4(), id, docId];
-                    });
-
-                    if (fileValues.length > 0) {
-                        await connection.query(
-                            'INSERT INTO proposal_files (id, proposalId, documentId) VALUES ?',
-                            [fileValues]
-                        );
-                    }
+                    await connection.query(`INSERT INTO proposal_items (id, proposalId, productId, name, quantity, price, description) VALUES ?`, [itemValues]);
                 }
             }
 
@@ -188,22 +154,9 @@ module.exports = (pool) => {
             res.json({ success: true });
         } catch (err) {
             await connection.rollback();
-            console.error("Update Error:", err);
             res.status(500).json({ error: err.message });
         } finally {
             connection.release();
-        }
-    });
-
-    // DELETE /api/proposals/:id
-    router.delete('/:id', async (req, res) => {
-        const { id } = req.params;
-        try {
-            await pool.query('DELETE FROM proposals WHERE id = ?', [id]);
-            // Items filtered by CASCADE foreign key
-            res.json({ success: true });
-        } catch (err) {
-            res.status(500).json({ error: err.message });
         }
     });
 
@@ -211,20 +164,14 @@ module.exports = (pool) => {
     router.post('/:id/files', async (req, res) => {
         const { id } = req.params;
         const { documentIds } = req.body;
-
         const connection = await pool.getConnection();
         try {
             await connection.beginTransaction();
-
-            // Clear existing files
             await connection.query('DELETE FROM proposal_files WHERE proposalId = ?', [id]);
-
-            // Insert new files
             if (documentIds && documentIds.length > 0) {
                 const values = documentIds.map(docId => [uuidv4(), id, docId]);
                 await connection.query('INSERT INTO proposal_files (id, proposalId, documentId) VALUES ?', [values]);
             }
-
             await connection.commit();
             res.json({ success: true });
         } catch (err) {
@@ -235,13 +182,11 @@ module.exports = (pool) => {
         }
     });
 
-    // POST /api/proposals/:id/send (Email Proposal)
+    // POST /api/proposals/:id/send (Email)
     router.post('/:id/send', async (req, res) => {
         const { id } = req.params;
-
         const connection = await pool.getConnection();
         try {
-            // 1. Fetch Proposal & Lead Info
             const [rows] = await connection.query(`
                 SELECT p.name as proposalName, p.leadId, p.tenantId, p.totalValue, l.name as leadName, l.email as leadEmail 
                 FROM proposals p
@@ -252,9 +197,6 @@ module.exports = (pool) => {
             if (rows.length === 0) return res.status(404).json({ error: 'Proposal not found' });
             const { proposalName, leadName, leadEmail, tenantId, leadId, totalValue } = rows[0];
 
-            if (!leadEmail) return res.status(400).json({ error: 'Lead has no email address' });
-
-            // 2. Fetch Attached Files
             const [files] = await connection.query(`
                 SELECT d.fileName, d.fileUrl 
                 FROM proposal_files pf 
@@ -262,29 +204,23 @@ module.exports = (pool) => {
                 WHERE pf.proposalId = ?
             `, [id]);
 
-            // 3. Prepare Attachments
             const attachments = files.map(f => ({
                 filename: f.fileName,
-                path: path.join(__dirname, '../../', f.fileUrl) // Resolve absolute path from project root
+                path: path.join(__dirname, '../../', f.fileUrl)
             }));
 
-            // 4. Send Email
             await sendProposalEmail(leadEmail, leadName, proposalName, attachments);
-
-            // 5. Update Status
             await connection.query('UPDATE proposals SET status = ? WHERE id = ?', ['Sent', id]);
 
-            // 6. Log Interaction
             const interactionId = uuidv4();
             await connection.query(`
                 INSERT INTO interactions (id, tenantId, leadId, type, notes, date)
                 VALUES (?, ?, ?, 'EMAIL', ?, NOW())
-            `, [interactionId, tenantId, leadId, `PROPOSAL SENT via Email. Value: $${totalValue}`]);
+            `, [interactionId, tenantId, leadId, `PROPOSAL SENT: ${proposalName}`]);
 
             res.json({ success: true });
         } catch (err) {
-            console.error(err);
-            res.status(500).json({ error: 'Failed to send email: ' + err.message });
+            res.status(500).json({ error: err.message });
         } finally {
             connection.release();
         }
