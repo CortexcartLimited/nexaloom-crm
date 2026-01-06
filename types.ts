@@ -66,6 +66,7 @@ export interface Tenant {
   stripePublicKey?: string;
   logoUrl?: string;
   emailSignature?: string;
+  companyName?: string;
 }
 
 export interface UserPreferences {

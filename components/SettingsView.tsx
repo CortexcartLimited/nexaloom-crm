@@ -13,6 +13,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ tenant, onUpdateTena
 
     // General State
     const [name, setName] = useState(tenant.name);
+    const [companyName, setCompanyName] = useState(tenant.companyName || '');
     const [logoUrl, setLogoUrl] = useState(tenant.logoUrl || '');
     const [emailSignature, setEmailSignature] = useState(tenant.emailSignature || '');
 
@@ -36,7 +37,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ tenant, onUpdateTena
     const handleGeneralSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
-        await onUpdateTenant({ name, logoUrl, emailSignature });
+        await onUpdateTenant({ name, companyName, logoUrl, emailSignature });
         setIsSaving(false);
         setSuccessMessage('Organization settings updated successfully.');
         setTimeout(() => setSuccessMessage(''), 3000);
@@ -110,9 +111,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ tenant, onUpdateTena
                             </div>
                             <div className="p-6 space-y-6">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Organization Name</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Organization Name (Internal)</label>
                                     <input
                                         type="text" required value={name} onChange={(e) => setName(e.target.value)}
+                                        className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Legal Company Name (Public)</label>
+                                    <input
+                                        type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)}
+                                        placeholder="e.g. Nexaloom Inc."
                                         className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all"
                                     />
                                 </div>
