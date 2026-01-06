@@ -114,6 +114,11 @@ module.exports = (pool) => {
         const { id } = req.params; // This is your 'prop-176...' string
         const updates = { ...req.body };
         const items = updates.items;
+        const files = updates.files; // Extract the files
+
+        delete updates.items; // Don't try to save items in the proposals table
+        delete updates.files; // Don't try to save files in the proposals table
+        delete updates.id;    // Don't try to save the ID in the proposals table
 
         // Remove items and id from the main table update object
         delete updates.items;
