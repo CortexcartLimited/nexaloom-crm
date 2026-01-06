@@ -72,8 +72,8 @@ module.exports = (pool) => {
             // 1. Insert Proposal
             const proposalId = id || uuidv4();
             await connection.query(
-                `INSERT INTO proposals (id, tenantId, name, leadId, leadName, leadCompany, totalValue, status, validUntil, terms, createdBy, createdAt) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+                `INSERT INTO proposals (id, tenantId, name, leadId, leadName, leadCompany, totalValue, status, validUntil, terms, createdBy) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?`,
                 [proposalId, tenantId, name, leadId, leadName, leadCompany, totalValue, status, validUntilDate, terms, createdBy]
             );
 
