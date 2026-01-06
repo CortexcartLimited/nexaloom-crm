@@ -264,7 +264,7 @@ const sendBasicEmail = async (to, leadName, subject, bodyContent, branding = {})
     `;
 
     const mailOptions = {
-        from: fromAddress,
+        from: 'accounts@cortexcart.com', // Hardcoded for isolation testing
         to: to,
         subject: subject,
         html: htmlContent
