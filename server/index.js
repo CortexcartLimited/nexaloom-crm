@@ -139,11 +139,11 @@ app.post('/api/leads/:id/email', async (req, res) => {
         // We require it here to ensure we get the latest version if files changed without restart (in dev), 
         // but for correctness we await it explicitly. 
         // CORRECT PATH: Go up one level from 'server' to root, then into 'services'
-        const { sendOutreachEmail } = require('../services/emailService');
+        const { sendBasicEmail } = require('../services/emailService');
 
         console.log(`Attempting to send outreach email to ${lead.email} for lead ${lead.id}...`);
 
-        await sendOutreachEmail(lead.email, lead.name, subject, body, {
+        await sendBasicEmail(lead.email, lead.name, subject, body, {
             companyName: branding.companyName || branding.name,
             companyAddress: branding.companyAddress,
             logoUrl: branding.logoUrl,

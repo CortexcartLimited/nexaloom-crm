@@ -158,7 +158,7 @@ const sendProposalEmail = async (to, leadName, proposalName, attachments, brandi
     }
 };
 
-const sendOutreachEmail = async (to, leadName, subject, bodyContent, branding = {}) => {
+const sendBasicEmail = async (to, leadName, subject, bodyContent, branding = {}) => {
     const { companyName = 'Nexaloom CRM', companyAddress, logoUrl, emailSignature } = branding;
 
     const fromName = companyName.replace(/[^a-zA-Z0-9 ]/g, '');
@@ -243,4 +243,4 @@ const sendOutreachEmail = async (to, leadName, subject, bodyContent, branding = 
     }
 };
 
-module.exports = { sendProposalEmail, sendOutreachEmail };
+module.exports = { sendProposalEmail, sendBasicEmail };
