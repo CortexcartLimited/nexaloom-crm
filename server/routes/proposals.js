@@ -188,14 +188,14 @@ module.exports = (pool) => {
         const connection = await pool.getConnection();
         try {
             const [rows] = await connection.query(`
-                SELECT p.name as proposalName, p.leadId, p.tenantId, p.totalValue, l.name as leadName, l.email as leadEmail 
+                SELECT p.name as proposalName, p.leadId, p.tenantId, p.totalValue, p.terms, l.name as leadName, l.email as leadEmail 
                 FROM proposals p
                 JOIN leads l ON p.leadId = l.id
                 WHERE p.id = ?
             `, [id]);
 
             if (rows.length === 0) return res.status(404).json({ error: 'Proposal not found' });
-            const { proposalName, leadName, leadEmail, tenantId, leadId, totalValue } = rows[0];
+            const { proposalName, leadName, leadEmail, tenantId, leadId, totalValue, terms } = rows[0];
 
             // 2. Fetch Attached Files & Tenant Branding
             const [files] = await connection.query(`
@@ -209,6 +209,9 @@ module.exports = (pool) => {
             const [tenantRows] = await connection.query(`SELECT logoUrl, name, emailSignature FROM tenants WHERE id = ?`, [tenantId]);
             const branding = tenantRows[0] || { companyName: 'Nexaloom' };
 
+            // Fetch Items for Email Table
+            const [items] = await connection.query(`SELECT name, quantity, price, description FROM proposal_items WHERE proposalId = ?`, [id]);
+
             // 3. Prepare Attachments
             const attachments = files.map(f => ({
                 filename: f.fileName,
@@ -220,6 +223,10 @@ module.exports = (pool) => {
                 companyName: branding.name,
                 logoUrl: branding.logoUrl,
                 emailSignature: branding.emailSignature
+            }, {
+                items,
+                totalValue,
+                terms
             });
             await connection.query('UPDATE proposals SET status = ? WHERE id = ?', ['Sent', id]);
 
