@@ -18,8 +18,10 @@ const sendProposalEmail = async (to, leadName, proposalName, attachments, brandi
     const { companyName = 'Nexaloom CRM', companyAddress, logoUrl, emailSignature } = branding;
     const { items = [], totalValue = 0, terms = '' } = proposalDetails;
 
-    const fromName = companyName.replace(/[^a-zA-Z0-9 ]/g, ''); // Simple sanitize
-    const fromAddress = `${fromName} <${process.env.SMTP_FROM.split('<')[1] || process.env.SMTP_FROM}>`;
+    const fromName = companyName.replace(/[^a-zA-Z0-9 ]/g, '');
+    // Clean the from email: extract strictly the email part
+    const rawFromEmail = (process.env.SMTP_FROM.split('<')[1] || process.env.SMTP_FROM).replace('>', '').trim();
+    const fromAddress = `"${fromName}" <${rawFromEmail}>`;
 
     // --- Helper for formatting currency ---
     const formatMoney = (amount) => {
@@ -160,7 +162,8 @@ const sendOutreachEmail = async (to, leadName, subject, bodyContent, branding = 
     const { companyName = 'Nexaloom CRM', companyAddress, logoUrl, emailSignature } = branding;
 
     const fromName = companyName.replace(/[^a-zA-Z0-9 ]/g, '');
-    const fromAddress = `${fromName} <${process.env.SMTP_FROM.split('<')[1] || process.env.SMTP_FROM}>`;
+    const rawFromEmail = (process.env.SMTP_FROM.split('<')[1] || process.env.SMTP_FROM).replace('>', '').trim();
+    const fromAddress = `"${fromName}" <${rawFromEmail}>`;
 
     let htmlContent = `
 <!DOCTYPE html>

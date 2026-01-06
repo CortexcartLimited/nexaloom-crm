@@ -113,11 +113,12 @@ app.post('/api/products', async (req, res) => {
     }
 });
 // ROUTE: Send Email Outreach to Lead
+// ROUTE: Send Email Outreach to Lead
 app.post('/api/leads/:id/email', async (req, res) => {
     const { id } = req.params;
     const { subject, body } = req.body;
-    const { tenantId } = req.query; // Assuming passed in query or body, but let's look up lead first.
 
+    // Validate Inputs
     if (!subject || !body) return res.status(400).json({ error: 'Subject and Body are required' });
 
     try {
@@ -126,12 +127,21 @@ app.post('/api/leads/:id/email', async (req, res) => {
         if (leads.length === 0) return res.status(404).json({ error: 'Lead not found' });
         const lead = leads[0];
 
+        if (!lead.email) {
+            return res.status(400).json({ error: 'Lead does not have an email address' });
+        }
+
         // 2. Fetch Tenant Branding
         const [tenants] = await pool.query('SELECT logoUrl, name, companyName, companyAddress, emailSignature, smtpConfig FROM tenants WHERE id = ?', [lead.tenantId]);
         const branding = tenants[0] || { companyName: 'Nexaloom' };
 
-        // 3. Send Email
+        // 3. Send Email (Imported dynamically to ensure freshness, though top-level is better for perf)
+        // We require it here to ensure we get the latest version if files changed without restart (in dev), 
+        // but for correctness we await it explicitly.
         const { sendOutreachEmail } = require('./services/emailService');
+
+        console.log(`Attempting to send outreach email to ${lead.email} for lead ${lead.id}...`);
+
         await sendOutreachEmail(lead.email, lead.name, subject, body, {
             companyName: branding.companyName || branding.name,
             companyAddress: branding.companyAddress,
@@ -139,18 +149,21 @@ app.post('/api/leads/:id/email', async (req, res) => {
             emailSignature: branding.emailSignature
         });
 
-        // 4. Update Interactions Log
+        console.log(`Email sent successfully to ${lead.email}. Logging interaction...`);
+
+        // 4. Update Interactions Log (ONLY executed if email sends successfully)
         const interactionId = uuidv4();
         await pool.query(
             `INSERT INTO interactions (id, tenantId, leadId, type, notes, date, metadata) VALUES (?, ?, ?, 'EMAIL', ?, NOW(), ?)`,
             [interactionId, lead.tenantId, id, `Outreach: ${subject}`, JSON.stringify({ sentTo: lead.email, subject })]
         );
 
-        res.json({ success: true, message: 'Email sent successfully' });
+        res.json({ success: true, message: 'Email sent and logged successfully' });
 
     } catch (err) {
         console.error('Email Outreach Error:', err);
-        res.status(500).json({ error: err.message });
+        // Explicitly return the error so the frontend knows it failed
+        res.status(500).json({ error: `Failed to send email: ${err.message}` });
     }
 });
 
