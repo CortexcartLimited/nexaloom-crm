@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Phone, Video, Mail, MessageSquare, X, User as UserIcon, Clock, Building, ArrowRight } from 'lucide-react';
 import { Interaction, Lead, User } from '../types';
+import { formatToMysql } from '../utils/formatDate';
 
 interface CalendarViewProps {
   interactions: Interaction[];
@@ -102,14 +103,14 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
       const [y, m, d] = rescheduleForm.date.split('-').map(Number);
       const [h, min] = rescheduleForm.time.split(':').map(Number);
       const newDate = new Date(y, m - 1, d, h, min);
-      const newDateIso = newDate.toISOString();
+      const newDateMysql = formatToMysql(newDate);
       const newDateStr = newDate.toLocaleDateString() + ' ' + newDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      // Optimistic UI
-      setSelectedInteraction({ ...selectedInteraction, date: newDateIso });
+      // Optimistic UI (ISO is fine for local state if needed, but consistency is better)
+      setSelectedInteraction({ ...selectedInteraction, date: newDate.toISOString() }); // Keep ISO for frontend state compatibility if needed, or switch? Original was ISO.
 
       // API
-      await onUpdateInteraction(selectedInteraction.id, { date: newDateIso });
+      await onUpdateInteraction(selectedInteraction.id, { date: newDateMysql });
 
       // History
       const lead = leads.find(l => l.id === selectedInteraction.leadId);
@@ -120,7 +121,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
           leadId: lead.id,
           type: 'NOTE',
           notes: `${user.name} Rescheduled '${selectedInteraction.type}' from ${oldDateStr} to ${newDateStr}.`,
-          date: new Date().toISOString()
+          date: formatToMysql(new Date())
         };
         await onAddInteraction(log);
       }
@@ -147,7 +148,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
         leadId: lead.id,
         type: 'NOTE',
         notes: `${user.name} Cancelled the event '${selectedInteraction.type}' scheduled for ${new Date(selectedInteraction.date).toLocaleDateString()}.`,
-        date: new Date().toISOString()
+        date: formatToMysql(new Date())
       };
       await onAddInteraction(note);
     }
@@ -167,8 +168,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
     const [hours, minutes] = newMeeting.time.split(':').map(Number);
     date.setHours(hours, minutes, 0, 0);
 
-    // Store as ISO string but based on local construction
-    const scheduledTime = date.toISOString();
+    // Store as MySQL string for API
+    const scheduledTimeMysql = formatToMysql(date);
+    const scheduledTime = date.toISOString(); // Keep ISO for local logic if needed
 
     // 1. Create the Primary Event Interaction
     // CREATE NEW EVENT
@@ -178,13 +180,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
       leadId: newMeeting.leadId,
       type: newMeeting.type,
       notes: newMeeting.notes,
-      date: scheduledTime,
+      date: scheduledTimeMysql, // Send MySQL format to API
       status: 'SCHEDULED'
     };
 
     const now = new Date();
     const auditTimestamp = now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const eventDateDisplay = new Date(scheduledTime).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const eventDateDisplay = date.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
     let auditNote = `EVENT BOOKED: ${user.name} - ${auditTimestamp}\n`;
     auditNote += `Action: New ${newMeeting.type} Scheduled\n`;
@@ -199,7 +201,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
       leadId: newMeeting.leadId,
       type: 'NOTE',
       notes: auditNote,
-      date: now.toISOString()
+      date: formatToMysql(now)
     };
 
     await onAddInteraction(interaction);
