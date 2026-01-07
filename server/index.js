@@ -58,7 +58,7 @@ app.post('/api/leads', async (req, res) => {
     const values = [];
 
     try {
-        const query = 'INSERT INTO leads (id, tenantId, name, company, email, phone, value, status, currency, country, taxId, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())';
+        const query = 'INSERT INTO leads (id, tenantId, name, company, email, phone, value, status, currency, country, tax_id, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())';
         await pool.query(query, [id, tenantId, name, company, email, phone, value || 0, status || 'NEW', currency || 'GBP', country, req.body.taxId]);
 
         // Log interaction

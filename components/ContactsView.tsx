@@ -515,7 +515,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
               <input required className="w-full border rounded-lg p-2 text-black" placeholder="Full Name" value={newContactData.name} onChange={e => setNewContactData({ ...newContactData, name: e.target.value })} />
               <input className="w-full border rounded-lg p-2 text-black" placeholder="Company" value={newContactData.company} onChange={e => setNewContactData({ ...newContactData, company: e.target.value })} />
               <input type="email" className="w-full border rounded-lg p-2 text-black" placeholder="Email" value={newContactData.email} onChange={e => setNewContactData({ ...newContactData, email: e.target.value })} />
-              <input type="email" className="w-full border rounded-lg p-2 text-black" placeholder="Email" value={newContactData.email} onChange={e => setNewContactData({ ...newContactData, email: e.target.value })} />
+
               <input className="w-full border rounded-lg p-2 text-black" placeholder="Phone" value={newContactData.phone} onChange={e => setNewContactData({ ...newContactData, phone: e.target.value })} />
               <select
                 className="w-full border rounded-lg p-2 text-black bg-white"
