@@ -97,6 +97,7 @@ export interface Lead {
   createdAt: string;
   lastInteraction?: string;
   currency?: string;
+  country?: string;
 }
 
 export interface Interaction {

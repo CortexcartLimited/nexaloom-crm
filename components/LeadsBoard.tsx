@@ -21,6 +21,17 @@ interface LeadsBoardProps {
 
 const COLUMNS = Object.values(LeadStatus);
 
+const COUNTRIES = [
+  'United Kingdom',
+  'United States',
+  'India',
+  'Australia',
+  'Canada',
+  'Germany',
+  'France',
+  'Other'
+];
+
 export const LeadsBoard: React.FC<LeadsBoardProps> = ({
   leads,
   onStatusChange,
@@ -43,7 +54,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const [newLeadData, setNewLeadData] = useState<Partial<Lead & { productId: string, discount: number }>>({
-    name: '', company: '', email: '', phone: '', value: 0, status: LeadStatus.NEW, productId: '', discount: 0, currency: 'GBP'
+    name: '', company: '', email: '', phone: '', value: 0, status: LeadStatus.NEW, productId: '', discount: 0, currency: 'GBP', country: 'United Kingdom'
   });
   // State for Editing
   const [editLeadData, setEditLeadData] = useState<Partial<Lead>>({});
@@ -82,7 +93,8 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
       phone: lead.phone,
       value: lead.value,
       status: lead.status, // Allow status edit? Why not.
-      currency: lead.currency || 'GBP'
+      currency: lead.currency || 'GBP',
+      country: lead.country || 'United Kingdom'
     });
     setModalMode('EDIT');
   };
@@ -281,6 +293,14 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
                   <input type="email" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={newLeadData.email} onChange={e => setNewLeadData({ ...newLeadData, email: e.target.value })} placeholder="Email Address" />
                   <input type="tel" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={newLeadData.phone} onChange={e => setNewLeadData({ ...newLeadData, phone: e.target.value })} placeholder="Phone Number" />
                 </div>
+                <select
+                  className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  value={newLeadData.country}
+                  onChange={e => setNewLeadData({ ...newLeadData, country: e.target.value })}
+                >
+                  <option value="" disabled>Select Country</option>
+                  {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
 
               {/* SECTION 2: DEAL INFO (CATALOG INTEGRATION) */}
@@ -476,6 +496,14 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
                   <input type="email" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={editLeadData.email} onChange={e => setEditLeadData({ ...editLeadData, email: e.target.value })} placeholder="Email Address" />
                   <input type="tel" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={editLeadData.phone} onChange={e => setEditLeadData({ ...editLeadData, phone: e.target.value })} placeholder="Phone Number" />
                 </div>
+                <select
+                  className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  value={editLeadData.country}
+                  onChange={e => setEditLeadData({ ...editLeadData, country: e.target.value })}
+                >
+                  <option value="" disabled>Select Country</option>
+                  {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
 
               <div className="pt-4 border-t border-gray-100 dark:border-gray-700">

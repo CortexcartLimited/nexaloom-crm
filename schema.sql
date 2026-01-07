@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS leads (
     value DECIMAL(10, 2) DEFAULT 0.00,
     status ENUM('NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'WON', 'LOST') DEFAULT 'NEW',
     currency VARCHAR(10) DEFAULT 'GBP',
+    country VARCHAR(100),
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     lastInteraction DATETIME
 );

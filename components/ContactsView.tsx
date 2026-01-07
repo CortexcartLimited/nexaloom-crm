@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Lead, Interaction, Document, KnowledgeBaseArticle, User } from '../types';
 import { generateEmailDraft } from '../services/geminiService';
-import { Phone, Mail, Building, Calendar, User as UserIcon, X, MessageSquare, Clock, MapPin, Upload, FileSpreadsheet, ArrowRight, CheckCircle, AlertCircle, ArrowLeft, Plus, Inbox, LayoutGrid, List, MoreHorizontal, Send, Wand2, Paperclip, File, Search, ClipboardList, Save, History, BookOpen, Edit } from 'lucide-react';
+import { Phone, Mail, Building, Calendar, User as UserIcon, X, MessageSquare, Clock, MapPin, Upload, FileSpreadsheet, ArrowRight, CheckCircle, AlertCircle, ArrowLeft, Plus, Inbox, LayoutGrid, List, MoreHorizontal, Send, Wand2, Paperclip, File, Search, ClipboardList, Save, History, BookOpen, Edit, Coins } from 'lucide-react';
+import { formatCurrency } from '../utils/formatCurrency';
 
 interface ContactsViewProps {
   contacts: Lead[];
@@ -14,6 +15,17 @@ interface ContactsViewProps {
   onOpenDialer: (phone?: string) => void;
   user: User; // Provided by App.tsx
 }
+
+const COUNTRIES = [
+  'United Kingdom',
+  'United States',
+  'India',
+  'Australia',
+  'Canada',
+  'Germany',
+  'France',
+  'Other'
+];
 
 export const ContactsView: React.FC<ContactsViewProps> = ({
   contacts,
@@ -106,7 +118,8 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
       company: selectedContact.company,
       email: selectedContact.email,
       phone: selectedContact.phone,
-      currency: selectedContact.currency || 'GBP'
+      currency: selectedContact.currency || 'GBP',
+      country: selectedContact.country || 'United Kingdom'
     });
     setIsEditing(true);
   };
@@ -352,25 +365,37 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Currency Field in Edit Mode */}
                   <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700">
+                    <Coins size={16} className="text-gray-400" />
                     <div className="flex-1">
-                      <p className="text-[10px] text-gray-500 uppercase">Currency Preference</p>
+                      <p className="text-[10px] text-gray-500 uppercase">Location & Currency</p>
                       {isEditing ? (
-                        <select
-                          className="w-full bg-white text-sm border rounded px-1 text-black py-1"
-                          value={editFormData.currency || 'GBP'}
-                          onChange={e => setEditFormData({ ...editFormData, currency: e.target.value })}
-                        >
-                          <option value="GBP">GBP (£)</option>
-                          <option value="USD">USD ($)</option>
-                          <option value="EUR">EUR (€)</option>
-                          <option value="INR">INR (₹)</option>
-                          <option value="AUD">AUD (A$)</option>
-                          <option value="CAD">CAD (C$)</option>
-                        </select>
+                        <div className="flex gap-2">
+                          <select
+                            className="w-1/2 bg-white text-sm border rounded px-1 text-black py-1"
+                            value={editFormData.country || 'United Kingdom'}
+                            onChange={e => setEditFormData({ ...editFormData, country: e.target.value })}
+                          >
+                            <option value="" disabled>Country</option>
+                            {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                          <select
+                            className="w-1/2 bg-white text-sm border rounded px-1 text-black py-1"
+                            value={editFormData.currency || 'GBP'}
+                            onChange={e => setEditFormData({ ...editFormData, currency: e.target.value })}
+                          >
+                            <option value="GBP">GBP (£)</option>
+                            <option value="USD">USD ($)</option>
+                            <option value="EUR">EUR (€)</option>
+                            <option value="INR">INR (₹)</option>
+                            <option value="AUD">AUD (A$)</option>
+                            <option value="CAD">CAD (C$)</option>
+                          </select>
+                        </div>
                       ) : (
-                        <p className="text-sm font-medium">{selectedContact.currency || 'GBP'}</p>
+                        <p className="text-sm font-medium">
+                          {selectedContact.country || 'Unknown'} ({formatCurrency(0, selectedContact.currency || 'GBP').replace(/\d|\s|\./g, '')})
+                        </p>
                       )}
                     </div>
                   </div>

@@ -51,14 +51,14 @@ app.get('/api/leads', async (req, res) => {
 
 // Add a new lead
 app.post('/api/leads', async (req, res) => {
-    const { tenantId, name, company, email, phone, value, status, currency } = req.body;
+    const { tenantId, name, company, email, phone, value, status, currency, country } = req.body;
     const id = uuidv4();
 
     try {
         await pool.query(
-            `INSERT INTO leads (id, tenantId, name, company, email, phone, value, status, currency, createdAt) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-            [id, tenantId, name, company, email, phone, value, status, currency || 'GBP']
+            `INSERT INTO leads (id, tenantId, name, company, email, phone, value, status, currency, country, createdAt) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+            [id, tenantId, name, company, email, phone, value, status, currency || 'GBP', country || null]
         );
         res.status(201).json({ id, ...req.body });
     } catch (err) {
