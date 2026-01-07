@@ -143,7 +143,7 @@ app.post('/api/leads/:id/email', async (req, res) => {
 
         console.log(`Attempting to send outreach email to ${lead.email} for lead ${lead.id}...`);
 
-        await sendBasicEmail(lead.email, lead.name, subject, body, {
+        await sendBasicEmail(lead.email, lead.name, subject, body, [], {
             companyName: branding.companyName || branding.name,
             companyAddress: branding.companyAddress,
             logoUrl: branding.logoUrl,

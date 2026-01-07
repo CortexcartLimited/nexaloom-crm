@@ -228,7 +228,7 @@ ${emailSignature || ''}
     }
 };
 
-const sendBasicEmail = async (to, leadName, subject, bodyContent, branding = {}) => {
+const sendBasicEmail = async (to, leadName, subject, bodyContent, attachments = [], branding = {}) => {
     const { companyName = 'Nexaloom CRM', companyAddress, logoUrl, emailSignature } = branding;
 
     // Use helper to get safe address
@@ -279,7 +279,7 @@ const sendBasicEmail = async (to, leadName, subject, bodyContent, branding = {})
 
                     <!-- Footer -->
                     <tr>
-                         <td style="padding: 20px 30px; background-color: #f8f9fa; border-top: 1px solid #eeeeee; text-align: center;">
+                        <td style="padding: 20px 30px; background-color: #f8f9fa; border-top: 1px solid #eeeeee; text-align: center;">
                             <p style="margin: 0; font-size: 12px; line-height: 18px; color: #999999;">
                                 <strong>${companyName}</strong><br>
                                 ${companyAddress ? companyAddress.replace(/\n/g, ', ') : ''}
@@ -318,7 +318,12 @@ ${emailSignature || ''}
         to: to,
         subject: subject,
         html: htmlContent,
-        text: textContent
+        text: textContent,
+        attachments: attachments,
+        envelope: {
+            from: 'accounts@cortexcart.com',
+            to: to
+        }
     };
 
     try {
