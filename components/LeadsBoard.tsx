@@ -120,13 +120,16 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
       // Assume 'api' is available globally or imported. 
       // Since it's not in props, we'll fetch directly.
       const token = localStorage.getItem('token');
+      const payload = { subject: emailSubject, body: aiDraft };
+      console.log('Sending Outreach Data:', payload);
+
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/leads/${selectedLead.id}/email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ subject: emailSubject, body: aiDraft })
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) throw new Error('Failed to send email');
