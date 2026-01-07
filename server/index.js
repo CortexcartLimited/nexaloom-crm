@@ -549,7 +549,7 @@ app.get('/api/leads/:id/timeline', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = 3006; // Hardcoded to match your Nginx/Vite proxy
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`--- SERVER STARTING ON PORT ${PORT} ---`);
 });
