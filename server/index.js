@@ -250,44 +250,60 @@ app.post('/api/interactions', async (req, res) => {
     }
 });
 
-// ROUTE: Update Interaction (e.g. Status Change / Cancel)
+// ROUTE: Update Interaction (e.g. Status Change / Cancel / Reschedule)
 app.patch('/api/interactions/:id', async (req, res) => {
     const { id } = req.params;
-    const updates = req.body;
+    const { date, notes, status, type, metadata } = req.body;
 
     try {
-        // Fix date format if present in updates
-        if (updates.date) {
-            updates.date = new Date(updates.date).toISOString().slice(0, 19).replace('T', ' ');
+        // 1. Fetch current state to get leadId and ensure existence
+        const [current] = await pool.query('SELECT * FROM interactions WHERE id = ?', [id]);
+        if (current.length === 0) return res.status(404).json({ error: 'Interaction not found' });
+        const interaction = current[0];
+
+        // 2. Prepare Updates (Explicit Columns)
+        // If a field is undefined in body, keep existing value. if explicitly null/empty, update it.
+        // We use || interaction.field to keep existing if not provided.
+
+        let newDate = interaction.date;
+        if (date) {
+            newDate = new Date(date).toISOString().slice(0, 19).replace('T', ' ');
         }
 
-        const fields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
-        const values = Object.values(updates);
+        const newNotes = notes !== undefined ? notes : interaction.notes;
+        const newStatus = status !== undefined ? status : interaction.status;
+        const newType = type !== undefined ? type : interaction.type;
+        const newMetadata = metadata !== undefined ? JSON.stringify(metadata) : interaction.metadata;
 
+        // Explicit UPDATE query
         await pool.query(
-            `UPDATE interactions SET ${fields} WHERE id = ?`,
-            [...values, id]
+            `UPDATE interactions 
+             SET date = ?, notes = ?, status = ?, type = ?, metadata = ?
+             WHERE id = ?`,
+            [newDate, newNotes, newStatus, newType, newMetadata, id]
         );
-        // Insert into leads_history if relevant fields changed
-        const historyId = uuidv4();
-        // Since id is interaction ID, we need to fetch the leadId first or pass it. 
-        // For efficiency, we might skip fetching if not critical, but leads_history requires lead_id. 
-        // Let's fetch the leadId from the interaction if not provided.
-        // Actually, let's just do a quick lookup.
-        const [rows] = await pool.query('SELECT leadId FROM interactions WHERE id = ?', [id]);
-        if (rows.length > 0) {
-            const leadId = rows[0].leadId;
-            const actionType = 'INTERACTION_UPDATE';
-            // Include Reason if provided in updates.notes or separately
-            const details = JSON.stringify(updates) || '{}';
 
+        // 3. Log to History if Date Changed (Rescheduling) or Status Changed (Cancel)
+        // We only log if it's a significant change to avoid spam
+        if (date || status) {
+            const historyId = uuidv4();
+            const actionType = 'INTERACTION_UPDATE';
+            // Create a safe details object
+            const detailsObj = {
+                date: date || 'unchanged',
+                status: status || 'unchanged',
+                notes: notes || 'unchanged'
+            };
+            const details = JSON.stringify(detailsObj);
+
+            // Explicit INSERT into leads_history
             await pool.query(
                 'INSERT INTO leads_history (lead_id, action_type, details, event_id) VALUES (?, ?, ?, ?)',
-                [leadId, actionType, details, historyId]
+                [interaction.leadId, actionType, details, historyId]
             );
         }
 
-        res.json({ success: true, message: 'Interaction updated' });
+        res.json({ success: true, message: 'Interaction updated successfully' });
     } catch (err) {
         console.error("UPDATE INTERACTION ERROR:", err);
         res.status(500).json({ error: err.message });
