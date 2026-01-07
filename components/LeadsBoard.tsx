@@ -395,7 +395,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
                   </>
                 ) : (
                   <>
-                    <Mail size={16} /> Send Email
+                    <Mail size={16} /> Send Email (FIXED)
                   </>
                 )}
               </button>

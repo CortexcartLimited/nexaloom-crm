@@ -15,39 +15,39 @@ interface ContactsViewProps {
   user: User; // Provided by App.tsx
 }
 
-export const ContactsView: React.FC<ContactsViewProps> = ({ 
-  contacts, 
+export const ContactsView: React.FC<ContactsViewProps> = ({
+  contacts,
   interactions,
-  onAddLeads, 
+  onAddLeads,
   onUpdateLead,
   onAddInteraction,
   onOpenDialer,
   user,
-  documents = [], 
+  documents = [],
   articles = []
 }) => {
-  console.log("Contacts received by component:", contacts); 
-  
- // --- ADD THIS BLOCK START ---
- if (!user) {
-  return <div className="p-10 text-center">User not loaded...</div>;
-}
+  console.log("Contacts received by component:", contacts);
 
-if (!contacts || contacts.length === 0) {
-  return (
-    <div className="p-10 text-center flex flex-col items-center justify-center h-full">
-      <div className="bg-gray-50 p-6 rounded-full mb-4">
-        <UserIcon size={48} className="text-gray-300" />
+  // --- ADD THIS BLOCK START ---
+  if (!user) {
+    return <div className="p-10 text-center">User not loaded...</div>;
+  }
+
+  if (!contacts || contacts.length === 0) {
+    return (
+      <div className="p-10 text-center flex flex-col items-center justify-center h-full">
+        <div className="bg-gray-50 p-6 rounded-full mb-4">
+          <UserIcon size={48} className="text-gray-300" />
+        </div>
+        <h3 className="text-lg font-medium text-gray-900">No contacts found</h3>
+        <p className="text-gray-500">Try importing leads or adding a new contact manually.</p>
+        <button onClick={() => setIsAddModalOpen(true)} className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg">
+          + Add First Contact
+        </button>
       </div>
-      <h3 className="text-lg font-medium text-gray-900">No contacts found</h3>
-      <p className="text-gray-500">Try importing leads or adding a new contact manually.</p>
-      <button onClick={() => setIsAddModalOpen(true)} className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg">
-        + Add First Contact
-      </button>
-    </div>
-  );
-}
-// --- ADD THIS BLOCK END ---
+    );
+  }
+  // --- ADD THIS BLOCK END ---
 
   // --- 2. STATE DECLARATIONS ---
   const [selectedContact, setSelectedContact] = useState<Lead | null>(null);
@@ -102,67 +102,73 @@ if (!contacts || contacts.length === 0) {
   };
 
   const handleAddNote = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!selectedContact || !newNoteText.trim()) return;
-      setIsSavingNote(true);
-      try {
-        const interaction: Interaction = {
-          id: `int-note-${Date.now()}`,
-          tenantId: user.tenantId,
-          leadId: selectedContact.id,
-          userId: user.id, // Ensure this is passed
-          type: 'NOTE',
-          notes: newNoteText,
-          date: new Date().toISOString()
-          // productId: someValue // You can add this if the note is about a specific product
+    e.preventDefault();
+    if (!selectedContact || !newNoteText.trim()) return;
+    setIsSavingNote(true);
+    try {
+      const interaction: Interaction = {
+        id: `int-note-${Date.now()}`,
+        tenantId: user.tenantId,
+        leadId: selectedContact.id,
+        userId: user.id, // Ensure this is passed
+        type: 'NOTE',
+        notes: newNoteText,
+        date: new Date().toISOString()
+        // productId: someValue // You can add this if the note is about a specific product
       };
-          await onAddInteraction(interaction);
-          setNewNoteText('');
-      } catch (err) {
-          console.error(err);
-      } finally {
-          setIsSavingNote(false);
-      }
+      await onAddInteraction(interaction);
+      setNewNoteText('');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSavingNote(false);
+    }
   };
 
   const handleSendEmail = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!selectedContact) return;
-      setIsSending(true);
-      try {
-          const interaction: Interaction = {
-              id: `int-email-${Date.now()}`,
-              tenantId: user.tenantId,
-              leadId: selectedContact.id,
-              type: 'EMAIL',
-              notes: `Subject: ${emailSubject}\n\n${emailBody}`,
-              date: new Date().toISOString(),
-              metadata: {
-                  subject: emailSubject,
-                  from: user.email,
-                  to: selectedContact.email,
-                  attachments: selectedAttachments.map(a => a.name)
-              } as any
-          };
-          await onAddInteraction(interaction);
-          setEmailSuccess('Email logged successfully!');
-          setTimeout(() => {
-            setIsEmailModalOpen(false);
-            setEmailSuccess('');
-          }, 1500);
-      } catch (error) {
-          alert('Failed to log email.');
-      } finally {
-          setIsSending(false);
+    e.preventDefault();
+    alert('Contact View Button Triggered');
+
+    if (!selectedContact) return;
+    setIsSending(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/leads/${selectedContact.id}/email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ subject: emailSubject, body: emailBody })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send email');
       }
+
+      // The backend logs the interaction automatically now.
+      // We can assume the list will refresh or we might need to manually trigger a refresh if the user wants.
+
+      setEmailSuccess('Email sent successfully!');
+      setTimeout(() => {
+        setIsEmailModalOpen(false);
+        setEmailSuccess('');
+      }, 1500);
+    } catch (error) {
+      console.error('Email Send Error:', error);
+      alert(`Failed to send email: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (onAddLeads) {
-        await onAddLeads([newContactData]);
-        setIsAddModalOpen(false);
-        setNewContactData({ name: '', company: '', email: '', phone: '' });
+      await onAddLeads([newContactData]);
+      setIsAddModalOpen(false);
+      setNewContactData({ name: '', company: '', email: '', phone: '' });
     }
   };
 
@@ -189,14 +195,14 @@ if (!contacts || contacts.length === 0) {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your relationships and interaction history</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-             <div className="bg-white dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700 flex shadow-sm mr-2">
-                <button onClick={() => setViewMode('GRID')} className={`p-1.5 rounded-md transition-all ${viewMode === 'GRID' ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`} title="Grid View"><LayoutGrid size={18} /></button>
-                <button onClick={() => setViewMode('LIST')} className={`p-1.5 rounded-md transition-all ${viewMode === 'LIST' ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`} title="List View"><List size={18} /></button>
-             </div>
-             <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-sm font-medium"><Plus size={16} /> New Contact</button>
+          <div className="bg-white dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700 flex shadow-sm mr-2">
+            <button onClick={() => setViewMode('GRID')} className={`p-1.5 rounded-md transition-all ${viewMode === 'GRID' ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`} title="Grid View"><LayoutGrid size={18} /></button>
+            <button onClick={() => setViewMode('LIST')} className={`p-1.5 rounded-md transition-all ${viewMode === 'LIST' ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`} title="List View"><List size={18} /></button>
+          </div>
+          <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-sm font-medium"><Plus size={16} /> New Contact</button>
         </div>
       </div>
-      
+
       {/* Contact Grid */}
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto pb-20 pr-2 custom-scrollbar">
@@ -204,9 +210,9 @@ if (!contacts || contacts.length === 0) {
           /* GRID VIEW */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {contacts.map(contact => (
-              <div 
-                key={contact.id} 
-                onClick={() => setSelectedContact(contact)} 
+              <div
+                key={contact.id}
+                onClick={() => setSelectedContact(contact)}
                 className={`bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border transition-all cursor-pointer group relative overflow-hidden ${selectedContact?.id === contact.id ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-100 dark:border-gray-700 hover:shadow-md'}`}
               >
                 <div className="flex items-start justify-between mb-4">
@@ -241,8 +247,8 @@ if (!contacts || contacts.length === 0) {
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
                 {contacts.map(contact => (
-                  <tr 
-                    key={contact.id} 
+                  <tr
+                    key={contact.id}
                     onClick={() => setSelectedContact(contact)}
                     className="hover:bg-blue-50/50 dark:hover:bg-blue-900/10 cursor-pointer transition-colors group"
                   >
@@ -275,20 +281,20 @@ if (!contacts || contacts.length === 0) {
           <div className="w-full max-w-md bg-white dark:bg-gray-800 h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 border-l border-gray-100 dark:border-gray-700" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 flex justify-between items-start shrink-0">
               <div className="flex gap-4">
-                 <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">{selectedContact.name.charAt(0)}</div>
-                 <div>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selectedContact.name}</h2>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm flex items-center gap-1 mt-1"><Building size={14} />{selectedContact.company}</p>
-                    <div className="mt-3 flex gap-2">
-                        {isEditing ? (
-                            <button onClick={handleSaveContactUpdates} className="text-xs bg-green-600 text-white px-3 py-1 rounded-md font-medium flex items-center gap-1"><Save size={12} /> Save</button>
-                        ) : (
-                            <button onClick={handleEditClick} className="text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 px-3 py-1 rounded-md font-medium">Edit Profile</button>
-                        )}
-                        <button onClick={handleOpenEmail} className="text-xs bg-blue-600 text-white px-3 py-1 rounded-md font-medium flex items-center gap-1"><Send size={12} /> Email</button>
-                        <button onClick={() => setIsNotesSidebarOpen(true)} className="text-xs bg-white dark:bg-gray-700 border border-gray-200 px-2 py-1 rounded-md" title="Notes & Logs"><ClipboardList size={14} /></button>
-                    </div>
-                 </div>
+                <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">{selectedContact.name.charAt(0)}</div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selectedContact.name}</h2>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm flex items-center gap-1 mt-1"><Building size={14} />{selectedContact.company}</p>
+                  <div className="mt-3 flex gap-2">
+                    {isEditing ? (
+                      <button onClick={handleSaveContactUpdates} className="text-xs bg-green-600 text-white px-3 py-1 rounded-md font-medium flex items-center gap-1"><Save size={12} /> Save</button>
+                    ) : (
+                      <button onClick={handleEditClick} className="text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 px-3 py-1 rounded-md font-medium">Edit Profile</button>
+                    )}
+                    <button onClick={handleOpenEmail} className="text-xs bg-blue-600 text-white px-3 py-1 rounded-md font-medium flex items-center gap-1"><Send size={12} /> Email</button>
+                    <button onClick={() => setIsNotesSidebarOpen(true)} className="text-xs bg-white dark:bg-gray-700 border border-gray-200 px-2 py-1 rounded-md" title="Notes & Logs"><ClipboardList size={14} /></button>
+                  </div>
+                </div>
               </div>
               <button onClick={() => setSelectedContact(null)} className="text-gray-400 p-2 rounded-full hover:bg-gray-200 transition-colors"><X size={20} /></button>
             </div>
@@ -297,55 +303,55 @@ if (!contacts || contacts.length === 0) {
               <div className="space-y-4">
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Contact Details</h3>
                 <div className="grid gap-3">
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700">
-                        <Mail size={16} className="text-gray-400" />
-                        <div className="flex-1">
-                          <p className="text-[10px] text-gray-500 uppercase">Email</p>
-                          {isEditing ? (
-                            <input className="w-full bg-white text-sm border rounded px-1 text-black" value={editFormData.email || ''} onChange={e => setEditFormData({...editFormData, email: e.target.value})} />
-                          ) : (
-                            <p className="text-sm font-medium">{selectedContact.email || 'None'}</p>
-                          )}
-                        </div>
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700">
+                    <Mail size={16} className="text-gray-400" />
+                    <div className="flex-1">
+                      <p className="text-[10px] text-gray-500 uppercase">Email</p>
+                      {isEditing ? (
+                        <input className="w-full bg-white text-sm border rounded px-1 text-black" value={editFormData.email || ''} onChange={e => setEditFormData({ ...editFormData, email: e.target.value })} />
+                      ) : (
+                        <p className="text-sm font-medium">{selectedContact.email || 'None'}</p>
+                      )}
                     </div>
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700">
-                        <Phone size={16} className="text-gray-400" />
-                        <div className="flex-1">
-                          <p className="text-[10px] text-gray-500 uppercase">Phone</p>
-                          {isEditing ? (
-                            <input className="w-full bg-white text-sm border rounded px-1 text-black" value={editFormData.phone || ''} onChange={e => setEditFormData({...editFormData, phone: e.target.value})} />
-                          ) : (
-                            <p className="text-sm font-medium">{selectedContact.phone || 'None'}</p>
-                          )}
-                        </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700">
+                    <Phone size={16} className="text-gray-400" />
+                    <div className="flex-1">
+                      <p className="text-[10px] text-gray-500 uppercase">Phone</p>
+                      {isEditing ? (
+                        <input className="w-full bg-white text-sm border rounded px-1 text-black" value={editFormData.phone || ''} onChange={e => setEditFormData({ ...editFormData, phone: e.target.value })} />
+                      ) : (
+                        <p className="text-sm font-medium">{selectedContact.phone || 'None'}</p>
+                      )}
                     </div>
+                  </div>
                 </div>
               </div>
 
               {/* Timeline Section */}
               <div>
-                 <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-2">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2"><Clock size={14} /> Activity Timeline</h3>
-                    <button onClick={() => setIsNotesSidebarOpen(true)} className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-bold">+ New Note</button>
-                 </div>
-                 {contactInteractions.length > 0 ? (
-                   <div className="space-y-4">
-                     {contactInteractions.map((int) => (
-                       <div key={int.id} className="relative pl-6">
-                         <div className="absolute left-0 top-1 w-2 h-2 rounded-full bg-blue-500" />
-                         <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg text-sm shadow-sm">
-                           <div className="flex justify-between text-[10px] mb-1">
-                             <span className="font-bold text-blue-600 uppercase">{int.type}</span>
-                             <span className="text-gray-400">{new Date(int.date).toLocaleDateString()}</span>
-                           </div>
-                           <p className="text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{int.notes}</p>
-                         </div>
-                       </div>
-                     ))}
-                   </div>
-                 ) : (
-                   <p className="text-center text-xs text-gray-400 py-4 italic">No activity yet.</p>
-                 )}
+                <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-2">
+                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2"><Clock size={14} /> Activity Timeline</h3>
+                  <button onClick={() => setIsNotesSidebarOpen(true)} className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-bold">+ New Note</button>
+                </div>
+                {contactInteractions.length > 0 ? (
+                  <div className="space-y-4">
+                    {contactInteractions.map((int) => (
+                      <div key={int.id} className="relative pl-6">
+                        <div className="absolute left-0 top-1 w-2 h-2 rounded-full bg-blue-500" />
+                        <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg text-sm shadow-sm">
+                          <div className="flex justify-between text-[10px] mb-1">
+                            <span className="font-bold text-blue-600 uppercase">{int.type}</span>
+                            <span className="text-gray-400">{new Date(int.date).toLocaleDateString()}</span>
+                          </div>
+                          <p className="text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{int.notes}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-xs text-gray-400 py-4 italic">No activity yet.</p>
+                )}
               </div>
             </div>
           </div>
@@ -355,87 +361,87 @@ if (!contacts || contacts.length === 0) {
       {/* Note Logging Sidebar */}
       {isNotesSidebarOpen && selectedContact && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex justify-end z-[70] animate-in fade-in" onClick={() => setIsNotesSidebarOpen(false)}>
-           <div className="w-full max-w-md bg-white dark:bg-gray-800 h-full shadow-2xl flex flex-col animate-in slide-in-from-right" onClick={e => e.stopPropagation()}>
-              <div className="p-6 border-b flex justify-between items-center bg-amber-50/50">
-                 <div className="flex items-center gap-3">
-                    <ClipboardList className="text-amber-600" />
-                    <h2 className="text-lg font-bold">Log Activity: {selectedContact.name}</h2>
-                 </div>
-                 <button onClick={() => setIsNotesSidebarOpen(false)}><X /></button>
+          <div className="w-full max-w-md bg-white dark:bg-gray-800 h-full shadow-2xl flex flex-col animate-in slide-in-from-right" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b flex justify-between items-center bg-amber-50/50">
+              <div className="flex items-center gap-3">
+                <ClipboardList className="text-amber-600" />
+                <h2 className="text-lg font-bold">Log Activity: {selectedContact.name}</h2>
               </div>
-              <div className="p-6 flex flex-col h-full">
-                  <form onSubmit={handleAddNote} className="flex flex-col flex-1">
-                      <div className="flex justify-between items-center mb-2">
-                        <label className="text-xs font-bold text-gray-400 uppercase">Interaction Note</label>
-                        <button type="button" onClick={() => setIsKbSearchOpen(!isKbSearchOpen)} className="text-xs text-blue-600 flex items-center gap-1 hover:underline"><BookOpen size={12} /> Reference KB</button>
-                      </div>
-                      
-                      {isKbSearchOpen && (
-                        <div className="mb-4 p-2 bg-gray-50 border rounded-lg">
-                           <input className="w-full p-2 text-xs border rounded mb-2" placeholder="Search KB Articles..." value={kbSearchQuery} onChange={e => setKbSearchQuery(e.target.value)} />
-                           <div className="max-h-32 overflow-y-auto">
-                              {filteredKbArticles.map(art => (
-                                <button key={art.id} onClick={() => handleInsertKbArticle(art)} className="w-full text-left p-1 text-xs hover:bg-blue-50">{art.title}</button>
-                              ))}
-                           </div>
-                        </div>
-                      )}
+              <button onClick={() => setIsNotesSidebarOpen(false)}><X /></button>
+            </div>
+            <div className="p-6 flex flex-col h-full">
+              <form onSubmit={handleAddNote} className="flex flex-col flex-1">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-xs font-bold text-gray-400 uppercase">Interaction Note</label>
+                  <button type="button" onClick={() => setIsKbSearchOpen(!isKbSearchOpen)} className="text-xs text-blue-600 flex items-center gap-1 hover:underline"><BookOpen size={12} /> Reference KB</button>
+                </div>
 
-                      <textarea 
-                         autoFocus
-                         className="w-full flex-1 p-4 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm text-black"
-                         placeholder="What happened? Log a call, meeting, or important detail..."
-                         value={newNoteText}
-                         onChange={e => setNewNoteText(e.target.value)}
-                      />
-                      <button type="submit" disabled={isSavingNote || !newNoteText.trim()} className="mt-4 w-full bg-blue-600 text-white py-3 rounded-lg font-bold shadow-lg disabled:opacity-50">
-                        {isSavingNote ? 'Saving...' : 'Save to Timeline'}
-                      </button>
-                  </form>
-              </div>
-           </div>
+                {isKbSearchOpen && (
+                  <div className="mb-4 p-2 bg-gray-50 border rounded-lg">
+                    <input className="w-full p-2 text-xs border rounded mb-2" placeholder="Search KB Articles..." value={kbSearchQuery} onChange={e => setKbSearchQuery(e.target.value)} />
+                    <div className="max-h-32 overflow-y-auto">
+                      {filteredKbArticles.map(art => (
+                        <button key={art.id} onClick={() => handleInsertKbArticle(art)} className="w-full text-left p-1 text-xs hover:bg-blue-50">{art.title}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <textarea
+                  autoFocus
+                  className="w-full flex-1 p-4 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm text-black"
+                  placeholder="What happened? Log a call, meeting, or important detail..."
+                  value={newNoteText}
+                  onChange={e => setNewNoteText(e.target.value)}
+                />
+                <button type="submit" disabled={isSavingNote || !newNoteText.trim()} className="mt-4 w-full bg-blue-600 text-white py-3 rounded-lg font-bold shadow-lg disabled:opacity-50">
+                  {isSavingNote ? 'Saving...' : 'Save to Timeline'}
+                </button>
+              </form>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Manual Add Contact Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-lg font-bold">New Contact</h3>
-                    <button onClick={() => setIsAddModalOpen(false)}><X /></button>
-                </div>
-                <form onSubmit={handleManualSubmit} className="space-y-4">
-                    <input required className="w-full border rounded-lg p-2 text-black" placeholder="Full Name" value={newContactData.name} onChange={e => setNewContactData({...newContactData, name: e.target.value})} />
-                    <input className="w-full border rounded-lg p-2 text-black" placeholder="Company" value={newContactData.company} onChange={e => setNewContactData({...newContactData, company: e.target.value})} />
-                    <input type="email" className="w-full border rounded-lg p-2 text-black" placeholder="Email" value={newContactData.email} onChange={e => setNewContactData({...newContactData, email: e.target.value})} />
-                    <input className="w-full border rounded-lg p-2 text-black" placeholder="Phone" value={newContactData.phone} onChange={e => setNewContactData({...newContactData, phone: e.target.value})} />
-                    <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold">Create Contact</button>
-                </form>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold">New Contact</h3>
+              <button onClick={() => setIsAddModalOpen(false)}><X /></button>
             </div>
+            <form onSubmit={handleManualSubmit} className="space-y-4">
+              <input required className="w-full border rounded-lg p-2 text-black" placeholder="Full Name" value={newContactData.name} onChange={e => setNewContactData({ ...newContactData, name: e.target.value })} />
+              <input className="w-full border rounded-lg p-2 text-black" placeholder="Company" value={newContactData.company} onChange={e => setNewContactData({ ...newContactData, company: e.target.value })} />
+              <input type="email" className="w-full border rounded-lg p-2 text-black" placeholder="Email" value={newContactData.email} onChange={e => setNewContactData({ ...newContactData, email: e.target.value })} />
+              <input className="w-full border rounded-lg p-2 text-black" placeholder="Phone" value={newContactData.phone} onChange={e => setNewContactData({ ...newContactData, phone: e.target.value })} />
+              <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold">Create Contact</button>
+            </form>
+          </div>
         </div>
       )}
 
       {/* Email Composition Modal */}
       {isEmailModalOpen && selectedContact && (
-         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
-             <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl flex flex-col p-6">
-                 <div className="flex justify-between items-center mb-6">
-                     <h3 className="text-lg font-bold">Log Sent Email</h3>
-                     <button onClick={() => setIsEmailModalOpen(false)}><X /></button>
-                 </div>
-                 <form onSubmit={handleSendEmail} className="space-y-4">
-                     <input required className="w-full border rounded-lg p-2 text-black" placeholder="Subject" value={emailSubject} onChange={e => setEmailSubject(e.target.value)} />
-                     <textarea required className="w-full h-64 border rounded-lg p-2 text-black" placeholder="Email content..." value={emailBody} onChange={e => setEmailBody(e.target.value)} />
-                     <div className="flex justify-between items-center">
-                        <span className="text-green-600 text-sm font-bold">{emailSuccess}</span>
-                        <button type="submit" disabled={isSending} className="bg-blue-600 text-white px-8 py-2 rounded-lg font-bold">
-                            {isSending ? 'Logging...' : 'Log Email'}
-                        </button>
-                     </div>
-                 </form>
-             </div>
-         </div>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl flex flex-col p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold">Log Sent Email</h3>
+              <button onClick={() => setIsEmailModalOpen(false)}><X /></button>
+            </div>
+            <form onSubmit={handleSendEmail} className="space-y-4">
+              <input required className="w-full border rounded-lg p-2 text-black" placeholder="Subject" value={emailSubject} onChange={e => setEmailSubject(e.target.value)} />
+              <textarea required className="w-full h-64 border rounded-lg p-2 text-black" placeholder="Email content..." value={emailBody} onChange={e => setEmailBody(e.target.value)} />
+              <div className="flex justify-between items-center">
+                <span className="text-green-600 text-sm font-bold">{emailSuccess}</span>
+                <button type="submit" disabled={isSending} className="bg-blue-600 text-white px-8 py-2 rounded-lg font-bold">
+                  {isSending ? 'Logging...' : 'Log Email'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
