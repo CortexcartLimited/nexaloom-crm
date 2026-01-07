@@ -460,7 +460,86 @@ app.use('/api/users', require('./routes/users')(pool));
 // --- SETTINGS ROUTES ---
 app.use('/api/settings', require('./routes/settings')(pool));
 
-const PORT = process.env.PORT || 5000;
+app.get('/api/leads/:id/timeline', async (req, res) => {
+    const { id } = req.params;
+    const { tenantId } = req.query;
+
+    try {
+        // 1. Fetch Interactions (Calendar Items + Notes)
+        const [interactions] = await pool.query(
+            'SELECT id, type, notes, date, status, "interaction" as source FROM interactions WHERE leadId = ? AND tenantId = ?',
+            [id, tenantId]
+        );
+
+        // 2. Fetch Lead History (Audit Logs)
+        // Assuming created_at exists. If not, we might need to rely on typical timestamp columns or handle error.
+        // We'll try to select created_at, if it fails, the user will notify us (or we can inspect db, but we can't).
+        // Based on other tables, 'createdAt' or 'created_at'. SQL typically uses snake_case defaults or camelCase if defined.
+        // 'leads' table has 'createdAt'. 'interactions' has 'date'.
+        // Let's guess 'created_at' for history table standard.
+        const [history] = await pool.query(
+            'SELECT id, action_type, details, status, created_at as date, "history" as source FROM leads_history WHERE lead_id = ?',
+            [id]
+        );
+
+        // 3. Fetch Email History
+        const [emails] = await pool.query(
+            'SELECT id, type, subject, sentAt as date, "email" as source FROM email_history WHERE leadId = ?',
+            [id]
+        );
+
+        // 4. Merge and Format
+        const timeline = [
+            ...interactions.map(i => ({
+                id: i.id,
+                type: i.type, // 'MEETING', 'CALL', 'NOTE'
+                date: i.date,
+                notes: i.notes,
+                status: i.status || 'COMPLETED',
+                source: 'interaction'
+            })),
+            ...history.map(h => {
+                let noteContent = '';
+                try {
+                    const details = JSON.parse(h.details || '{}');
+                    // Format details into a readable string
+                    noteContent = Object.entries(details)
+                        .map(([k, v]) => `${k}: ${v}`)
+                        .join(', ');
+                } catch (e) {
+                    noteContent = h.details;
+                }
+                return {
+                    id: `hist-${h.id}`,
+                    type: h.action_type, // 'INTERACTION_UPDATE'
+                    date: h.date, // mapped from created_at
+                    notes: noteContent,
+                    status: h.status,
+                    source: 'history'
+                };
+            }),
+            ...emails.map(e => ({
+                id: `email-${e.id}`,
+                type: 'EMAIL',
+                date: e.date, // mapped from sentAt
+                notes: `Subject: ${e.subject}`,
+                status: 'SENT',
+                source: 'email'
+            }))
+        ];
+
+        // 5. Sort by Date Descending
+        timeline.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        res.json(timeline);
+    } catch (err) {
+        console.error("TIMELINE FETCH ERROR:", err);
+        // Fallback: if columns fail (e.g. leads_history created_at), return generic error
+        res.status(500).json({ error: "Failed to fetch timeline", details: err.message });
+    }
+});
+
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });

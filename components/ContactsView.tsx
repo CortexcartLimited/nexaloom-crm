@@ -82,22 +82,52 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   const [selectedAttachments, setSelectedAttachments] = useState<Document[]>([]);
   const [commHistory, setCommHistory] = useState<any[]>([]);
 
+
+
+  // --- 3. MEMOIZED DATA ---
+
+  // New Timeline Interface
+  interface TimelineItem {
+    id: string;
+    type: string;
+    date: string;
+    notes: string;
+    status: string;
+    source: 'interaction' | 'history' | 'email';
+  }
+
+  const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
+
   useEffect(() => {
     if (selectedContact) {
-      // Use the correct derived prefix
       const token = localStorage.getItem('nexaloom_token');
+
+      // 1. Fetch Email History (Legacy Support - keeping for now if used elsewhere)
       fetch(`/crm/nexaloom-crm/api/leads/${selectedContact.id}/email-history`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
         .then(res => res.json())
         .then(data => setCommHistory(Array.isArray(data) ? data : []))
         .catch(err => console.error("Failed to fetch history:", err));
+
+      // 2. Fetch Unified Timeline
+      fetch(`/crm/nexaloom-crm/api/leads/${selectedContact.id}/timeline?tenantId=${user.tenantId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setTimelineItems(data);
+          }
+        })
+        .catch(err => console.error("Failed to fetch timeline:", err));
+
     } else {
       setCommHistory([]);
+      setTimelineItems([]);
     }
-  }, [selectedContact]);
+  }, [selectedContact, user.tenantId]);
 
-  // --- 3. MEMOIZED DATA ---
   const contactInteractions = useMemo(() => {
     if (!selectedContact || !interactions) return [];
     return interactions
@@ -434,20 +464,27 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                   <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2"><Clock size={14} /> Activity Timeline</h3>
                   <button onClick={() => setIsNotesSidebarOpen(true)} className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-bold">+ New Note</button>
                 </div>
-                {contactInteractions.length > 0 ? (
+                {timelineItems.length > 0 ? (
                   <div className="space-y-4">
-                    {contactInteractions.map((int) => (
-                      <div key={int.id} className="relative pl-6">
-                        <div className="absolute left-0 top-1 w-2 h-2 rounded-full bg-blue-500" />
-                        <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg text-sm shadow-sm">
-                          <div className="flex justify-between text-[10px] mb-1">
-                            <span className="font-bold text-blue-600 uppercase">{int.type}</span>
-                            <span className="text-gray-400">{new Date(int.date).toLocaleDateString()}</span>
+                    {timelineItems.map((item) => {
+                      const isOutreach = item.notes?.startsWith('OUTREACH SENT:');
+                      const displayNotes = isOutreach ? item.notes.replace('OUTREACH SENT:', '').trim() : item.notes;
+
+                      return (
+                        <div key={item.id} className="relative pl-6">
+                          <div className={`absolute left-0 top-1 w-2 h-2 rounded-full ${item.source === 'history' ? 'bg-gray-300' : 'bg-blue-500'}`} />
+                          <div className={`bg-gray-50 dark:bg-gray-700 p-3 rounded-lg text-sm shadow-sm ${isOutreach ? 'border-l-4 border-purple-500' : ''}`}>
+                            <div className="flex justify-between text-[10px] mb-1">
+                              <span className={`font-bold uppercase ${item.source === 'history' ? 'text-gray-500' : 'text-blue-600'}`}>
+                                {isOutreach ? 'OUTREACH' : item.type}
+                              </span>
+                              <span className="text-gray-400">{new Date(item.date).toLocaleDateString()} {new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <p className="text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{displayNotes}</p>
                           </div>
-                          <p className="text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{int.notes}</p>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 ) : (
                   <p className="text-center text-xs text-gray-400 py-4 italic">No activity yet.</p>
