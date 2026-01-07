@@ -17,7 +17,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null);
-  const [editingInteractionId, setEditingInteractionId] = useState<string | null>(null);
+
+
+  const [isRescheduling, setIsRescheduling] = useState(false);
+  const [rescheduleForm, setRescheduleForm] = useState({ date: '', time: '' });
 
   // Schedule State
   const [newMeeting, setNewMeeting] = useState({
@@ -59,7 +62,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
 
   const handleDayClick = (day: number) => {
     setSelectedDay(day);
-    setEditingInteractionId(null);
     setNewMeeting({ leadId: '', type: 'MEETING', notes: '', time: '10:00' });
     setIsModalOpen(true);
   };
@@ -67,32 +69,67 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
   const handleEventClick = (e: React.MouseEvent, interaction: Interaction) => {
     e.stopPropagation();
     setSelectedInteraction(interaction);
+    setIsRescheduling(false);
     setIsDrawerOpen(true);
   };
 
   const handleReschedule = () => {
     if (!selectedInteraction) return;
 
-    // Parse date safely
     const date = new Date(selectedInteraction.date);
-    const timeStr = date.toTimeString().slice(0, 5); // "HH:MM"
+    // Format for input[type="date"] (YYYY-MM-DD)
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
 
-    setNewMeeting({
-      leadId: selectedInteraction.leadId,
-      type: selectedInteraction.type,
-      notes: selectedInteraction.notes,
+    const timeStr = date.toTimeString().slice(0, 5); // HH:MM
+
+    setRescheduleForm({
+      date: dateStr,
       time: timeStr
     });
+    setIsRescheduling(true);
+  };
 
-    // Set editing mode
-    setEditingInteractionId(selectedInteraction.id);
+  const handleConfirmReschedule = async () => {
+    if (!selectedInteraction || !onUpdateInteraction) return;
 
-    // Set the day from the interaction
-    setSelectedDay(date.getDate());
-    setCurrentDate(new Date(date)); // Ensure we are looking at the right month
+    try {
+      const oldDate = new Date(selectedInteraction.date);
+      const oldDateStr = oldDate.toLocaleDateString() + ' ' + oldDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    setIsDrawerOpen(false);
-    setIsModalOpen(true);
+      const [y, m, d] = rescheduleForm.date.split('-').map(Number);
+      const [h, min] = rescheduleForm.time.split(':').map(Number);
+      const newDate = new Date(y, m - 1, d, h, min);
+      const newDateIso = newDate.toISOString();
+      const newDateStr = newDate.toLocaleDateString() + ' ' + newDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      // Optimistic UI
+      setSelectedInteraction({ ...selectedInteraction, date: newDateIso });
+
+      // API
+      await onUpdateInteraction(selectedInteraction.id, { date: newDateIso });
+
+      // History
+      const lead = leads.find(l => l.id === selectedInteraction.leadId);
+      if (lead) {
+        const log: Interaction = {
+          id: `log-resched-${Date.now()}`,
+          tenantId: user.tenantId,
+          leadId: lead.id,
+          type: 'NOTE',
+          notes: `${user.name} Rescheduled '${selectedInteraction.type}' from ${oldDateStr} to ${newDateStr}.`,
+          date: new Date().toISOString()
+        };
+        await onAddInteraction(log);
+      }
+
+      setIsRescheduling(false);
+    } catch (error) {
+      console.error("Reschedule failed:", error);
+      alert("Failed to reschedule event.");
+    }
   };
 
   const handleCancelEvent = async () => {
@@ -134,69 +171,42 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
     const scheduledTime = date.toISOString();
 
     // 1. Create the Primary Event Interaction
-    if (editingInteractionId && onUpdateInteraction) {
-      // UPDATE EXISTING EVENT
-      await onUpdateInteraction(editingInteractionId, {
-        leadId: newMeeting.leadId,
-        type: newMeeting.type,
-        notes: newMeeting.notes,
-        date: scheduledTime,
-        status: 'SCHEDULED' // Reset status if it was cancelled
-      });
+    // CREATE NEW EVENT
+    const interaction: Interaction = {
+      id: `int-${Date.now()}`,
+      tenantId: user.tenantId,
+      leadId: newMeeting.leadId,
+      type: newMeeting.type,
+      notes: newMeeting.notes,
+      date: scheduledTime,
+      status: 'SCHEDULED'
+    };
 
-      // Log Reschedule
-      const lead = leads.find(l => l.id === newMeeting.leadId);
-      if (lead) {
-        const note: Interaction = {
-          id: `log-resched-${Date.now()}`,
-          tenantId: user.tenantId,
-          leadId: lead.id,
-          type: 'NOTE',
-          notes: `${user.name} Rescheduled the event '${newMeeting.type}' to ${new Date(scheduledTime).toLocaleDateString()} at ${newMeeting.time}.`,
-          date: new Date().toISOString()
-        };
-        await onAddInteraction(note);
-      }
+    const now = new Date();
+    const auditTimestamp = now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const eventDateDisplay = new Date(scheduledTime).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-    } else {
-      // CREATE NEW EVENT
-      const interaction: Interaction = {
-        id: `int-${Date.now()}`,
-        tenantId: user.tenantId,
-        leadId: newMeeting.leadId,
-        type: newMeeting.type,
-        notes: newMeeting.notes,
-        date: scheduledTime,
-        status: 'SCHEDULED'
-      };
+    let auditNote = `EVENT BOOKED: ${user.name} - ${auditTimestamp}\n`;
+    auditNote += `Action: New ${newMeeting.type} Scheduled\n`;
+    auditNote += `Scheduled For: ${eventDateDisplay} at ${newMeeting.time}\n`;
+    auditNote += `------------------------------------------------\n`;
+    auditNote += `Agenda/Notes: ${newMeeting.notes || 'None provided'}\n`;
+    auditNote += `Status: CALENDAR_SYNCED`;
 
-      const now = new Date();
-      const auditTimestamp = now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const eventDateDisplay = new Date(scheduledTime).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const auditInteraction: Interaction = {
+      id: `int-log-${Date.now()}`,
+      tenantId: user.tenantId,
+      leadId: newMeeting.leadId,
+      type: 'NOTE',
+      notes: auditNote,
+      date: now.toISOString()
+    };
 
-      let auditNote = `EVENT BOOKED: ${user.name} - ${auditTimestamp}\n`;
-      auditNote += `Action: New ${newMeeting.type} Scheduled\n`;
-      auditNote += `Scheduled For: ${eventDateDisplay} at ${newMeeting.time}\n`;
-      auditNote += `------------------------------------------------\n`;
-      auditNote += `Agenda/Notes: ${newMeeting.notes || 'None provided'}\n`;
-      auditNote += `Status: CALENDAR_SYNCED`;
-
-      const auditInteraction: Interaction = {
-        id: `int-log-${Date.now()}`,
-        tenantId: user.tenantId,
-        leadId: newMeeting.leadId,
-        type: 'NOTE',
-        notes: auditNote,
-        date: now.toISOString()
-      };
-
-      await onAddInteraction(interaction);
-      await onAddInteraction(auditInteraction);
-    }
+    await onAddInteraction(interaction);
+    await onAddInteraction(auditInteraction);
 
     setIsModalOpen(false);
     setNewMeeting({ leadId: '', type: 'MEETING', notes: '', time: '10:00' });
-    setEditingInteractionId(null);
   };
 
   const getEventStyle = (interaction: Interaction) => {
@@ -330,8 +340,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
               <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
                 <CalendarIcon size={18} className="text-blue-600" />
                 Event Details
-                {editingInteractionId && <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">(Rescheduling)</span>}
-                {selectedDay && !editingInteractionId && <span className="text-sm font-normal text-gray-500 dark:text-gray-400">for {monthNames[month]} {selectedDay}</span>}
+                {selectedDay && <span className="text-sm font-normal text-gray-500 dark:text-gray-400">for {monthNames[month]} {selectedDay}</span>}
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                 <X size={20} />
@@ -393,7 +402,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
               <div className="pt-4 flex justify-end gap-3">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">Cancel</button>
                 <button type="submit" className="px-6 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 flex items-center gap-2">
-                  {editingInteractionId ? 'Update Event' : 'Confirm Schedule'} <ArrowRight size={14} />
+                  Confirm Schedule <ArrowRight size={14} />
                 </button>
               </div>
             </form>
@@ -437,15 +446,33 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-700">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Date</label>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {new Date(selectedInteraction.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                  </p>
+                  {isRescheduling ? (
+                    <input
+                      type="date"
+                      className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm outline-none focus:border-blue-500"
+                      value={rescheduleForm.date}
+                      onChange={(e) => setRescheduleForm({ ...rescheduleForm, date: e.target.value })}
+                    />
+                  ) : (
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {new Date(selectedInteraction.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                    </p>
+                  )}
                 </div>
                 <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-700">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Time</label>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {new Date(selectedInteraction.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                  </p>
+                  {isRescheduling ? (
+                    <input
+                      type="time"
+                      className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm outline-none focus:border-blue-500"
+                      value={rescheduleForm.time}
+                      onChange={(e) => setRescheduleForm({ ...rescheduleForm, time: e.target.value })}
+                    />
+                  ) : (
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {new Date(selectedInteraction.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -460,18 +487,37 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
             <div className="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 flex justify-end gap-3">
               {selectedInteraction.status !== 'CANCELLED' && (
                 <>
-                  <button
-                    onClick={handleCancelEvent}
-                    className="px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg font-medium text-sm transition-colors"
-                  >
-                    Cancel Event
-                  </button>
-                  <button
-                    onClick={handleReschedule}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm shadow-md transition-colors"
-                  >
-                    Reschedule
-                  </button>
+                  {isRescheduling ? (
+                    <>
+                      <button
+                        onClick={() => setIsRescheduling(false)}
+                        className="px-4 py-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 rounded-lg font-medium text-sm transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleConfirmReschedule}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm shadow-md transition-colors"
+                      >
+                        Confirm Reschedule
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={handleCancelEvent}
+                        className="px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg font-medium text-sm transition-colors"
+                      >
+                        Cancel Event
+                      </button>
+                      <button
+                        onClick={handleReschedule}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm shadow-md transition-colors"
+                      >
+                        Reschedule
+                      </button>
+                    </>
+                  )}
                 </>
               )}
             </div>
