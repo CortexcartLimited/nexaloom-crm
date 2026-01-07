@@ -60,7 +60,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   const [isKbSearchOpen, setIsKbSearchOpen] = useState(false);
   const [kbSearchQuery, setKbSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newContactData, setNewContactData] = useState({ name: '', company: '', email: '', phone: '' });
+  const [newContactData, setNewContactData] = useState({ name: '', company: '', email: '', phone: '', currency: 'GBP' });
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
@@ -105,7 +105,8 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
       name: selectedContact.name,
       company: selectedContact.company,
       email: selectedContact.email,
-      phone: selectedContact.phone
+      phone: selectedContact.phone,
+      currency: selectedContact.currency || 'GBP'
     });
     setIsEditing(true);
   };
@@ -193,7 +194,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
     if (onAddLeads) {
       await onAddLeads([newContactData]);
       setIsAddModalOpen(false);
-      setNewContactData({ name: '', company: '', email: '', phone: '' });
+      setNewContactData({ name: '', company: '', email: '', phone: '', currency: 'GBP' });
     }
   };
 
@@ -350,6 +351,29 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                       )}
                     </div>
                   </div>
+
+                  {/* Currency Field in Edit Mode */}
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700">
+                    <div className="flex-1">
+                      <p className="text-[10px] text-gray-500 uppercase">Currency Preference</p>
+                      {isEditing ? (
+                        <select
+                          className="w-full bg-white text-sm border rounded px-1 text-black py-1"
+                          value={editFormData.currency || 'GBP'}
+                          onChange={e => setEditFormData({ ...editFormData, currency: e.target.value })}
+                        >
+                          <option value="GBP">GBP (£)</option>
+                          <option value="USD">USD ($)</option>
+                          <option value="EUR">EUR (€)</option>
+                          <option value="INR">INR (₹)</option>
+                          <option value="AUD">AUD (A$)</option>
+                          <option value="CAD">CAD (C$)</option>
+                        </select>
+                      ) : (
+                        <p className="text-sm font-medium">{selectedContact.currency || 'GBP'}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -466,7 +490,20 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
               <input required className="w-full border rounded-lg p-2 text-black" placeholder="Full Name" value={newContactData.name} onChange={e => setNewContactData({ ...newContactData, name: e.target.value })} />
               <input className="w-full border rounded-lg p-2 text-black" placeholder="Company" value={newContactData.company} onChange={e => setNewContactData({ ...newContactData, company: e.target.value })} />
               <input type="email" className="w-full border rounded-lg p-2 text-black" placeholder="Email" value={newContactData.email} onChange={e => setNewContactData({ ...newContactData, email: e.target.value })} />
+              <input type="email" className="w-full border rounded-lg p-2 text-black" placeholder="Email" value={newContactData.email} onChange={e => setNewContactData({ ...newContactData, email: e.target.value })} />
               <input className="w-full border rounded-lg p-2 text-black" placeholder="Phone" value={newContactData.phone} onChange={e => setNewContactData({ ...newContactData, phone: e.target.value })} />
+              <select
+                className="w-full border rounded-lg p-2 text-black bg-white"
+                value={newContactData.currency}
+                onChange={e => setNewContactData({ ...newContactData, currency: e.target.value })}
+              >
+                <option value="GBP">GBP (£)</option>
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="INR">INR (₹)</option>
+                <option value="AUD">AUD (A$)</option>
+                <option value="CAD">CAD (C$)</option>
+              </select>
               <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold">Create Contact</button>
             </form>
           </div>

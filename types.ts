@@ -96,6 +96,7 @@ export interface Lead {
   status: LeadStatus;
   createdAt: string;
   lastInteraction?: string;
+  currency?: string;
 }
 
 export interface Interaction {

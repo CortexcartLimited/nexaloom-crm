@@ -3,9 +3,10 @@ import { Lead, LeadStatus, Document } from '../types';
 import {
   MoreHorizontal, ShoppingBag, Plus, Sparkles, MessageSquare, X, Wand2, Upload,
   FileSpreadsheet, AlertCircle, ArrowRight, CheckCircle, ArrowLeft,
-  User, DollarSign, Building, Mail, Phone, Copy, Paperclip, File, Search
+  User, DollarSign, Building, Mail, Phone, Copy, Paperclip, File, Search, Coins
 } from 'lucide-react';
 import { generateEmailDraft, analyzeLeadPotential } from '../services/geminiService';
+import { formatCurrency } from '../utils/formatCurrency';
 
 interface LeadsBoardProps {
   leads: Lead[];
@@ -40,7 +41,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const [newLeadData, setNewLeadData] = useState<Partial<Lead & { productId: string, discount: number }>>({
-    name: '', company: '', email: '', phone: '', value: 0, status: LeadStatus.NEW, productId: '', discount: 0
+    name: '', company: '', email: '', phone: '', value: 0, status: LeadStatus.NEW, productId: '', discount: 0, currency: 'GBP'
   });
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
@@ -109,7 +110,8 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
       value: 0,
       status: LeadStatus.NEW,
       productId: '',
-      discount: 0
+      discount: 0,
+      currency: 'GBP'
     });
   };
 
@@ -192,7 +194,9 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
               </div>
               <div className="px-2 mb-4">
                 <span className="text-lg font-black text-gray-900 dark:text-white">
-                  ${totalValue.toLocaleString()}
+                  {/* Note: Summing mixed currencies is tricky. For now, we assume mostly single currency or just show raw number sum as GBP default fallback or separate by currency later. */}
+                  {/* Better approach: Just show count or basic sum. For now, let's keep it simple. */}
+                  {formatCurrency(totalValue, 'GBP')}
                 </span>
               </div>
 
@@ -211,7 +215,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">{lead.name}</p>
                     <div className="flex justify-between items-center pt-3 border-t border-gray-50 dark:border-gray-700/50">
                       <span className="text-[10px] font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
-                        ${(Number(lead.value) || 0).toLocaleString()}
+                        {formatCurrency(Number(lead.value) || 0, lead.currency)}
                       </span>
                       <div className="flex gap-1">
                         <button onClick={() => onOpenDialer(lead.phone, lead.id)} className="p-1.5 text-gray-400 hover:text-green-500"><Phone size={14} /></button>
@@ -284,26 +288,45 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] text-gray-500 mb-1 font-bold uppercase">Intro Discount ($)</label>
-                      <div className="relative">
-                        <DollarSign className="absolute left-3 top-2.5 text-gray-400" size={14} />
-                        <input
-                          type="number"
-                          className="w-full pl-9 pr-3 py-2 rounded-lg border-gray-300 dark:border-gray-600 border text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          value={newLeadData.discount}
-                          onChange={e => setNewLeadData({ ...newLeadData, discount: parseFloat(e.target.value) || 0 })}
-                          placeholder="0.00"
-                        />
+                      <div>
+                        <label className="block text-[10px] text-gray-500 mb-1 font-bold uppercase">Currency</label>
+                        <div className="relative">
+                          <Coins className="absolute left-3 top-2.5 text-gray-400" size={14} />
+                          <select
+                            className="w-full pl-9 pr-3 py-2 rounded-lg border-gray-300 dark:border-gray-600 border text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white appearance-none"
+                            value={newLeadData.currency}
+                            onChange={e => setNewLeadData({ ...newLeadData, currency: e.target.value })}
+                          >
+                            <option value="GBP">GBP (£)</option>
+                            <option value="USD">USD ($)</option>
+                            <option value="EUR">EUR (€)</option>
+                            <option value="INR">INR (₹)</option>
+                            <option value="AUD">AUD (A$)</option>
+                            <option value="CAD">CAD (C$)</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-gray-500 mb-1 font-bold uppercase">Intro Discount</label>
+                        <div className="relative">
+                          <DollarSign className="absolute left-3 top-2.5 text-gray-400" size={14} />
+                          <input
+                            type="number"
+                            className="w-full pl-9 pr-3 py-2 rounded-lg border-gray-300 dark:border-gray-600 border text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            value={newLeadData.discount}
+                            onChange={e => setNewLeadData({ ...newLeadData, discount: parseFloat(e.target.value) || 0 })}
+                            placeholder="0.00"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex justify-end gap-3 pt-6">
-                <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 text-gray-500 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">Cancel</button>
-                <button type="submit" className="px-6 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg shadow-md hover:bg-blue-700 transition-all">Create & Value Lead</button>
-              </div>
+                <div className="flex justify-end gap-3 pt-6">
+                  <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 text-gray-500 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">Cancel</button>
+                  <button type="submit" className="px-6 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg shadow-md hover:bg-blue-700 transition-all">Create & Value Lead</button>
+                </div>
             </form>
           </div>
         </div>

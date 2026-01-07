@@ -51,14 +51,14 @@ app.get('/api/leads', async (req, res) => {
 
 // Add a new lead
 app.post('/api/leads', async (req, res) => {
-    const { tenantId, name, company, email, phone, value, status } = req.body;
+    const { tenantId, name, company, email, phone, value, status, currency } = req.body;
     const id = uuidv4();
 
     try {
         await pool.query(
-            `INSERT INTO leads (id, tenantId, name, company, email, phone, value, status, createdAt) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-            [id, tenantId, name, company, email, phone, value, status]
+            `INSERT INTO leads (id, tenantId, name, company, email, phone, value, status, currency, createdAt) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+            [id, tenantId, name, company, email, phone, value, status, currency || 'GBP']
         );
         res.status(201).json({ id, ...req.body });
     } catch (err) {
@@ -177,6 +177,7 @@ app.patch('/api/leads/:id', async (req, res) => {
 
     try {
         // Dynamically build the update query based on provided fields
+        // Allow currency updates if provided
         const fields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
         const values = Object.values(updates);
 
