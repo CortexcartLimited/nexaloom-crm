@@ -327,6 +327,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
                   <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 text-gray-500 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">Cancel</button>
                   <button type="submit" className="px-6 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg shadow-md hover:bg-blue-700 transition-all">Create & Value Lead</button>
                 </div>
+              </div>
             </form>
           </div>
         </div>
