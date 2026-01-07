@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Proposal, ProposalItem, ProposalStatus, Lead, Product, User, Interaction } from '../types';
 import { api } from '../services/api';
 import { formatCurrency } from '../utils/formatCurrency';
+import { taxRules } from '../utils/taxRates';
 import { ScrollText, Plus, User as UserIcon, Calendar, CheckCircle, FileText, Download, Send, Eye, X, Edit, Trash2, ArrowRight } from 'lucide-react';
 
 interface ProposalsViewProps {
@@ -25,20 +26,28 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
     const [attachedDocIds, setAttachedDocIds] = useState<string[]>([]);
     const [isSending, setIsSending] = useState(false);
     const [builderStep, setBuilderStep] = useState(1);
+    const [taxLabel, setTaxLabel] = useState('Tax');
+
     const [activeProposal, setActiveProposal] = useState<Partial<Proposal>>({
         items: [],
         name: 'New Proposal',
         totalValue: 0,
         status: ProposalStatus.DRAFT,
         validUntil: new Date(Date.now() + 1209600000).toISOString().split('T')[0], // 14 days
-        terms: 'Payment due within 14 days of invoice. All services are subject to standard SLA.'
+        terms: 'Payment due within 14 days of invoice. All services are subject to standard SLA.',
+        isTaxEnabled: false,
+        taxRate: 0,
+        taxAmount: 0
     });
 
     const [selectedLeadId, setSelectedLeadId] = useState('');
     const [selectedProductId, setSelectedProductId] = useState('');
 
-    const calculateTotal = (items: ProposalItem[]) => {
-        return items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const calculateTotals = (items: ProposalItem[], taxRate: number, isTaxEnabled: boolean) => {
+        const subTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const taxAmount = isTaxEnabled ? subTotal * (taxRate / 100) : 0;
+        const total = subTotal + taxAmount;
+        return { subTotal, taxAmount, total };
     };
 
     const handleStartBuilder = () => {
@@ -70,20 +79,22 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
         };
 
         const updatedItems = [...(activeProposal.items || []), newItem];
+        const { total } = calculateTotals(updatedItems, activeProposal.taxRate || 0, !!activeProposal.isTaxEnabled);
         setActiveProposal({
             ...activeProposal,
             items: updatedItems,
-            totalValue: calculateTotal(updatedItems)
+            totalValue: total
         });
         setSelectedProductId('');
     };
 
     const handleRemoveItem = (itemId: string) => {
         const updatedItems = (activeProposal.items || []).filter(i => i.id !== itemId);
+        const { total } = calculateTotals(updatedItems, activeProposal.taxRate || 0, !!activeProposal.isTaxEnabled);
         setActiveProposal({
             ...activeProposal,
             items: updatedItems,
-            totalValue: calculateTotal(updatedItems)
+            totalValue: total
         });
     };
 
@@ -128,6 +139,9 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
             leadCompany: lead.company,
             items: activeProposal.items || [],
             totalValue: activeProposal.totalValue || 0,
+            taxRate: activeProposal.taxRate || 0,
+            taxAmount: activeProposal.taxAmount || 0,
+            isTaxEnabled: !!activeProposal.isTaxEnabled,
             status: ProposalStatus.DRAFT,
             validUntil: activeProposal.validUntil || '',
             terms: activeProposal.terms,
@@ -201,6 +215,45 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
             case ProposalStatus.DECLINED: return 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400';
         }
     };
+
+    // SMART TAX & CURRENCY LOGIC
+    React.useEffect(() => {
+        if (selectedLeadId && view === 'BUILDER') {
+            const lead = leads.find(l => l.id === selectedLeadId);
+            if (lead) {
+                const currency = lead.currency || 'GBP';
+                let newTaxRate = 0;
+                let newTaxLabel = 'Tax';
+                let newIsTaxEnabled = false;
+
+                // Logic: Auto-set based on Country & Tax ID (Reverse Charge)
+                const isInternationalB2B = lead.taxId && lead.country !== 'United Kingdom';
+
+                if (isInternationalB2B) {
+                    // Reverse Charge -> Default OFF
+                    if (lead.country && taxRules[lead.country]) {
+                        newTaxRate = taxRules[lead.country].rate;
+                        newTaxLabel = taxRules[lead.country].label;
+                    }
+                    newIsTaxEnabled = false;
+                } else if (lead.country && taxRules[lead.country]) {
+                    // Domestic/Consumer -> Default ON
+                    const rule = taxRules[lead.country];
+                    newTaxRate = rule.rate;
+                    newTaxLabel = rule.label;
+                    newIsTaxEnabled = rule.rate > 0;
+                }
+
+                setTaxLabel(newTaxLabel);
+                setActiveProposal(prev => ({
+                    ...prev,
+                    currency,
+                    taxRate: newTaxRate,
+                    isTaxEnabled: newIsTaxEnabled
+                }));
+            }
+        }
+    }, [selectedLeadId, leads, view]);
 
     if (view === 'BUILDER') {
         const selectedLead = leads.find(l => l.id === selectedLeadId);
@@ -398,22 +451,55 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
                             </table>
                         </div>
 
-                        {/* Totals */}
+                        {/* Totals Section */}
                         <div className="flex justify-end mb-12">
                             <div className="w-64 space-y-2">
-                                <div className="flex justify-between text-gray-600">
-                                    <span>Subtotal</span>
-                                    <span>Subtotal</span>
-                                    <span>{formatCurrency(activeProposal.totalValue || 0, activeProposal.currency)}</span>
-                                </div>
-                                <div className="flex justify-between text-gray-600">
-                                    <span>Tax (0%)</span>
-                                    <span>{formatCurrency(0, activeProposal.currency)}</span>
-                                </div>
-                                <div className="flex justify-between font-bold text-xl pt-4 border-t border-gray-200">
-                                    <span>Total</span>
-                                    <span>{formatCurrency(activeProposal.totalValue || 0, activeProposal.currency)}</span>
-                                </div>
+                                {/* Calculation using helper */}
+                                {(() => {
+                                    const { subTotal, taxAmount, total } = calculateTotals(
+                                        activeProposal.items || [],
+                                        activeProposal.taxRate || 0,
+                                        !!activeProposal.isTaxEnabled
+                                    );
+
+                                    return (
+                                        <>
+                                            <div className="flex justify-between text-gray-600">
+                                                <span>Subtotal</span>
+                                                <span>{formatCurrency(subTotal, activeProposal.currency)}</span>
+                                            </div>
+
+                                            {/* Tax Toggle UI */}
+                                            <div className="flex items-center justify-end gap-2 my-2 py-2 border-y border-dashed border-gray-200">
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        className={`${activeProposal.isTaxEnabled ? 'bg-blue-600' : 'bg-gray-200'} relative inline-flex h-4 w-8 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none`}
+                                                        role="switch"
+                                                        onClick={() => setActiveProposal(prev => ({ ...prev, isTaxEnabled: !prev.isTaxEnabled }))}
+                                                    >
+                                                        <span className={`${activeProposal.isTaxEnabled ? 'translate-x-4' : 'translate-x-0'} pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`} />
+                                                    </button>
+                                                    <span className="text-[10px] text-gray-500 font-medium cursor-pointer uppercase tracking-wider" onClick={() => setActiveProposal(prev => ({ ...prev, isTaxEnabled: !prev.isTaxEnabled }))}>
+                                                        Apply {taxLabel}
+                                                    </span>
+                                                </div>
+                                                {activeProposal.isTaxEnabled && (
+                                                    <span className="text-xs text-gray-400">({activeProposal.taxRate}%)</span>
+                                                )}
+                                            </div>
+
+                                            <div className="flex justify-between text-gray-600">
+                                                <span>{taxLabel} {activeProposal.isTaxEnabled ? `(${activeProposal.taxRate}%)` : '(0%)'}</span>
+                                                <span>{formatCurrency(activeProposal.isTaxEnabled ? taxAmount : 0, activeProposal.currency)}</span>
+                                            </div>
+                                            <div className="flex justify-between font-bold text-xl pt-4 border-t border-gray-200">
+                                                <span>Total</span>
+                                                <span>{formatCurrency(activeProposal.isTaxEnabled ? total : subTotal, activeProposal.currency)}</span>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </div>
                         </div>
 
@@ -621,7 +707,12 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
                                             <button
                                                 onClick={() => {
                                                     const updatedItems = (editingProposal.items || []).filter(i => i.id !== item.id);
-                                                    setEditingProposal({ ...editingProposal, items: updatedItems, totalValue: calculateTotal(updatedItems) });
+                                                    // Simple calculation for drawer edit matching original logic or reused logic
+                                                    // For consistency, we should maybe use calculateTotals, but editingProposal state might not have tax fields fully typed or initialized same way
+                                                    // Assuming simple calc for now or reuse if possible. 
+                                                    const subTotal = updatedItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+                                                    const taxAmt = (editingProposal.isTaxEnabled) ? subTotal * ((editingProposal.taxRate || 0) / 100) : 0;
+                                                    setEditingProposal({ ...editingProposal, items: updatedItems, totalValue: subTotal + taxAmt });
                                                 }}
                                                 className="text-gray-400 hover:text-red-500 p-1"
                                             >
