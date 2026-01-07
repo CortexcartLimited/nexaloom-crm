@@ -432,7 +432,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
             <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
               <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
                 Event Details
-                {selectedInteraction.status === 'CANCELLED' && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">CANCELLED</span>}
+                {(() => {
+                  const s = (selectedInteraction.status || 'SCHEDULED').toUpperCase();
+                  let badgeClass = 'bg-blue-100 text-blue-600'; // Default / Scheduled
+                  if (s === 'CONFIRMED') badgeClass = 'bg-green-100 text-green-700 border border-green-200';
+                  else if (s === 'TENTATIVE') badgeClass = 'bg-yellow-100 text-yellow-700 border border-yellow-200';
+                  else if (s === 'CANCELLED') badgeClass = 'bg-red-100 text-red-600 border border-red-200';
+
+                  return <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full tracking-wide shadow-sm ${badgeClass}`}>{s}</span>;
+                })()}
               </h3>
               <button onClick={() => setIsDrawerOpen(false)} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-400">
                 <X size={20} />

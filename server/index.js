@@ -308,12 +308,15 @@ app.patch('/api/interactions/:id', async (req, res) => {
             const details = JSON.stringify(detailsObj);
 
             // Guarantee lead_id is not undefined.
+            // Guarantee lead_id is not undefined.
             if (interaction.leadId) {
-                const historyParams = [interaction.leadId, actionType, details, historyId];
+                // Use newStatus (safe value) or default
+                const statusForHistory = newStatus || 'SCHEDULED';
+                const historyParams = [interaction.leadId, actionType, details, historyId, statusForHistory];
                 console.log("History Log Params:", historyParams);
 
                 await pool.query(
-                    'INSERT INTO leads_history (lead_id, action_type, details, event_id) VALUES (?, ?, ?, ?)',
+                    'INSERT INTO leads_history (lead_id, action_type, details, event_id, status) VALUES (?, ?, ?, ?, ?)',
                     historyParams
                 );
             }
