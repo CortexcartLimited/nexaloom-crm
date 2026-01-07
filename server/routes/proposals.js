@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
-const { sendProposalEmail } = require('../../services/emailService');
+const { sendProposalEmail, sendBasicEmail } = require('../../services/emailService');
 
 // Helper to format JavaScript ISO dates to MySQL format (removes T and Z)
 const formatSQLDate = (date) => {
@@ -239,6 +239,45 @@ module.exports = (pool) => {
 
             res.json({ success: true });
         } catch (err) {
+            res.status(500).json({ error: err.message });
+        } finally {
+            connection.release();
+        }
+    });
+
+    // POST /api/proposals/outreach/:id (Basic Outreach Email)
+    router.post('/outreach/:id', async (req, res) => {
+        const { id } = req.params;
+        const { subject, body } = req.body;
+        const connection = await pool.getConnection();
+
+        try {
+            // 1. Fetch Lead Details & Branding
+            const [leads] = await connection.query('SELECT * FROM leads WHERE id = ?', [id]);
+            if (leads.length === 0) return res.status(404).json({ error: 'Lead not found' });
+            const lead = leads[0];
+
+            const [tenantRows] = await connection.query('SELECT * FROM tenants WHERE id = ?', [lead.tenantId]);
+            const branding = tenantRows[0] || {};
+
+            // 2. Send Email using sendBasicEmail
+            await sendBasicEmail(lead.email, lead.name, subject, body, [], {
+                companyName: branding.companyName || branding.name,
+                companyAddress: branding.companyAddress,
+                logoUrl: branding.logoUrl,
+                emailSignature: branding.emailSignature
+            });
+
+            // 3. Log Interaction
+            const interactionId = uuidv4();
+            await connection.query(`
+              INSERT INTO interactions (id, tenantId, leadId, type, notes, date)
+              VALUES (?, ?, ?, 'EMAIL', ?, NOW())
+          `, [interactionId, lead.tenantId, id, `OUTREACH SENT: ${subject}`]);
+
+            res.json({ success: true });
+        } catch (err) {
+            console.error('Outreach Error:', err);
             res.status(500).json({ error: err.message });
         } finally {
             connection.release();

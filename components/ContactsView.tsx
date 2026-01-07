@@ -134,14 +134,14 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
       return;
     }
 
-    const targetUrl = `/api/leads/${selectedContact.id}/email`;
+    const targetUrl = `/api/proposals/outreach/${selectedContact.id}`;
     console.log('Target URL:', targetUrl);
     console.log('Payload Body:', { subject: emailSubject, body: emailBody });
 
     setIsSending(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/leads/${selectedContact.id}/email`, {
+      const response = await fetch(`/api/proposals/outreach/${selectedContact.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
