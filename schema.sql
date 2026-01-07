@@ -29,6 +29,7 @@ CREATE TABLE discounts (
     code VARCHAR(255) NOT NULL,
     type VARCHAR(50) NOT NULL, -- e.g., 'percentage', 'fixed'
     value DECIMAL(10, 2) NOT NULL,
+    currency VARCHAR(10),
     productId VARCHAR(255),
     FOREIGN KEY (productId) REFERENCES products(id)
 );
@@ -110,6 +111,7 @@ CREATE TABLE IF NOT EXISTS proposals (
     title VARCHAR(255) NOT NULL,
     status ENUM('DRAFT', 'SENT', 'ACCEPTED', 'REJECTED') DEFAULT 'DRAFT',
     totalValue DECIMAL(10, 2) DEFAULT 0.00,
+    currency VARCHAR(10) DEFAULT 'GBP',
     validUntil DATETIME,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (leadId) REFERENCES leads(id) ON DELETE CASCADE

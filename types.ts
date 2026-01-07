@@ -174,6 +174,7 @@ export interface Discount {
   code: string;
   type: DiscountType;
   value: number;
+  currency?: string;
   contractTerm?: 6 | 12;
   isManagerOnly?: boolean;
   applicableProductIds: string[];
@@ -199,6 +200,7 @@ export interface Proposal {
   items: ProposalItem[];
   totalValue: number;
   status: ProposalStatus;
+  currency?: string;
   validUntil: string;
   terms?: string;
   createdAt: string;

@@ -268,8 +268,8 @@ app.post('/api/discounts', async (req, res) => {
 
         const query = `
             INSERT INTO discounts 
-            (id, tenantId, name, code, type, value, applicableProductIds, expiresAt, contractTerm, isManagerOnly) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, tenantId, name, code, type, value, applicableProductIds, expiresAt, contractTerm, isManagerOnly, currency) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         await pool.query(query, [
@@ -282,7 +282,8 @@ app.post('/api/discounts', async (req, res) => {
             productsJson,
             mysqlExpiresAt,
             contractTerm || null,
-            isManagerOnly ? 1 : 0
+            isManagerOnly ? 1 : 0,
+            req.body.currency || 'GBP'
         ]);
 
         res.status(201).json({ success: true });

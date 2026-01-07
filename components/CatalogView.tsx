@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Product, Discount, DiscountType, User, UserRole, Lead, Interaction } from '../types';
+import { formatCurrency } from '../utils/formatCurrency';
 import { Plus, Tag, ShoppingBag, Percent, Clock, X, Check, ShoppingCart, Trash2, Minus, Receipt, FileText, Shield, Edit, AlertCircle, ShieldCheck, Calendar, Send, Zap, User as UserIcon, Mic } from 'lucide-react';
 
 interface CatalogViewProps {
@@ -262,9 +263,11 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
     cart.forEach(item => {
       const discount = item.appliedDiscountId ? discounts.find(d => d.id === item.appliedDiscountId) : undefined;
       const price = calculateItemPrice(item, discount);
-      const itemTotal = price.toFixed(2);
+      const itemTotal = price;
+      // Resolve currency
+      const currency = selectedLeadId ? leads.find(l => l.id === selectedLeadId)?.currency || 'GBP' : 'GBP';
 
-      script += `• ${item.quantity}x ${item.name} at $${itemTotal}/${item.billingCycle === 'MONTHLY' ? 'mo' : item.billingCycle === 'YEARLY' ? 'yr' : 'one-time'}`;
+      script += `• ${item.quantity}x ${item.name} at ${formatCurrency(itemTotal, currency)}/${item.billingCycle === 'MONTHLY' ? 'mo' : item.billingCycle === 'YEARLY' ? 'yr' : 'one-time'}`;
 
       if (item.contractTerm !== 'NONE') {
         const term = item.contractTerm === '6_MONTHS' ? '6 months' : '12 months';
@@ -272,14 +275,16 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
       }
 
       if (item.customDiscountValue) {
-        script += ` (includes manual discount of $${item.customDiscountValue})`;
+        const currency = selectedLeadId ? leads.find(l => l.id === selectedLeadId)?.currency || 'GBP' : 'GBP';
+        script += ` (includes manual discount of ${formatCurrency(item.customDiscountValue, currency)})`;
       } else if (discount) {
         script += ` (includes ${discount.name})`;
       }
       script += ".\n";
     });
 
-    script += `\nThe total amount due today is $${finalTotal.toFixed(2)}. `;
+    const currency = selectedLeadId ? leads.find(l => l.id === selectedLeadId)?.currency || 'GBP' : 'GBP';
+    script += `\nThe total amount due today is ${formatCurrency(finalTotal, currency)}. `;
     if (legalAgreements.autoRenew) {
       script += "This subscription will automatically renew at the standard rate at the end of the term. ";
     }
@@ -321,19 +326,22 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
     cart.forEach((item, idx) => {
       const discount = item.appliedDiscountId ? discounts.find(d => d.id === item.appliedDiscountId) : undefined;
       const price = calculateItemPrice(item, discount);
+      const currency = selectedLeadId ? leads.find(l => l.id === selectedLeadId)?.currency || 'GBP' : 'GBP';
+
       summary += `${idx + 1}. ${item.name} x${item.quantity}\n`;
       summary += `   Term: ${item.contractTerm !== 'NONE' ? item.contractTerm : 'No Commitment'}\n`;
       if (discount) {
         summary += `   Applied Offer: ${discount.name} (${discount.code})\n`;
       }
       if (item.customDiscountValue) {
-        summary += `   Manager Override: -$${item.customDiscountValue.toFixed(2)}\n`;
+        summary += `   Manager Override: -${formatCurrency(item.customDiscountValue, currency)}\n`;
       }
-      summary += `   Price: $${price.toFixed(2)}\n`;
+      summary += `   Price: ${formatCurrency(price, currency)}\n`;
     });
 
+    const currency = selectedLeadId ? leads.find(l => l.id === selectedLeadId)?.currency || 'GBP' : 'GBP';
     summary += `------------------------------------------------\n`;
-    summary += `ORDER TOTAL: $${finalTotal.toFixed(2)}\n`;
+    summary += `ORDER TOTAL: ${formatCurrency(finalTotal, currency)}\n`;
     summary += `Billing status: SUCCESSFUL`;
 
     // Log to Lead Interaction
@@ -545,7 +553,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
 
               <div className="mt-auto pt-4 border-t border-gray-50 dark:border-gray-700 flex items-center justify-between">
                 <div className="flex items-end gap-1">
-                  <span className="text-2xl font-bold text-gray-900 dark:text-white">${product.price}</span>
+                  <span className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(product.price, 'GBP')}</span>
                   <span className="text-sm text-gray-400 dark:text-gray-500 mb-1">/ {product.billingCycle === 'MONTHLY' ? 'mo' : product.billingCycle === 'YEARLY' ? 'yr' : product.billingCycle === 'EVERY_28_DAYS' ? '28d' : 'once'}</span>
                 </div>
                 <button
@@ -729,6 +737,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
                     const applicableDiscounts = getApplicableDiscounts(item.id);
                     const appliedDiscount = discounts.find(d => d.id === item.appliedDiscountId);
                     const displayPrice = calculateItemPrice(item, appliedDiscount);
+                    const currency = selectedLeadId ? leads.find(l => l.id === selectedLeadId)?.currency || 'GBP' : 'GBP';
 
                     return (
                       <div key={item.id} className="flex flex-col gap-3 p-4 bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 rounded-xl shadow-sm">
@@ -758,9 +767,9 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
                               </div>
                               <div className="text-right">
                                 {(appliedDiscount || item.customDiscountValue !== undefined) && (
-                                  <span className="block text-xs text-gray-400 dark:text-gray-500 line-through">${itemTotal.toFixed(2)}</span>
+                                  <span className="block text-xs text-gray-400 dark:text-gray-500 line-through">{formatCurrency(itemTotal, currency)}</span>
                                 )}
-                                <span className="font-bold text-gray-900 dark:text-white">${displayPrice.toFixed(2)}</span>
+                                <span className="font-bold text-gray-900 dark:text-white">{formatCurrency(displayPrice, currency)}</span>
                               </div>
                             </div>
                           </div>
@@ -1235,8 +1244,8 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
                         type="button"
                         onClick={() => setDiscountForm({ ...discountForm, applicableProductIds: ['ALL'] })} // Changed from [] to ['ALL']
                         className={`w-full text-left px-3 py-2 rounded-lg text-sm border transition-all ${discountForm.applicableProductIds.includes('ALL') || discountForm.applicableProductIds.length === 0
-                            ? 'bg-blue-50 border-blue-200 text-blue-700'
-                            : 'bg-white border-gray-100 text-gray-600'
+                          ? 'bg-blue-50 border-blue-200 text-blue-700'
+                          : 'bg-white border-gray-100 text-gray-600'
                           }`}
                       >
                         All Products

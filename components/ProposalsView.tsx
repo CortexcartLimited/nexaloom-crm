@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Proposal, ProposalItem, ProposalStatus, Lead, Product, User, Interaction } from '../types';
 import { api } from '../services/api';
+import { formatCurrency } from '../utils/formatCurrency';
 import { ScrollText, Plus, User as UserIcon, Calendar, CheckCircle, FileText, Download, Send, Eye, X, Edit, Trash2, ArrowRight } from 'lucide-react';
 
 interface ProposalsViewProps {
@@ -130,6 +131,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
             status: ProposalStatus.DRAFT,
             validUntil: activeProposal.validUntil || '',
             terms: activeProposal.terms,
+            currency: activeProposal.currency || 'GBP',
             createdAt: new Date().toISOString(),
             createdBy: user.name
         };
@@ -233,7 +235,14 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
                                 <select
                                     className="w-full p-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                                     value={selectedLeadId}
-                                    onChange={(e) => setSelectedLeadId(e.target.value)}
+                                    onChange={(e) => {
+                                        const lId = e.target.value;
+                                        setSelectedLeadId(lId);
+                                        const lead = leads.find(l => l.id === lId);
+                                        if (lead) {
+                                            setActiveProposal(prev => ({ ...prev, currency: lead.currency || 'GBP' }));
+                                        }
+                                    }}
                                 >
                                     <option value="">-- Choose Customer --</option>
                                     {leads.map(l => (
@@ -265,7 +274,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
                                 >
                                     <option value="">-- Add Product --</option>
                                     {products.map(p => (
-                                        <option key={p.id} value={p.id}>{p.name} (${p.price})</option>
+                                        <option key={p.id} value={p.id}>{p.name} ({formatCurrency(p.price, activeProposal.currency || 'GBP')})</option>
                                     ))}
                                 </select>
                                 <button
@@ -282,7 +291,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
                                     <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
                                         <div>
                                             <p className="font-medium text-sm text-gray-900 dark:text-white">{item.name}</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">${Number(item.price || 0).toFixed(2)} x {item.quantity}</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">{formatCurrency(item.price, activeProposal.currency)} x {item.quantity}</p>
                                         </div>
                                         <button onClick={() => handleRemoveItem(item.id)} className="text-gray-400 hover:text-red-500 p-1">
                                             <Trash2 size={16} />
@@ -377,7 +386,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
                                                 <p className="text-gray-500 text-xs mt-1">{item.description}</p>
                                             </td>
                                             <td className="py-4 text-center">{item.quantity}</td>
-                                            <td className="py-4 text-right">${(Number(item.price || 0) * Number(item.quantity || 0)).toFixed(2)}</td>
+                                            <td className="py-4 text-right">{formatCurrency(Number(item.price || 0) * Number(item.quantity || 0), activeProposal.currency)}</td>
                                         </tr>
                                     ))}
                                     {(!activeProposal.items || activeProposal.items.length === 0) && (
@@ -394,15 +403,16 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
                             <div className="w-64 space-y-2">
                                 <div className="flex justify-between text-gray-600">
                                     <span>Subtotal</span>
-                                    <span>${Number(activeProposal.totalValue || 0).toFixed(2)}</span>
+                                    <span>Subtotal</span>
+                                    <span>{formatCurrency(activeProposal.totalValue || 0, activeProposal.currency)}</span>
                                 </div>
                                 <div className="flex justify-between text-gray-600">
                                     <span>Tax (0%)</span>
-                                    <span>$0.00</span>
+                                    <span>{formatCurrency(0, activeProposal.currency)}</span>
                                 </div>
                                 <div className="flex justify-between font-bold text-xl pt-4 border-t border-gray-200">
                                     <span>Total</span>
-                                    <span>${Number(activeProposal.totalValue || 0).toFixed(2)}</span>
+                                    <span>{formatCurrency(activeProposal.totalValue || 0, activeProposal.currency)}</span>
                                 </div>
                             </div>
                         </div>
@@ -468,7 +478,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
                             </div>
 
                             <div className="flex flex-col items-end gap-1">
-                                <span className="text-2xl font-bold text-gray-900 dark:text-white">${Number(prop.totalValue || 0).toFixed(2)}</span>
+                                <span className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(prop.totalValue || 0, prop.currency)}</span>
                                 <span className="text-xs text-gray-400">Total Value</span>
                             </div>
 
@@ -574,7 +584,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
                                     >
                                         <option value="">-- Add Product --</option>
                                         {products.map(p => (
-                                            <option key={p.id} value={p.id}>{p.name} (${p.price})</option>
+                                            <option key={p.id} value={p.id}>{p.name} ({formatCurrency(p.price, editingProposal.currency || 'GBP')})</option>
                                         ))}
                                     </select>
                                     <button
@@ -606,7 +616,7 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
                                         <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
                                             <div>
                                                 <p className="font-medium text-sm text-gray-900 dark:text-white">{item.name}</p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">${Number(item.price || 0).toFixed(2)} x {item.quantity}</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">{formatCurrency(item.price, editingProposal.currency)} x {item.quantity}</p>
                                             </div>
                                             <button
                                                 onClick={() => {

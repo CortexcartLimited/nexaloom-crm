@@ -66,7 +66,7 @@ module.exports = (pool) => {
 
     // POST /api/proposals (Create)
     router.post('/', async (req, res) => {
-        const { id, tenantId, name, leadId, leadName, leadCompany, items, totalValue, status, validUntil, terms, createdBy } = req.body;
+        const { id, tenantId, name, leadId, leadName, leadCompany, items, totalValue, status, validUntil, terms, createdBy, currency } = req.body;
         const connection = await pool.getConnection();
         try {
             await connection.beginTransaction();
@@ -75,9 +75,9 @@ module.exports = (pool) => {
             const proposalId = id || uuidv4();
 
             await connection.query(
-                `INSERT INTO proposals (id, tenantId, name, leadId, leadName, leadCompany, totalValue, status, validUntil, terms, createdBy, createdAt) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-                [proposalId, tenantId, name, leadId, leadName, leadCompany, totalValue, status, validUntilDate, terms, createdBy]
+                `INSERT INTO proposals (id, tenantId, name, leadId, leadName, leadCompany, totalValue, status, validUntil, terms, createdBy, currency, createdAt) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+                [proposalId, tenantId, name, leadId, leadName, leadCompany, totalValue, status, validUntilDate, terms, createdBy, currency || 'GBP']
             );
 
             if (items && items.length > 0) {
