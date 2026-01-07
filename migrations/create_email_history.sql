@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS email_history (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    leadId VARCHAR(255) NOT NULL,
+    subject VARCHAR(255),
+    type VARCHAR(50) NOT NULL, -- 'outreach', 'proposal'
+    sentAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (leadId) REFERENCES leads(id) ON DELETE CASCADE
+);

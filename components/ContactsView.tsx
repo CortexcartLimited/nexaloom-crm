@@ -68,6 +68,22 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState('');
   const [selectedAttachments, setSelectedAttachments] = useState<Document[]>([]);
+  const [commHistory, setCommHistory] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (selectedContact) {
+      // Use the correct derived prefix
+      const token = localStorage.getItem('nexaloom_token');
+      fetch(`/crm/nexaloom-crm/api/leads/${selectedContact.id}/email-history`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => setCommHistory(Array.isArray(data) ? data : []))
+        .catch(err => console.error("Failed to fetch history:", err));
+    } else {
+      setCommHistory([]);
+    }
+  }, [selectedContact]);
 
   // --- 3. MEMOIZED DATA ---
   const contactInteractions = useMemo(() => {
@@ -334,6 +350,32 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                       )}
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Communication History Section */}
+              <div className="mb-6">
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2"><Mail size={14} /> Communication History</h3>
+                <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+                  {commHistory.length > 0 ? (
+                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                      {commHistory.map((email: any) => (
+                        <div key={email.id} className="p-3 hover:bg-white dark:hover:bg-gray-700/50 transition-colors">
+                          <div className="flex justify-between items-start mb-1">
+                            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${email.type === 'Proposal' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
+                              {email.type}
+                            </span>
+                            <span className="text-[10px] text-gray-400">
+                              {new Date(email.sentAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-200">{email.subject}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-xs text-gray-400 py-4 italic">No communication history found.</p>
+                  )}
                 </div>
               </div>
 

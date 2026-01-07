@@ -186,6 +186,20 @@ app.patch('/api/leads/:id', async (req, res) => {
         );
         res.json({ success: true });
     } catch (err) {
+    }
+});
+
+// ROUTE: Get Email History for a Lead
+app.get('/api/leads/:id/email-history', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [rows] = await pool.query(
+            'SELECT * FROM email_history WHERE leadId = ? ORDER BY sentAt DESC',
+            [id]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('Error fetching email history:', err);
         res.status(500).json({ error: err.message });
     }
 });

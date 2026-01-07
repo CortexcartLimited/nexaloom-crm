@@ -231,6 +231,12 @@ module.exports = (pool) => {
             });
             await connection.query('UPDATE proposals SET status = ? WHERE id = ?', ['Sent', id]);
 
+            // Log to Email History
+            await connection.query(`
+                INSERT INTO email_history (leadId, subject, type, sentAt)
+                VALUES (?, ?, 'Proposal', NOW())
+            `, [leadId, `Proposal: ${proposalName}`]);
+
             const interactionId = uuidv4();
             await connection.query(`
                 INSERT INTO interactions (id, tenantId, leadId, type, notes, date)
@@ -274,6 +280,12 @@ module.exports = (pool) => {
               INSERT INTO interactions (id, tenantId, leadId, type, notes, date)
               VALUES (?, ?, ?, 'EMAIL', ?, NOW())
           `, [interactionId, lead.tenantId, id, `OUTREACH SENT: ${subject}`]);
+
+            // Log to Email History
+            await connection.query(`
+                INSERT INTO email_history (leadId, subject, type, sentAt)
+                VALUES (?, ?, 'Outreach', NOW())
+            `, [id, subject]);
 
             res.json({ success: true });
         } catch (err) {
