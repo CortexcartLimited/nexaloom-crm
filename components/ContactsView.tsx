@@ -134,14 +134,15 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
       return;
     }
 
-    const targetUrl = `/api/proposals/outreach/${selectedContact.id}`;
+    const targetUrl = `/crm/nexaloom-crm/api/proposals/outreach/${selectedContact.id}`;
     console.log('Target URL:', targetUrl);
     console.log('Payload Body:', { subject: emailSubject, body: emailBody });
 
     setIsSending(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/proposals/outreach/${selectedContact.id}`, {
+      // MATCHING WORKING CODE FROM api.ts (API_BASE = '/crm/nexaloom-crm/api')
+      const response = await fetch(`/crm/nexaloom-crm/api/proposals/outreach/${selectedContact.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
