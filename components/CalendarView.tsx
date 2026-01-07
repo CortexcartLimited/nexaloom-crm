@@ -226,6 +226,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
 
   const getEventStyle = (interaction: Interaction) => {
     if (interaction.status === 'CANCELLED') return 'bg-gray-100 text-gray-400 border-gray-200 line-through opacity-70';
+    if (interaction.status === 'COMPLETED') return 'bg-gray-50 dark:bg-gray-800/50 text-gray-400 border-gray-200 dark:border-gray-700 opacity-75 grayscale';
 
     switch (interaction.type) {
       case 'MEETING': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border-blue-200 dark:border-blue-800';
@@ -243,6 +244,37 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
       default: return <MessageSquare size={10} />;
     }
   };
+
+  const handleCompleteEvent = async () => {
+    if (!selectedInteraction || !onUpdateInteraction) return;
+
+    try {
+      setIsSaving(true);
+      await onUpdateInteraction(selectedInteraction.id, { status: 'COMPLETED' });
+
+      // Log Timeline Event
+      const lead = leads.find(l => l.id === selectedInteraction.leadId);
+      if (lead) {
+        const note: Interaction = {
+          id: `log-comp-${Date.now()}`,
+          tenantId: user.tenantId,
+          leadId: lead.id,
+          type: 'NOTE',
+          notes: `Meeting '${selectedInteraction.type}' was completed successfully.`,
+          date: formatToMysql(new Date())
+        };
+        await onAddInteraction(note);
+      }
+
+      setIsDrawerOpen(false);
+      setSelectedInteraction(null);
+    } catch (error) {
+      console.error("Completion failed:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
 
   return (
     <div className="p-6 h-full flex flex-col animate-fade-in">
@@ -620,13 +652,29 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
                 )}
               </div>
 
-              {/* Cancel at bottom */}
               {selectedInteraction.status !== 'CANCELLED' && !isRescheduling && (
-                <div className="p-4 bg-gray-50/50 dark:bg-gray-900/50 text-center">
+                <div className="p-4 bg-gray-50/50 dark:bg-gray-900/50 text-center space-y-3">
+                  {/* Mark as Completed */}
+                  {selectedInteraction.status !== 'COMPLETED' && (
+                    <button
+                      onClick={handleCompleteEvent}
+                      disabled={isSaving}
+                      className="w-full px-4 py-2 text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isSaving ? 'Updating...' : (
+                        <>
+                          <Check size={16} />
+                          Mark as Completed
+                        </>
+                      )}
+                    </button>
+                  )}
+
+                  {/* Cancel */}
                   <button
                     onClick={handleCancelEvent}
                     disabled={isSaving}
-                    className="w-full px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-2 text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {isSaving ? 'Cancelling...' : 'Cancel Event'}
                   </button>
