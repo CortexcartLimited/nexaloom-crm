@@ -190,6 +190,17 @@ app.patch('/api/leads/:id', async (req, res) => {
             `UPDATE leads SET ${fields} WHERE id = ?`,
             [...values, id]
         );
+
+        // Insert into leads_history with explicit columns and safe values
+        const historyId = uuidv4();
+        const actionType = 'UPDATE';
+        const details = JSON.stringify(updates) || '{}';
+
+        await pool.query(
+            'INSERT INTO leads_history (lead_id, action_type, details, event_id) VALUES (?, ?, ?, ?)',
+            [id, actionType, details, historyId]
+        );
+
         res.json({ success: true });
     } catch (err) {
     }
