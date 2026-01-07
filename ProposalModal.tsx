@@ -345,7 +345,7 @@ export const ProposalModal: React.FC<ProposalModalProps> = ({
                                             />
                                         </button>
                                         <label className="text-xs text-gray-500 dark:text-gray-400 select-none cursor-pointer" onClick={() => setIsTaxEnabled(!isTaxEnabled)}>
-                                            Enable {taxLabel}
+                                            Apply {taxLabel}
                                         </label>
                                     </div>
 
