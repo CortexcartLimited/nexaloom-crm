@@ -1,4 +1,18 @@
 
+CREATE TABLE IF NOT EXISTS leads (
+    id VARCHAR(255) PRIMARY KEY,
+    tenantId VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    company VARCHAR(255),
+    email VARCHAR(255),
+    phone VARCHAR(255),
+    value DECIMAL(10, 2) DEFAULT 0.00,
+    status ENUM('NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'WON', 'LOST') DEFAULT 'NEW',
+    currency VARCHAR(10) DEFAULT 'GBP',
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    lastInteraction DATETIME
+);
+
 CREATE TABLE products (
     id VARCHAR(255) PRIMARY KEY,
     tenantId VARCHAR(255) NOT NULL,

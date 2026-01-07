@@ -804,6 +804,7 @@ const App: React.FC = () => {
             onStatusChange={handleStatusChange}
             onAddLead={handleAddLead}
             onAddLeads={handleAddLeads}
+            onUpdateLead={handleUpdateLead}
             documents={documents}
             onOpenDialer={handleOpenDialer}
           />

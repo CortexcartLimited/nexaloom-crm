@@ -3,7 +3,7 @@ import { Lead, LeadStatus, Document } from '../types';
 import {
   MoreHorizontal, ShoppingBag, Plus, Sparkles, MessageSquare, X, Wand2, Upload,
   FileSpreadsheet, AlertCircle, ArrowRight, CheckCircle, ArrowLeft,
-  User, DollarSign, Building, Mail, Phone, Copy, Paperclip, File, Search, Coins
+  User, DollarSign, Building, Mail, Phone, Copy, Paperclip, File, Search, Coins, Pencil, Save
 } from 'lucide-react';
 import { generateEmailDraft, analyzeLeadPotential } from '../services/geminiService';
 import { formatCurrency } from '../utils/formatCurrency';
@@ -15,6 +15,7 @@ interface LeadsBoardProps {
   onStatusChange: (id: string, newStatus: LeadStatus) => void;
   onAddLead: (leadData?: Partial<Lead>) => Promise<void>;
   onAddLeads: (leads: Omit<Lead, 'id' | 'tenantId' | 'status' | 'createdAt' | 'value'>[]) => Promise<void>;
+  onUpdateLead: (id: string, updates: Partial<Lead>) => Promise<void>;
   onOpenDialer: (phone?: string, leadId?: string) => void;
 }
 
@@ -27,10 +28,11 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
   onAddLeads,
   documents = [],
   onOpenDialer,
+  onUpdateLead,
   products = [] // FIX 1: Added products to destructuring with a default empty array
 }) => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [modalMode, setModalMode] = useState<'EMAIL' | 'ANALYSIS' | null>(null);
+  const [modalMode, setModalMode] = useState<'EMAIL' | 'ANALYSIS' | 'EDIT' | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [aiDraft, setAiDraft] = useState('');
@@ -43,6 +45,8 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
   const [newLeadData, setNewLeadData] = useState<Partial<Lead & { productId: string, discount: number }>>({
     name: '', company: '', email: '', phone: '', value: 0, status: LeadStatus.NEW, productId: '', discount: 0, currency: 'GBP'
   });
+  // State for Editing
+  const [editLeadData, setEditLeadData] = useState<Partial<Lead>>({});
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedId(id);
@@ -67,6 +71,32 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
     setModalMode('EMAIL');
     setAiDraft('');
     setEmailSubject(`Discovery: ${lead.company}`);
+  };
+
+  const handleOpenEdit = (lead: Lead) => {
+    setSelectedLead(lead);
+    setEditLeadData({
+      name: lead.name,
+      company: lead.company,
+      email: lead.email,
+      phone: lead.phone,
+      value: lead.value,
+      status: lead.status, // Allow status edit? Why not.
+      currency: lead.currency || 'GBP'
+    });
+    setModalMode('EDIT');
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedLead) return;
+
+    // Pass updates to parent
+    await onUpdateLead(selectedLead.id, editLeadData);
+
+    // Close & Cleanup
+    setModalMode(null);
+    setSelectedLead(null);
   };
 
   const handleGenerateDraft = async () => {
@@ -221,6 +251,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
                         <button onClick={() => onOpenDialer(lead.phone, lead.id)} className="p-1.5 text-gray-400 hover:text-green-500"><Phone size={14} /></button>
                         <button onClick={() => handleOpenAnalysis(lead)} className="p-1.5 text-gray-400 hover:text-purple-500"><Sparkles size={14} /></button>
                         <button onClick={() => handleOpenEmail(lead)} className="p-1.5 text-gray-400 hover:text-blue-500"><Wand2 size={14} /></button>
+                        <button onClick={() => handleOpenEdit(lead)} className="p-1.5 text-gray-400 hover:text-orange-500"><Pencil size={14} /></button>
                       </div>
                     </div>
                   </div>
@@ -269,7 +300,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
                         {products.map(prod => (
                           <option key={prod.id} value={prod.id}>
                             {/* Use optional chaining (?.) and a fallback string to prevent the crash */}
-                            {prod.name} (${prod.price}/{prod.billingCycle?.toLowerCase() || 'unit'})
+                            {prod.name} ({formatCurrency(prod.price)}/{prod.billingCycle?.toLowerCase() || 'unit'})
                           </option>
                         ))}
                       </select>
@@ -424,6 +455,71 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Edit Lead Modal */}
+      {selectedLead && modalMode === 'EDIT' && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-orange-50/50 dark:bg-orange-900/20">
+              <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2"><Pencil size={18} className="text-orange-500" /> Edit Lead</h3>
+              <button onClick={() => setModalMode(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
+              <div className="space-y-3">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contact Information</p>
+                <input required type="text" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none" value={editLeadData.name} onChange={e => setEditLeadData({ ...editLeadData, name: e.target.value })} placeholder="Full Name" />
+                <input type="text" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={editLeadData.company} onChange={e => setEditLeadData({ ...editLeadData, company: e.target.value })} placeholder="Company Name" />
+                <div className="grid grid-cols-2 gap-3">
+                  <input type="email" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={editLeadData.email} onChange={e => setEditLeadData({ ...editLeadData, email: e.target.value })} placeholder="Email Address" />
+                  <input type="tel" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={editLeadData.phone} onChange={e => setEditLeadData({ ...editLeadData, phone: e.target.value })} placeholder="Phone Number" />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Deal Details</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] text-gray-500 mb-1 font-bold uppercase">Value</label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-2.5 text-gray-400" size={14} />
+                      <input
+                        type="number"
+                        className="w-full pl-9 pr-3 py-2 rounded-lg border-gray-300 dark:border-gray-600 border text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        value={editLeadData.value}
+                        onChange={e => setEditLeadData({ ...editLeadData, value: parseFloat(e.target.value) || 0 })}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-gray-500 mb-1 font-bold uppercase">Currency</label>
+                    <div className="relative">
+                      <Coins className="absolute left-3 top-2.5 text-gray-400" size={14} />
+                      <select
+                        className="w-full pl-9 pr-3 py-2 rounded-lg border-gray-300 dark:border-gray-600 border text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white appearance-none"
+                        value={editLeadData.currency}
+                        onChange={e => setEditLeadData({ ...editLeadData, currency: e.target.value })}
+                      >
+                        <option value="GBP">GBP (£)</option>
+                        <option value="USD">USD ($)</option>
+                        <option value="EUR">EUR (€)</option>
+                        <option value="INR">INR (₹)</option>
+                        <option value="AUD">AUD (A$)</option>
+                        <option value="CAD">CAD (C$)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-6">
+                <button type="button" onClick={() => setModalMode(null)} className="px-4 py-2 text-gray-500 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">Cancel</button>
+                <button type="submit" className="px-6 py-2 bg-orange-600 text-white text-sm font-bold rounded-lg shadow-md hover:bg-orange-700 transition-all flex items-center gap-2"><Save size={16} /> Save Changes</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
