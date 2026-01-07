@@ -164,7 +164,8 @@ export enum DiscountType {
   PERCENTAGE = 'PERCENTAGE',
   TRIAL_EXTENSION = 'TRIAL_EXTENSION',
   CONTRACT = 'CONTRACT',
-  CUSTOM = 'CUSTOM'
+  CUSTOM = 'CUSTOM',
+  FIXED_AMOUNT = 'FIXED_AMOUNT'
 }
 
 export interface Discount {

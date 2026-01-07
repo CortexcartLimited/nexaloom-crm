@@ -62,8 +62,9 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
     value: string;
     applicableProductIds: string[];
     contractTerm?: 6 | 12;
+    currency: string;
     expiresAt: string;
-  }>({ name: '', code: '', type: DiscountType.PERCENTAGE, value: '', applicableProductIds: [] as string[], expiresAt: '' });
+  }>({ name: '', code: '', type: DiscountType.PERCENTAGE, value: '', applicableProductIds: [] as string[], currency: 'GBP', expiresAt: '' });
 
   // --- Calculations Helper ---
 
@@ -101,7 +102,12 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
       }
     }
 
-    // 5. Default fallback
+    // 5. Fixed Amount Discount
+    if (discount.type === DiscountType.FIXED_AMOUNT) {
+      return Math.max(0, itemTotal - (discount.value * item.quantity));
+    }
+
+    // 6. Default fallback
     return itemTotal;
   };
 
@@ -221,7 +227,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
 
   // --- Memoized Totals ---
 
-  const getApplicableDiscounts = (productId: string) => {
+  const getApplicableDiscounts = (productId: string, currency: string) => {
     return (discounts || []).filter(d => {
       // 1. Must not be a contract-specific discount (those are handled by term selector)
       const notContract = d.type !== DiscountType.CONTRACT;
@@ -233,7 +239,10 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
       // 3. Must not be expired
       const notExpired = !d.expiresAt || new Date(d.expiresAt) >= new Date();
 
-      return notContract && productMatch && notExpired;
+      // 4. If Fixed Amount, must match currency
+      const currencyMatch = d.type !== DiscountType.FIXED_AMOUNT || (d.currency === currency);
+
+      return notContract && productMatch && notExpired && currencyMatch;
     });
   };
 
@@ -404,6 +413,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
       applicableProductIds: (discountForm.applicableProductIds.length === 0 || discountForm.applicableProductIds.includes('ALL'))
         ? ['ALL']
         : discountForm.applicableProductIds,
+      currency: discountForm.currency || 'GBP',
       expiresAt: discountForm.expiresAt ? new Date(discountForm.expiresAt).toISOString() : null
     };
 
@@ -416,7 +426,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
 
       // Clear form and close modal on success
       setIsModalOpen(false);
-      setDiscountForm({ name: '', code: '', type: DiscountType.PERCENTAGE, value: '', applicableProductIds: [], expiresAt: '' });
+      setDiscountForm({ name: '', code: '', type: DiscountType.PERCENTAGE, value: '', applicableProductIds: [], currency: 'GBP', expiresAt: '' });
       setEditingDiscountId(null);
     } catch (err) {
       console.error("Failed to save discount:", err);
@@ -450,7 +460,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
   };
   const openAddDiscountModal = () => {
     setEditingDiscountId(null);
-    setDiscountForm({ name: '', code: '', type: DiscountType.PERCENTAGE, value: '', applicableProductIds: [], expiresAt: '' });
+    setDiscountForm({ name: '', code: '', type: DiscountType.PERCENTAGE, value: '', applicableProductIds: [], currency: 'GBP', expiresAt: '' });
     setActiveTab('DISCOUNTS');
     setIsModalOpen(true);
   };
@@ -464,6 +474,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
       value: discount.value.toString(),
       applicableProductIds: discount.applicableProductIds,
       contractTerm: discount.contractTerm,
+      currency: discount.currency || 'GBP',
       expiresAt: discount.expiresAt ? new Date(discount.expiresAt).toISOString().split('T')[0] : ''
     });
     setIsModalOpen(true);
@@ -643,7 +654,8 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
                     <span className={`text-2xl font-bold ${discount.type === DiscountType.PERCENTAGE ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-800 dark:text-gray-200'}`}>
                       {discount.type === DiscountType.PERCENTAGE ? `${discount.value}% OFF` :
                         discount.type === DiscountType.CONTRACT ? (discount.name.toLowerCase().includes('free') ? `${discount.value} MO FREE` : `${discount.value}% OFF`) :
-                          discount.type === DiscountType.CUSTOM ? 'MANUAL' : `+${discount.value} Days`}
+                          discount.type === DiscountType.FIXED_AMOUNT ? `${formatCurrency(discount.value, discount.currency || 'GBP')} OFF` :
+                            discount.type === DiscountType.CUSTOM ? 'MANUAL' : `+${discount.value} Days`}
                     </span>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       {discount.type === DiscountType.CONTRACT ? `${discount.contractTerm} Month Commitment` :
@@ -734,10 +746,10 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
                 <div className="space-y-4">
                   {cart.map(item => {
                     const itemTotal = item.price * item.quantity;
-                    const applicableDiscounts = getApplicableDiscounts(item.id);
+                    const currency = selectedLeadId ? leads.find(l => l.id === selectedLeadId)?.currency || 'GBP' : 'GBP';
+                    const applicableDiscounts = getApplicableDiscounts(item.id, currency);
                     const appliedDiscount = discounts.find(d => d.id === item.appliedDiscountId);
                     const displayPrice = calculateItemPrice(item, appliedDiscount);
-                    const currency = selectedLeadId ? leads.find(l => l.id === selectedLeadId)?.currency || 'GBP' : 'GBP';
 
                     return (
                       <div key={item.id} className="flex flex-col gap-3 p-4 bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 rounded-xl shadow-sm">
@@ -1170,6 +1182,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
                     <div className="grid grid-cols-2 gap-2 mb-4">
                       {[
                         { id: DiscountType.PERCENTAGE, label: 'Promo Code' },
+                        { id: DiscountType.FIXED_AMOUNT, label: 'Fixed Amount' },
                         { id: DiscountType.TRIAL_EXTENSION, label: 'Trial Extension' },
                         { id: DiscountType.CONTRACT, label: 'Contract Deal' },
                         { id: DiscountType.CUSTOM, label: 'Manager Custom' }
@@ -1200,9 +1213,24 @@ export const CatalogView: React.FC<CatalogViewProps> = ({ products, discounts, l
                   )}
 
                   <div className="grid grid-cols-2 gap-4">
+                    {discountForm.type === DiscountType.FIXED_AMOUNT && (
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Currency</label>
+                        <select
+                          className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          value={discountForm.currency}
+                          onChange={e => setDiscountForm({ ...discountForm, currency: e.target.value })}
+                        >
+                          <option value="GBP">GBP (£)</option>
+                          <option value="USD">USD ($)</option>
+                          <option value="EUR">EUR (€)</option>
+                        </select>
+                      </div>
+                    )}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        {discountForm.name.toLowerCase().includes('free') ? 'Months Free' : 'Value (%)'}
+                        {discountForm.type === DiscountType.FIXED_AMOUNT ? 'Amount' :
+                          discountForm.name.toLowerCase().includes('free') ? 'Months Free' : 'Value (%)'}
                       </label>
                       <input required type="number" min="1" className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={discountForm.value} onChange={e => setDiscountForm({ ...discountForm, value: e.target.value })} />
                     </div>
