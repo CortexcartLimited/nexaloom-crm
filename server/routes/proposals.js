@@ -75,9 +75,9 @@ module.exports = (pool) => {
             const proposalId = id || uuidv4();
 
             await connection.query(
-                `INSERT INTO proposals (id, tenantId, name, leadId, leadName, leadCompany, totalValue, status, validUntil, terms, createdBy, currency, createdAt) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-                [proposalId, tenantId, name, leadId, leadName, leadCompany, totalValue, status, validUntilDate, terms, createdBy, currency || 'GBP']
+                `INSERT INTO proposals (id, tenantId, name, leadId, leadName, leadCompany, totalValue, taxRate, taxAmount, status, validUntil, terms, createdBy, currency, createdAt) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+                [proposalId, tenantId, name, leadId, leadName, leadCompany, totalValue, req.body.taxRate || 0, req.body.taxAmount || 0, status, validUntilDate, terms, createdBy, currency || 'GBP']
             );
 
             if (items && items.length > 0) {

@@ -200,6 +200,8 @@ export interface Proposal {
   leadCompany: string;
   items: ProposalItem[];
   totalValue: number;
+  taxRate?: number;
+  taxAmount?: number;
   status: ProposalStatus;
   currency?: string;
   validUntil: string;
