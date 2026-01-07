@@ -17,6 +17,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null);
+  const [editingInteractionId, setEditingInteractionId] = useState<string | null>(null);
 
   // Schedule State
   const [newMeeting, setNewMeeting] = useState({
@@ -58,6 +59,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
 
   const handleDayClick = (day: number) => {
     setSelectedDay(day);
+    setEditingInteractionId(null);
+    setNewMeeting({ leadId: '', type: 'MEETING', notes: '', time: '10:00' });
     setIsModalOpen(true);
   };
 
@@ -81,6 +84,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
       time: timeStr
     });
 
+    // Set editing mode
+    setEditingInteractionId(selectedInteraction.id);
+
     // Set the day from the interaction
     setSelectedDay(date.getDate());
     setCurrentDate(new Date(date)); // Ensure we are looking at the right month
@@ -94,6 +100,21 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
     if (!confirm('Are you sure you want to cancel this event?')) return;
 
     await onUpdateInteraction(selectedInteraction.id, { status: 'CANCELLED' });
+
+    // Log Timeline Event
+    const lead = leads.find(l => l.id === selectedInteraction.leadId);
+    if (lead) {
+      const note: Interaction = {
+        id: `log-${Date.now()}`,
+        tenantId: user.tenantId,
+        leadId: lead.id,
+        type: 'NOTE',
+        notes: `${user.name} Cancelled the event '${selectedInteraction.type}' scheduled for ${new Date(selectedInteraction.date).toLocaleDateString()}.`,
+        date: new Date().toISOString()
+      };
+      await onAddInteraction(note);
+    }
+
     setIsDrawerOpen(false);
     setSelectedInteraction(null);
   };
@@ -113,43 +134,69 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
     const scheduledTime = date.toISOString();
 
     // 1. Create the Primary Event Interaction
-    const interaction: Interaction = {
-      id: `int-${Date.now()}`,
-      tenantId: user.tenantId,
-      leadId: newMeeting.leadId,
-      type: newMeeting.type,
-      notes: newMeeting.notes,
-      date: scheduledTime,
-      status: 'SCHEDULED'
-    };
+    if (editingInteractionId && onUpdateInteraction) {
+      // UPDATE EXISTING EVENT
+      await onUpdateInteraction(editingInteractionId, {
+        leadId: newMeeting.leadId,
+        type: newMeeting.type,
+        notes: newMeeting.notes,
+        date: scheduledTime,
+        status: 'SCHEDULED' // Reset status if it was cancelled
+      });
 
-    // 2. Create the Audit Log Note for the Customer Account
-    const now = new Date();
-    const auditTimestamp = now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const eventDateDisplay = new Date(scheduledTime).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      // Log Reschedule
+      const lead = leads.find(l => l.id === newMeeting.leadId);
+      if (lead) {
+        const note: Interaction = {
+          id: `log-resched-${Date.now()}`,
+          tenantId: user.tenantId,
+          leadId: lead.id,
+          type: 'NOTE',
+          notes: `${user.name} Rescheduled the event '${newMeeting.type}' to ${new Date(scheduledTime).toLocaleDateString()} at ${newMeeting.time}.`,
+          date: new Date().toISOString()
+        };
+        await onAddInteraction(note);
+      }
 
-    let auditNote = `EVENT BOOKED: ${user.name} - ${auditTimestamp}\n`;
-    auditNote += `Action: New ${newMeeting.type} Scheduled\n`;
-    auditNote += `Scheduled For: ${eventDateDisplay} at ${newMeeting.time}\n`;
-    auditNote += `------------------------------------------------\n`;
-    auditNote += `Agenda/Notes: ${newMeeting.notes || 'None provided'}\n`;
-    auditNote += `Status: CALENDAR_SYNCED`;
+    } else {
+      // CREATE NEW EVENT
+      const interaction: Interaction = {
+        id: `int-${Date.now()}`,
+        tenantId: user.tenantId,
+        leadId: newMeeting.leadId,
+        type: newMeeting.type,
+        notes: newMeeting.notes,
+        date: scheduledTime,
+        status: 'SCHEDULED'
+      };
 
-    const auditInteraction: Interaction = {
-      id: `int-log-${Date.now()}`,
-      tenantId: user.tenantId,
-      leadId: newMeeting.leadId,
-      type: 'NOTE',
-      notes: auditNote,
-      date: now.toISOString()
-    };
+      const now = new Date();
+      const auditTimestamp = now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const eventDateDisplay = new Date(scheduledTime).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-    // Add both to history
-    await onAddInteraction(interaction);
-    await onAddInteraction(auditInteraction);
+      let auditNote = `EVENT BOOKED: ${user.name} - ${auditTimestamp}\n`;
+      auditNote += `Action: New ${newMeeting.type} Scheduled\n`;
+      auditNote += `Scheduled For: ${eventDateDisplay} at ${newMeeting.time}\n`;
+      auditNote += `------------------------------------------------\n`;
+      auditNote += `Agenda/Notes: ${newMeeting.notes || 'None provided'}\n`;
+      auditNote += `Status: CALENDAR_SYNCED`;
+
+      const auditInteraction: Interaction = {
+        id: `int-log-${Date.now()}`,
+        tenantId: user.tenantId,
+        leadId: newMeeting.leadId,
+        type: 'NOTE',
+        notes: auditNote,
+        date: now.toISOString()
+      };
+
+      await onAddInteraction(interaction);
+      await onAddInteraction(auditInteraction);
+    }
 
     setIsModalOpen(false);
     setNewMeeting({ leadId: '', type: 'MEETING', notes: '', time: '10:00' });
+    setEditingInteractionId(null);
   };
 
   const getEventStyle = (interaction: Interaction) => {
@@ -282,8 +329,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
             <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
               <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
                 <CalendarIcon size={18} className="text-blue-600" />
-                Schedule Event
-                {selectedDay && <span className="text-sm font-normal text-gray-500 dark:text-gray-400">for {monthNames[month]} {selectedDay}</span>}
+                Event Details
+                {editingInteractionId && <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">(Rescheduling)</span>}
+                {selectedDay && !editingInteractionId && <span className="text-sm font-normal text-gray-500 dark:text-gray-400">for {monthNames[month]} {selectedDay}</span>}
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                 <X size={20} />
@@ -345,7 +393,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
               <div className="pt-4 flex justify-end gap-3">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">Cancel</button>
                 <button type="submit" className="px-6 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 flex items-center gap-2">
-                  Confirm Schedule <ArrowRight size={14} />
+                  {editingInteractionId ? 'Update Event' : 'Confirm Schedule'} <ArrowRight size={14} />
                 </button>
               </div>
             </form>
@@ -356,7 +404,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
       {isDrawerOpen && selectedInteraction && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setIsDrawerOpen(false)}></div>
-          <div className="relative w-full max-w-md bg-white dark:bg-gray-800 h-full shadow-2xl overflow-y-auto flex flex-col animate-in slide-in-from-right duration-300">
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setIsDrawerOpen(false)}></div>
+          <div className="relative w-full max-w-sm md:w-96 bg-white dark:bg-gray-800 h-full shadow-2xl overflow-y-auto flex flex-col animate-in slide-in-from-right duration-300">
             <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
               <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
                 Event Details
