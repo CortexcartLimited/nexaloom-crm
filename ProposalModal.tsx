@@ -49,7 +49,6 @@ export const ProposalModal: React.FC<ProposalModalProps> = ({
                 setStatus(initialProposal.status || ProposalStatus.DRAFT);
                 setCurrency(initialProposal.currency || 'GBP');
                 setTaxRate(initialProposal.taxRate || 0);
-                setTaxRate(initialProposal.taxRate || 0);
                 setIsTaxEnabled(!!initialProposal.taxRate && initialProposal.taxRate > 0);
 
                 // Try to recover label from lead if possible, otherwise default
