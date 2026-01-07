@@ -117,6 +117,8 @@ app.post('/api/products', async (req, res) => {
 app.post('/api/leads/:id/email', async (req, res) => {
     const { id } = req.params;
     const { subject, body } = req.body;
+    console.log(`Starting Outreach Send for Lead ID: ${id}`);
+    if (req.body.email) console.log(`(Frontend sent email in body: ${req.body.email})`);
 
     // Validate Inputs
     if (!subject || !body) return res.status(400).json({ error: 'Subject and Body are required' });

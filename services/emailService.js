@@ -215,7 +215,11 @@ ${emailSignature || ''}
         subject: `New Proposal: ${proposalName}`,
         html: htmlContent,
         text: textContent,
-        attachments: attachments
+        attachments: attachments,
+        envelope: {
+            from: 'accounts@cortexcart.com',
+            to: to
+        }
     };
 
     try {
