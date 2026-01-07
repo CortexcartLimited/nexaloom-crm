@@ -53,14 +53,19 @@ app.get('/api/leads', async (req, res) => {
 app.post('/api/leads', async (req, res) => {
     const { tenantId, name, company, email, phone, value, status, currency, country } = req.body;
     const id = uuidv4();
+    const allowedFields = ['name', 'company', 'email', 'phone', 'value', 'status', 'currency', 'country', 'taxId'];
+    const updates = [];
+    const values = [];
 
     try {
-        await pool.query(
-            `INSERT INTO leads (id, tenantId, name, company, email, phone, value, status, currency, country, createdAt) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-            [id, tenantId, name, company, email, phone, value, status, currency || 'GBP', country || null]
-        );
-        res.status(201).json({ id, ...req.body });
+        const query = 'INSERT INTO leads (id, tenantId, name, company, email, phone, value, status, currency, country, taxId, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())';
+        await pool.query(query, [id, tenantId, name, company, email, phone, value || 0, status || 'NEW', currency || 'GBP', country, req.body.taxId]);
+
+        // Log interaction
+        await pool.query('INSERT INTO interactions (id, tenantId, leadId, type, notes, date) VALUES (?, ?, ?, "Status Change", "Lead Created", NOW())',
+            [uuidv4(), tenantId, id]);
+
+        res.status(201).json({ id, tenantId, name, company, email, phone, value, status, currency, country, taxId: req.body.taxId });
     } catch (err) {
         console.error('Database error:', err);
         res.status(500).json({ error: err.message });

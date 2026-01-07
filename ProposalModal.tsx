@@ -81,13 +81,25 @@ export const ProposalModal: React.FC<ProposalModalProps> = ({
                 setCurrency(lead.currency || 'GBP');
 
                 // Auto-Set Tax based on Country
-                if (lead.country && taxRules[lead.country]) {
+                // Auto-Set Tax based on Country & Tax ID (Reverse Charge Logic)
+                const isInternationalB2B = lead.taxId && lead.country !== 'United Kingdom'; // Assuming UK tenant base
+
+                if (isInternationalB2B) {
+                    // Reverse Charge: Tax Enabled = OFF
+                    // We still set the rate/label so if they toggle it ON manually, it's correct
+                    if (lead.country && taxRules[lead.country]) {
+                        setTaxRate(taxRules[lead.country].rate);
+                        setTaxLabel(taxRules[lead.country].label);
+                    }
+                    setIsTaxEnabled(false);
+                } else if (lead.country && taxRules[lead.country]) {
+                    // Standard Domestic or Consumer Logic
                     const rule = taxRules[lead.country];
                     setTaxRate(rule.rate);
                     setTaxLabel(rule.label);
                     setIsTaxEnabled(rule.rate > 0);
                 } else {
-                    // Default fallback if no country match
+                    // Default fallback
                     setTaxRate(0);
                     setTaxLabel('Tax');
                     setIsTaxEnabled(false);

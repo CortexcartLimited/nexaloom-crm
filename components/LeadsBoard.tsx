@@ -94,6 +94,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
       value: lead.value,
       status: lead.status, // Allow status edit? Why not.
       currency: lead.currency || 'GBP',
+      taxId: lead.taxId || '',
       country: lead.country || 'United Kingdom'
     });
     setModalMode('EDIT');
@@ -153,7 +154,9 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
       status: LeadStatus.NEW,
       productId: '',
       discount: 0,
-      currency: 'GBP'
+      currency: 'GBP',
+      taxId: '',
+      country: 'United Kingdom'
     });
   };
 
@@ -301,6 +304,16 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
                   <option value="" disabled>Select Country</option>
                   {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
+                <div>
+                  <label className="block text-[10px] text-gray-500 mb-1 font-bold uppercase">Tax ID / VAT Number</label>
+                  <input
+                    type="text"
+                    className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    value={newLeadData.taxId}
+                    onChange={e => setNewLeadData({ ...newLeadData, taxId: e.target.value })}
+                    placeholder="e.g. GB123456789"
+                  />
+                </div>
               </div>
 
               {/* SECTION 2: DEAL INFO (CATALOG INTEGRATION) */}
@@ -504,6 +517,16 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
                   <option value="" disabled>Select Country</option>
                   {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
+                <div>
+                  <label className="block text-[10px] text-gray-500 mb-1 font-bold uppercase">Tax ID / VAT Number</label>
+                  <input
+                    type="text"
+                    className="w-full rounded-lg border-gray-300 dark:border-gray-600 border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    value={editLeadData.taxId || ''}
+                    onChange={e => setEditLeadData({ ...editLeadData, taxId: e.target.value })}
+                    placeholder="e.g. GB123456789"
+                  />
+                </div>
               </div>
 
               <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
@@ -549,8 +572,8 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
               </div>
             </form>
           </div>
-        </div>
+        </div >
       )}
-    </div>
+    </div >
   );
 };
