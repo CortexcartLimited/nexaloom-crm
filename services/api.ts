@@ -143,6 +143,14 @@ export const api = {
     if (!response.ok) throw new Error('Failed to create interaction');
     return response.json();
   },
+  updateInteraction: async (id: string, updates: any) => {
+    const response = await req(`/interactions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+    if (!response.ok) throw new Error('Failed to update interaction');
+    return response.json();
+  },
 
   // Tasks
   getTasks: async (tenantId: string) => {

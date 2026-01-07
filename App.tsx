@@ -633,6 +633,18 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUpdateInteraction = async (id: string, updates: Partial<Interaction>) => {
+    // Optimistic update
+    setInteractions(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i));
+
+    try {
+      await api.updateInteraction(id, updates);
+    } catch (e) {
+      console.error("Failed to update interaction", e);
+      // Revert if needed, but for now we expect success
+    }
+  };
+
   const handleAddUser = async (userData: Omit<User, 'id' | 'tenantId'>) => {
     if (!auth.tenant) return;
     try {
@@ -795,6 +807,7 @@ const App: React.FC = () => {
             leads={leads}
             user={auth.user}
             onAddInteraction={handleAddInteraction}
+            onUpdateInteraction={handleUpdateInteraction}
           />
         )}
         {activeTab === 'leads' && (

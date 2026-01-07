@@ -222,23 +222,42 @@ app.post('/api/interactions', async (req, res) => {
 
     try {
         await pool.query(
-            `INSERT INTO interactions (id, tenantId, leadId, userId, type, notes, date, metadata, productId) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO interactions (id, tenantId, leadId, userId, type, notes, date, metadata, productId, status) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 id || uuidv4(),
                 tenantId,
-                leadId,
-                userId || null,
                 type,
                 notes,
                 formattedDate, // Use the cleaned-up date here
                 JSON.stringify(metadata || {}),
-                productId || null
+                productId || null,
+                req.body.status || 'SCHEDULED'
             ]
         );
         res.status(201).json({ success: true });
     } catch (err) {
         console.error("SQL ERROR:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ROUTE: Update Interaction (e.g. Status Change / Cancel)
+app.patch('/api/interactions/:id', async (req, res) => {
+    const { id } = req.params;
+    const updates = req.body;
+
+    try {
+        const fields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
+        const values = Object.values(updates);
+
+        await pool.query(
+            `UPDATE interactions SET ${fields} WHERE id = ?`,
+            [...values, id]
+        );
+        res.json({ success: true, message: 'Interaction updated' });
+    } catch (err) {
+        console.error("UPDATE INTERACTION ERROR:", err);
         res.status(500).json({ error: err.message });
     }
 });

@@ -43,6 +43,7 @@ CREATE TABLE interactions (
     type VARCHAR(255) NOT NULL, -- e.g., 'Note', 'Call', 'Email', 'Meeting', 'Status Change'
     notes TEXT,
     date DATETIME NOT NULL,
+    status ENUM('SCHEDULED', 'COMPLETED', 'CANCELLED') DEFAULT 'SCHEDULED',
     FOREIGN KEY (leadId) REFERENCES leads(id),
     FOREIGN KEY (userId) REFERENCES users(id)
 );

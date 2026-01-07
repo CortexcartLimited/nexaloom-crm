@@ -116,6 +116,7 @@ export interface Interaction {
     to?: string;
     attachments?: string[];
   };
+  status?: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
 }
 
 export interface Task {
