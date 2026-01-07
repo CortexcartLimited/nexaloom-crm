@@ -140,7 +140,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
 
     setIsSending(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('nexaloom_token');
       // MATCHING WORKING CODE FROM api.ts (API_BASE = '/crm/nexaloom-crm/api')
       const response = await fetch(`/crm/nexaloom-crm/api/proposals/outreach/${selectedContact.id}`, {
         method: 'POST',
