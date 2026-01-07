@@ -89,14 +89,39 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
   const handleReschedule = () => {
     if (!selectedInteraction) return;
 
-    const date = new Date(selectedInteraction.date);
-    // Format for input[type="date"] (YYYY-MM-DD)
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}`;
+    let dateStr = '';
+    let timeStr = '';
+    const rawDate = selectedInteraction.date;
 
-    const timeStr = date.toTimeString().slice(0, 5); // HH:MM
+    // Robust Date Extraction to ensure YYYY-MM-DD
+    // Check for ISO (T) or MySQL (space) format first to avoid timezone shifts
+    if (typeof rawDate === 'string') {
+      if (rawDate.includes('T')) {
+        dateStr = rawDate.split('T')[0];
+        const timePart = rawDate.split('T')[1];
+        timeStr = timePart ? timePart.substring(0, 5) : '10:00';
+      } else if (rawDate.includes(' ')) {
+        dateStr = rawDate.split(' ')[0];
+        const timePart = rawDate.split(' ')[1];
+        timeStr = timePart ? timePart.substring(0, 5) : '10:00';
+      }
+    }
+
+    // Fallback if string parsing failed or it's a Date object
+    if (!dateStr || dateStr.length !== 10) {
+      const date = new Date(rawDate);
+      if (!isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        dateStr = `${year}-${month}-${day}`;
+        timeStr = date.toTimeString().slice(0, 5);
+      } else {
+        // Last resort default
+        dateStr = new Date().toISOString().split('T')[0];
+        timeStr = '10:00';
+      }
+    }
 
     setRescheduleForm({
       date: dateStr,
