@@ -202,6 +202,7 @@ export interface Proposal {
   totalValue: number;
   taxRate?: number;
   taxAmount?: number;
+  isTaxEnabled?: boolean;
   status: ProposalStatus;
   currency?: string;
   validUntil: string;

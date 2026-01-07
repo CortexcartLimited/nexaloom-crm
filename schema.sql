@@ -113,6 +113,7 @@ CREATE TABLE IF NOT EXISTS proposals (
     totalValue DECIMAL(10, 2) DEFAULT 0.00,
     taxRate DECIMAL(5, 2) DEFAULT 0.00,
     taxAmount DECIMAL(10, 2) DEFAULT 0.00,
+    isTaxEnabled BOOLEAN DEFAULT FALSE,
     currency VARCHAR(10) DEFAULT 'GBP',
     validUntil DATETIME,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,

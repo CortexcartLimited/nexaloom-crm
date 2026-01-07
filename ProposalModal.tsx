@@ -49,7 +49,7 @@ export const ProposalModal: React.FC<ProposalModalProps> = ({
                 setStatus(initialProposal.status || ProposalStatus.DRAFT);
                 setCurrency(initialProposal.currency || 'GBP');
                 setTaxRate(initialProposal.taxRate || 0);
-                setIsTaxEnabled(!!initialProposal.taxRate && initialProposal.taxRate > 0);
+                setIsTaxEnabled(!!initialProposal.isTaxEnabled);
 
                 // Try to recover label from lead if possible, otherwise default
                 if (initialProposal.leadId) {
@@ -162,6 +162,7 @@ export const ProposalModal: React.FC<ProposalModalProps> = ({
                 totalValue: total,
                 taxRate: isTaxEnabled ? taxRate : 0,
                 taxAmount: isTaxEnabled ? taxAmount : 0,
+                isTaxEnabled,
                 status,
                 validUntil,
                 terms,
@@ -318,17 +319,26 @@ export const ProposalModal: React.FC<ProposalModalProps> = ({
                                 </div>
 
                                 <div className="flex items-center justify-end gap-2 my-2">
-                                    <label className="text-xs text-gray-500 flex items-center gap-1 cursor-pointer select-none">
-                                        <input
-                                            type="checkbox"
-                                            checked={isTaxEnabled}
-                                            onChange={(e) => setIsTaxEnabled(e.target.checked)}
-                                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                        />
-                                        Enable Tax
-                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            className={`${isTaxEnabled ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-600'} relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
+                                            role="switch"
+                                            aria-checked={isTaxEnabled}
+                                            onClick={() => setIsTaxEnabled(!isTaxEnabled)}
+                                        >
+                                            <span
+                                                aria-hidden="true"
+                                                className={`${isTaxEnabled ? 'translate-x-4' : 'translate-x-0'} pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
+                                            />
+                                        </button>
+                                        <label className="text-xs text-gray-500 dark:text-gray-400 select-none cursor-pointer" onClick={() => setIsTaxEnabled(!isTaxEnabled)}>
+                                            Enable {taxLabel}
+                                        </label>
+                                    </div>
+
                                     {isTaxEnabled && (
-                                        <div className="flex items-center gap-1">
+                                        <div className="flex items-center gap-1 ml-4">
                                             <input
                                                 type="number"
                                                 min="0"
