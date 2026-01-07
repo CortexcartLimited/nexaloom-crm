@@ -18,6 +18,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null);
+  const [viewAllDate, setViewAllDate] = useState<Date | null>(null);
 
 
   const [isRescheduling, setIsRescheduling] = useState(false);
@@ -259,7 +260,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
         </div>
 
         <button
-          onClick={() => { setSelectedDay(new Date().getDate()); setIsModalOpen(true); }}
+          onClick={() => {
+            // FIX: Use currently selected day if available, otherwise default to today
+            if (!selectedDay) setSelectedDay(new Date().getDate());
+            setIsModalOpen(true);
+          }}
           className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md text-sm font-semibold"
         >
           <Plus size={18} />
@@ -312,9 +317,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
                     </div>
                   ))}
                   {dayEvents.length > 3 && (
-                    <div className="text-[10px] text-gray-400 dark:text-gray-500 pl-1 font-medium italic">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setViewAllDate(new Date(year, month, dayNum));
+                      }}
+                      className="text-[10px] text-blue-500 hover:text-blue-700 dark:text-blue-400 pl-1 font-bold hover:underline bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded transition-colors w-full text-left"
+                    >
                       + {dayEvents.length - 3} more
-                    </div>
+                    </button>
                   )}
                 </div>
 
@@ -423,156 +434,208 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
           </div>
         </div>
       )}
-      {/* Event Details Drawer */}
-      {isDrawerOpen && selectedInteraction && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setIsDrawerOpen(false)}></div>
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setIsDrawerOpen(false)}></div>
-          <div className="relative w-full max-w-sm md:w-96 bg-white dark:bg-gray-800 h-full shadow-2xl overflow-y-auto flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
-              <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                Event Details
+
+
+      {/* View All Events Modal */}
+      {
+        viewAllDate && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200" onClick={() => setViewAllDate(null)}>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden flex flex-col max-h-[70vh]" onClick={e => e.stopPropagation()}>
+              <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
+                <h3 className="text-lg font-bold text-gray-800 dark:text-white">
+                  Events for {viewAllDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                </h3>
+                <button onClick={() => setViewAllDate(null)} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-400">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-4 overflow-y-auto space-y-2">
                 {(() => {
-                  const s = (selectedInteraction.status || 'SCHEDULED').toUpperCase();
-                  let badgeClass = 'bg-blue-100 text-blue-600'; // Default / Scheduled
-                  if (s === 'CONFIRMED') badgeClass = 'bg-green-100 text-green-700 border border-green-200';
-                  else if (s === 'TENTATIVE') badgeClass = 'bg-yellow-100 text-yellow-700 border border-yellow-200';
-                  else if (s === 'CANCELLED') badgeClass = 'bg-red-100 text-red-600 border border-red-200';
-
-                  return <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full tracking-wide shadow-sm ${badgeClass}`}>{s}</span>;
+                  const day = viewAllDate.getDate();
+                  const events = interactionsByDay[day] || [];
+                  if (events.length === 0) return <p className="text-gray-500 text-center py-4">No events found.</p>;
+                  return events.map(event => (
+                    <div
+                      key={event.id}
+                      onClick={(e) => {
+                        handleEventClick(e, event);
+                        setViewAllDate(null);
+                      }}
+                      className={`p-3 rounded-lg border flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${getEventStyle(event)}`}
+                    >
+                      <div className="flex-shrink-0">
+                        {getEventIcon(event.type)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold truncate">
+                          {leads.find(l => l.id === event.leadId)?.name || 'Unknown Lead'}
+                        </p>
+                        <p className="text-xs opacity-80 truncate">
+                          {new Date(event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {event.type}
+                        </p>
+                      </div>
+                      <ArrowRight size={14} className="opacity-50" />
+                    </div>
+                  ));
                 })()}
-              </h3>
-              <button onClick={() => setIsDrawerOpen(false)} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-400">
-                <X size={20} />
-              </button>
+              </div>
             </div>
+          </div>
+        )
+      }
 
-            <div className="p-6 space-y-6 flex-1">
-              <div>
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Lead / Contact</label>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center">
-                    <UserIcon size={20} />
+      {/* Event Details Drawer */}
+      {
+        isDrawerOpen && selectedInteraction && (
+          <div className="fixed inset-0 z-50 flex justify-end">
+            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setIsDrawerOpen(false)}></div>
+            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setIsDrawerOpen(false)}></div>
+            <div className="relative w-full max-w-sm md:w-96 bg-white dark:bg-gray-800 h-full shadow-2xl overflow-y-auto flex flex-col animate-in slide-in-from-right duration-300">
+              <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
+                <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                  Event Details
+                  {(() => {
+                    const s = (selectedInteraction.status || 'SCHEDULED').toUpperCase();
+                    let badgeClass = 'bg-blue-100 text-blue-600'; // Default / Scheduled
+                    if (s === 'CONFIRMED') badgeClass = 'bg-green-100 text-green-700 border border-green-200';
+                    else if (s === 'TENTATIVE') badgeClass = 'bg-yellow-100 text-yellow-700 border border-yellow-200';
+                    else if (s === 'CANCELLED') badgeClass = 'bg-red-100 text-red-600 border border-red-200';
+
+                    return <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full tracking-wide shadow-sm ${badgeClass}`}>{s}</span>;
+                  })()}
+                </h3>
+                <button onClick={() => setIsDrawerOpen(false)} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-400">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-6 flex-1">
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Lead / Contact</label>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center">
+                      <UserIcon size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 dark:text-white text-lg">
+                        {leads.find(l => l.id === selectedInteraction.leadId)?.name || 'Unknown Lead'}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {leads.find(l => l.id === selectedInteraction.leadId)?.company || 'No Company'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-bold text-gray-900 dark:text-white text-lg">
-                      {leads.find(l => l.id === selectedInteraction.leadId)?.name || 'Unknown Lead'}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {leads.find(l => l.id === selectedInteraction.leadId)?.company || 'No Company'}
-                    </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-700">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Date</label>
+                    {isRescheduling ? (
+                      <input
+                        type="date"
+                        className="w-full bg-white dark:bg-gray-800 border border-gray-300 focus:border-blue-500 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-200 transition-all font-medium shadow-sm"
+                        value={rescheduleForm.date}
+                        onChange={(e) => setRescheduleForm({ ...rescheduleForm, date: e.target.value })}
+                      />
+                    ) : (
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {new Date(selectedInteraction.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </p>
+                    )}
+                  </div>
+                  <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-700">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Time</label>
+                    {isRescheduling ? (
+                      <input
+                        type="time"
+                        className="w-full bg-white dark:bg-gray-800 border border-gray-300 focus:border-blue-500 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-200 transition-all font-medium shadow-sm"
+                        value={rescheduleForm.time}
+                        onChange={(e) => setRescheduleForm({ ...rescheduleForm, time: e.target.value })}
+                      />
+                    ) : (
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {new Date(selectedInteraction.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    )}
+                  </div>
+
+                  {isRescheduling && (
+                    <div className="mt-4 animate-in fade-in slide-in-from-top-2">
+                      <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Reason for Reschedule</label>
+                      <textarea
+                        className="w-full bg-white dark:bg-gray-800 border border-gray-300 focus:border-blue-500 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-blue-100 transition-all resize-none shadow-sm"
+                        rows={2}
+                        placeholder="Why is this being moved?"
+                        value={rescheduleForm.reason}
+                        onChange={(e) => setRescheduleForm({ ...rescheduleForm, reason: e.target.value })}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">Description / Notes</label>
+                  <div className="p-4 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900/30 rounded-lg text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
+                    {selectedInteraction.notes || 'No description provided.'}
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-700">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Date</label>
-                  {isRescheduling ? (
-                    <input
-                      type="date"
-                      className="w-full bg-white dark:bg-gray-800 border border-gray-300 focus:border-blue-500 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-200 transition-all font-medium shadow-sm"
-                      value={rescheduleForm.date}
-                      onChange={(e) => setRescheduleForm({ ...rescheduleForm, date: e.target.value })}
-                    />
-                  ) : (
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {new Date(selectedInteraction.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                    </p>
-                  )}
-                </div>
-                <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-700">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Time</label>
-                  {isRescheduling ? (
-                    <input
-                      type="time"
-                      className="w-full bg-white dark:bg-gray-800 border border-gray-300 focus:border-blue-500 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-200 transition-all font-medium shadow-sm"
-                      value={rescheduleForm.time}
-                      onChange={(e) => setRescheduleForm({ ...rescheduleForm, time: e.target.value })}
-                    />
-                  ) : (
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {new Date(selectedInteraction.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  )}
-                </div>
-
-                {isRescheduling && (
-                  <div className="mt-4 animate-in fade-in slide-in-from-top-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Reason for Reschedule</label>
-                    <textarea
-                      className="w-full bg-white dark:bg-gray-800 border border-gray-300 focus:border-blue-500 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-blue-100 transition-all resize-none shadow-sm"
-                      rows={2}
-                      placeholder="Why is this being moved?"
-                      value={rescheduleForm.reason}
-                      onChange={(e) => setRescheduleForm({ ...rescheduleForm, reason: e.target.value })}
-                    />
-                  </div>
+              <div className="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 flex justify-end gap-3">
+                {selectedInteraction.status !== 'CANCELLED' && (
+                  <>
+                    {isRescheduling ? (
+                      <div className="grid grid-cols-2 gap-3 w-full">
+                        <button
+                          onClick={() => setIsRescheduling(false)}
+                          className="px-4 py-2 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg font-medium text-sm transition-all shadow-sm"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleConfirmReschedule}
+                          disabled={isSaving}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isSaving ? 'Saving...' : (
+                            <>
+                              <Check size={16} />
+                              Save Changes
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={handleReschedule}
+                          disabled={isSaving}
+                          className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Reschedule Event
+                        </button>
+                      </>
+                    )}
+                  </>
                 )}
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">Description / Notes</label>
-                <div className="p-4 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900/30 rounded-lg text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
-                  {selectedInteraction.notes || 'No description provided.'}
+              {/* Cancel at bottom */}
+              {selectedInteraction.status !== 'CANCELLED' && !isRescheduling && (
+                <div className="p-4 bg-gray-50/50 dark:bg-gray-900/50 text-center">
+                  <button
+                    onClick={handleCancelEvent}
+                    disabled={isSaving}
+                    className="w-full px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSaving ? 'Cancelling...' : 'Cancel Event'}
+                  </button>
                 </div>
-              </div>
-            </div>
-
-            <div className="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 flex justify-end gap-3">
-              {selectedInteraction.status !== 'CANCELLED' && (
-                <>
-                  {isRescheduling ? (
-                    <div className="grid grid-cols-2 gap-3 w-full">
-                      <button
-                        onClick={() => setIsRescheduling(false)}
-                        className="px-4 py-2 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg font-medium text-sm transition-all shadow-sm"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleConfirmReschedule}
-                        disabled={isSaving}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isSaving ? 'Saving...' : (
-                          <>
-                            <Check size={16} />
-                            Save Changes
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <button
-                        onClick={handleReschedule}
-                        disabled={isSaving}
-                        className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Reschedule Event
-                      </button>
-                    </>
-                  )}
-                </>
               )}
             </div>
-
-            {/* Cancel at bottom */}
-            {selectedInteraction.status !== 'CANCELLED' && !isRescheduling && (
-              <div className="p-4 bg-gray-50/50 dark:bg-gray-900/50 text-center">
-                <button
-                  onClick={handleCancelEvent}
-                  disabled={isSaving}
-                  className="w-full px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSaving ? 'Cancelling...' : 'Cancel Event'}
-                </button>
-              </div>
-            )}
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 };
