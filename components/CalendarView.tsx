@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Phone, Video, Mail, MessageSquare, X, User as UserIcon, Clock, Building, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Phone, Video, Mail, MessageSquare, X, User as UserIcon, Clock, Building, ArrowRight, Check } from 'lucide-react';
 import { Interaction, Lead, User } from '../types';
 import { formatToMysql } from '../utils/formatDate';
 
@@ -21,6 +21,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
 
 
   const [isRescheduling, setIsRescheduling] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [rescheduleForm, setRescheduleForm] = useState({ date: '', time: '' });
 
   // Schedule State
@@ -97,6 +98,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
     if (!selectedInteraction || !onUpdateInteraction) return;
 
     try {
+      setIsSaving(true);
       const oldDate = new Date(selectedInteraction.date);
       const oldDateStr = oldDate.toLocaleDateString() + ' ' + oldDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -130,6 +132,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
     } catch (error) {
       console.error("Reschedule failed:", error);
       alert("Failed to reschedule event.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -137,24 +141,31 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
     if (!selectedInteraction || !onUpdateInteraction) return;
     if (!confirm('Are you sure you want to cancel this event?')) return;
 
-    await onUpdateInteraction(selectedInteraction.id, { status: 'CANCELLED' });
+    try {
+      setIsSaving(true);
+      await onUpdateInteraction(selectedInteraction.id, { status: 'CANCELLED' });
 
-    // Log Timeline Event
-    const lead = leads.find(l => l.id === selectedInteraction.leadId);
-    if (lead) {
-      const note: Interaction = {
-        id: `log-${Date.now()}`,
-        tenantId: user.tenantId,
-        leadId: lead.id,
-        type: 'NOTE',
-        notes: `${user.name} Cancelled the event '${selectedInteraction.type}' scheduled for ${new Date(selectedInteraction.date).toLocaleDateString()}.`,
-        date: formatToMysql(new Date())
-      };
-      await onAddInteraction(note);
+      // Log Timeline Event
+      const lead = leads.find(l => l.id === selectedInteraction.leadId);
+      if (lead) {
+        const note: Interaction = {
+          id: `log-${Date.now()}`,
+          tenantId: user.tenantId,
+          leadId: lead.id,
+          type: 'NOTE',
+          notes: `${user.name} Cancelled the event '${selectedInteraction.type}' scheduled for ${new Date(selectedInteraction.date).toLocaleDateString()}.`,
+          date: formatToMysql(new Date())
+        };
+        await onAddInteraction(note);
+      }
+
+      setIsDrawerOpen(false);
+      setSelectedInteraction(null);
+    } catch (error) {
+      console.error("Cancellation failed:", error);
+    } finally {
+      setIsSaving(false);
     }
-
-    setIsDrawerOpen(false);
-    setSelectedInteraction(null);
   };
 
   const handleSubmitSchedule = async (e: React.FormEvent) => {
@@ -451,7 +462,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
                   {isRescheduling ? (
                     <input
                       type="date"
-                      className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm outline-none focus:border-blue-500"
+                      className="w-full bg-white dark:bg-gray-800 border-2 border-blue-300 dark:border-blue-700 rounded px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-200 transition-all font-bold"
                       value={rescheduleForm.date}
                       onChange={(e) => setRescheduleForm({ ...rescheduleForm, date: e.target.value })}
                     />
@@ -466,7 +477,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
                   {isRescheduling ? (
                     <input
                       type="time"
-                      className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm outline-none focus:border-blue-500"
+                      className="w-full bg-white dark:bg-gray-800 border-2 border-blue-300 dark:border-blue-700 rounded px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-200 transition-all font-bold"
                       value={rescheduleForm.time}
                       onChange={(e) => setRescheduleForm({ ...rescheduleForm, time: e.target.value })}
                     />
@@ -499,22 +510,23 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
                       </button>
                       <button
                         onClick={handleConfirmReschedule}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm shadow-md transition-colors"
+                        disabled={isSaving}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm shadow-md transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Confirm Reschedule
+                        {isSaving ? 'Saving...' : (
+                          <>
+                            <Check size={16} />
+                            Confirm Reschedule
+                          </>
+                        )}
                       </button>
                     </>
                   ) : (
                     <>
                       <button
-                        onClick={handleCancelEvent}
-                        className="px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg font-medium text-sm transition-colors"
-                      >
-                        Cancel Event
-                      </button>
-                      <button
                         onClick={handleReschedule}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm shadow-md transition-colors"
+                        disabled={isSaving}
+                        className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Reschedule
                       </button>
@@ -523,6 +535,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
                 </>
               )}
             </div>
+
+            {/* Cancel at bottom */}
+            {selectedInteraction.status !== 'CANCELLED' && !isRescheduling && (
+              <div className="p-4 bg-gray-50/50 dark:bg-gray-900/50 text-center">
+                <button
+                  onClick={handleCancelEvent}
+                  disabled={isSaving}
+                  className="w-full px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSaving ? 'Cancelling...' : 'Cancel Event'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
