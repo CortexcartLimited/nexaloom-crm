@@ -268,6 +268,25 @@ app.patch('/api/interactions/:id', async (req, res) => {
             `UPDATE interactions SET ${fields} WHERE id = ?`,
             [...values, id]
         );
+        // Insert into leads_history if relevant fields changed
+        const historyId = uuidv4();
+        // Since id is interaction ID, we need to fetch the leadId first or pass it. 
+        // For efficiency, we might skip fetching if not critical, but leads_history requires lead_id. 
+        // Let's fetch the leadId from the interaction if not provided.
+        // Actually, let's just do a quick lookup.
+        const [rows] = await pool.query('SELECT leadId FROM interactions WHERE id = ?', [id]);
+        if (rows.length > 0) {
+            const leadId = rows[0].leadId;
+            const actionType = 'INTERACTION_UPDATE';
+            // Include Reason if provided in updates.notes or separately
+            const details = JSON.stringify(updates) || '{}';
+
+            await pool.query(
+                'INSERT INTO leads_history (lead_id, action_type, details, event_id) VALUES (?, ?, ?, ?)',
+                [leadId, actionType, details, historyId]
+            );
+        }
+
         res.json({ success: true, message: 'Interaction updated' });
     } catch (err) {
         console.error("UPDATE INTERACTION ERROR:", err);

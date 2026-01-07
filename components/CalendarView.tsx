@@ -22,7 +22,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
 
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [rescheduleForm, setRescheduleForm] = useState({ date: '', time: '' });
+  const [rescheduleForm, setRescheduleForm] = useState({ date: '', time: '', reason: '' });
 
   // Schedule State
   const [newMeeting, setNewMeeting] = useState({
@@ -89,7 +89,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
 
     setRescheduleForm({
       date: dateStr,
-      time: timeStr
+      time: timeStr,
+      reason: ''
     });
     setIsRescheduling(true);
   };
@@ -122,7 +123,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
           tenantId: user.tenantId,
           leadId: lead.id,
           type: 'NOTE',
-          notes: `${user.name} Rescheduled '${selectedInteraction.type}' from ${oldDateStr} to ${newDateStr}.`,
+          notes: `${user.name} Rescheduled '${selectedInteraction.type}' from ${oldDateStr} to ${newDateStr}.\nReason: ${rescheduleForm.reason || 'No reason provided'}`,
           date: formatToMysql(new Date())
         };
         await onAddInteraction(log);
@@ -139,7 +140,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
 
   const handleCancelEvent = async () => {
     if (!selectedInteraction || !onUpdateInteraction) return;
-    if (!confirm('Are you sure you want to cancel this event?')) return;
+    if (!confirm("Are you sure you want to delete this event? This cannot be undone.")) return;
 
     try {
       setIsSaving(true);
@@ -487,6 +488,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
                     </p>
                   )}
                 </div>
+
+                {isRescheduling && (
+                  <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Reason for Reschedule</label>
+                    <textarea
+                      className="w-full bg-white dark:bg-gray-800 border-2 border-blue-300 dark:border-blue-700 rounded px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200 transition-all resize-none"
+                      rows={2}
+                      placeholder="Why is this being moved?"
+                      value={rescheduleForm.reason}
+                      onChange={(e) => setRescheduleForm({ ...rescheduleForm, reason: e.target.value })}
+                    />
+                  </div>
+                )}
               </div>
 
               <div>
@@ -504,9 +518,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
                     <>
                       <button
                         onClick={() => setIsRescheduling(false)}
-                        className="px-4 py-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 rounded-lg font-medium text-sm transition-colors"
+                        className="px-4 py-2 text-gray-500 underline text-sm hover:text-gray-700 transition-colors"
                       >
-                        Cancel
+                        Back
                       </button>
                       <button
                         onClick={handleConfirmReschedule}
