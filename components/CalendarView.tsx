@@ -463,7 +463,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
                   {isRescheduling ? (
                     <input
                       type="date"
-                      className="w-full bg-white dark:bg-gray-800 border-2 border-blue-300 dark:border-blue-700 rounded px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-200 transition-all font-bold"
+                      className="w-full bg-white dark:bg-gray-800 border border-gray-300 focus:border-blue-500 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-200 transition-all font-medium shadow-sm"
                       value={rescheduleForm.date}
                       onChange={(e) => setRescheduleForm({ ...rescheduleForm, date: e.target.value })}
                     />
@@ -478,7 +478,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
                   {isRescheduling ? (
                     <input
                       type="time"
-                      className="w-full bg-white dark:bg-gray-800 border-2 border-blue-300 dark:border-blue-700 rounded px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-200 transition-all font-bold"
+                      className="w-full bg-white dark:bg-gray-800 border border-gray-300 focus:border-blue-500 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-200 transition-all font-medium shadow-sm"
                       value={rescheduleForm.time}
                       onChange={(e) => setRescheduleForm({ ...rescheduleForm, time: e.target.value })}
                     />
@@ -490,10 +490,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
                 </div>
 
                 {isRescheduling && (
-                  <div>
+                  <div className="mt-4 animate-in fade-in slide-in-from-top-2">
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Reason for Reschedule</label>
                     <textarea
-                      className="w-full bg-white dark:bg-gray-800 border-2 border-blue-300 dark:border-blue-700 rounded px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200 transition-all resize-none"
+                      className="w-full bg-white dark:bg-gray-800 border border-gray-300 focus:border-blue-500 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-blue-100 transition-all resize-none shadow-sm"
                       rows={2}
                       placeholder="Why is this being moved?"
                       value={rescheduleForm.reason}
@@ -515,34 +515,34 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
               {selectedInteraction.status !== 'CANCELLED' && (
                 <>
                   {isRescheduling ? (
-                    <>
+                    <div className="grid grid-cols-2 gap-3 w-full">
                       <button
                         onClick={() => setIsRescheduling(false)}
-                        className="px-4 py-2 text-gray-500 underline text-sm hover:text-gray-700 transition-colors"
+                        className="px-4 py-2 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg font-medium text-sm transition-all shadow-sm"
                       >
-                        Back
+                        Cancel
                       </button>
                       <button
                         onClick={handleConfirmReschedule}
                         disabled={isSaving}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm shadow-md transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isSaving ? 'Saving...' : (
                           <>
                             <Check size={16} />
-                            Confirm Reschedule
+                            Save Changes
                           </>
                         )}
                       </button>
-                    </>
+                    </div>
                   ) : (
                     <>
                       <button
                         onClick={handleReschedule}
                         disabled={isSaving}
-                        className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Reschedule
+                        Reschedule Event
                       </button>
                     </>
                   )}

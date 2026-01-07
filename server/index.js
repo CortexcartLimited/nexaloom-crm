@@ -228,24 +228,30 @@ app.post('/api/interactions', async (req, res) => {
     // Convert ISO string to MySQL format per user request
     const mysqlDate = new Date(req.body.date || new Date()).toISOString().slice(0, 19).replace('T', ' ');
 
+    // DEBUG: Log params to catch undefined values
+    // Verify params match PLACEHOLDERS exactly
+    const query = `INSERT INTO interactions (id, tenantId, leadId, userId, type, notes, date, metadata, productId, status) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const params = [
+        id || uuidv4(),
+        tenantId,
+        leadId, // Fixed: Added leadId
+        userId, // Fixed: Added userId
+        type,
+        notes,
+        mysqlDate,
+        JSON.stringify(metadata || {}),
+        productId || null,
+        req.body.status || 'SCHEDULED'
+    ];
+
+    console.log("POST /api/interactions Params:", params);
+
     try {
-        await pool.query(
-            `INSERT INTO interactions (id, tenantId, leadId, userId, type, notes, date, metadata, productId, status) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-                id || uuidv4(),
-                tenantId,
-                type,
-                notes,
-                mysqlDate,
-                JSON.stringify(metadata || {}),
-                productId || null,
-                req.body.status || 'SCHEDULED'
-            ]
-        );
+        await pool.query(query, params);
         res.status(201).json({ success: true });
     } catch (err) {
-        console.error("SQL ERROR:", err.message);
+        console.error("SQL ERROR in POST /interactions:", err.message);
         res.status(500).json({ error: err.message });
     }
 });
@@ -265,8 +271,6 @@ app.patch('/api/interactions/:id', async (req, res) => {
         const interaction = current[0];
 
         // 2. Prepare Safe Values
-        // Explicitly fallback to existing value or NULL if completely missing
-        // Also ensure NO undefined values are passed to Params
 
         // Date Check
         let newDate = interaction.date;
@@ -279,12 +283,15 @@ app.patch('/api/interactions/:id', async (req, res) => {
         const newType = type !== undefined ? type : interaction.type;
         const newMetadata = metadata !== undefined ? JSON.stringify(metadata) : interaction.metadata;
 
+        const updateParams = [newDate, newNotes, newStatus, newType, newMetadata, id];
+        console.log("PATCH /api/interactions/:id Update Params:", updateParams);
+
         // 3. Execute Explicit UPDATE
         await pool.query(
             `UPDATE interactions 
              SET date = ?, notes = ?, status = ?, type = ?, metadata = ?
              WHERE id = ?`,
-            [newDate, newNotes, newStatus, newType, newMetadata, id]
+            updateParams
         );
 
         // 4. History Logging (Safe Insert)
@@ -302,9 +309,12 @@ app.patch('/api/interactions/:id', async (req, res) => {
 
             // Guarantee lead_id is not undefined.
             if (interaction.leadId) {
+                const historyParams = [interaction.leadId, actionType, details, historyId];
+                console.log("History Log Params:", historyParams);
+
                 await pool.query(
                     'INSERT INTO leads_history (lead_id, action_type, details, event_id) VALUES (?, ?, ?, ?)',
-                    [interaction.leadId, actionType, details, historyId]
+                    historyParams
                 );
             }
         }
