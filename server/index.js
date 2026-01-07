@@ -214,11 +214,8 @@ app.get('/api/leads/:id/email-history', async (req, res) => {
 app.post('/api/interactions', async (req, res) => {
     const { id, tenantId, leadId, userId, type, notes, date, metadata, productId } = req.body;
 
-    // Convert '2026-01-04T11:36:41.196Z' to '2026-01-04 11:36:41'
-    const formattedDate = (date ? new Date(date) : new Date())
-        .toISOString()
-        .slice(0, 19)
-        .replace('T', ' ');
+    // Convert ISO string to MySQL format per user request
+    const mysqlDate = new Date(req.body.date || new Date()).toISOString().slice(0, 19).replace('T', ' ');
 
     try {
         await pool.query(
@@ -229,7 +226,7 @@ app.post('/api/interactions', async (req, res) => {
                 tenantId,
                 type,
                 notes,
-                formattedDate, // Use the cleaned-up date here
+                mysqlDate,
                 JSON.stringify(metadata || {}),
                 productId || null,
                 req.body.status || 'SCHEDULED'
@@ -248,6 +245,11 @@ app.patch('/api/interactions/:id', async (req, res) => {
     const updates = req.body;
 
     try {
+        // Fix date format if present in updates
+        if (updates.date) {
+            updates.date = new Date(updates.date).toISOString().slice(0, 19).replace('T', ' ');
+        }
+
         const fields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
         const values = Object.values(updates);
 
