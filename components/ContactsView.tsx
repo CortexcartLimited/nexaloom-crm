@@ -133,7 +133,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
     setIsSending(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/leads/${selectedContact.id}/email`, {
+      const response = await fetch(`/api/leads/${selectedContact.id}/email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
