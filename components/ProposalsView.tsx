@@ -687,7 +687,11 @@ export const ProposalsView: React.FC<ProposalsViewProps> = ({ proposals, leads, 
                                                 description: product.description
                                             };
                                             const updatedItems = [...(editingProposal.items || []), newItem];
-                                            setEditingProposal({ ...editingProposal, items: updatedItems, totalValue: calculateTotal(updatedItems) });
+                                            setEditingProposal({
+                                                ...editingProposal,
+                                                items: updatedItems,
+                                                totalValue: calculateTotals(updatedItems, editingProposal.taxRate || 0, editingProposal.isTaxEnabled || false).total
+                                            });
                                             setSelectedProductId('');
                                         }}
                                         disabled={!selectedProductId}

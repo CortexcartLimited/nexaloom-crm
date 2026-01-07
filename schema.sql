@@ -184,6 +184,6 @@ CREATE TABLE IF NOT EXISTS leads_history (
     details TEXT,
     event_id VARCHAR(255),
     status VARCHAR(50),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE
 );

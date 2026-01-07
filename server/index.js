@@ -317,6 +317,7 @@ app.patch('/api/interactions/:id', async (req, res) => {
             if (interaction.leadId) {
                 // Use newStatus (safe value) or default
                 const statusForHistory = newStatus || 'SCHEDULED';
+                // CRITICAL: Explicit String() casting for UUIDs to prevent "Data truncated" or "Invalid Buffer" errors
                 const historyParams = [String(interaction.leadId), actionType, details, String(historyId), statusForHistory];
                 console.log("History Log Params:", historyParams);
 
@@ -482,13 +483,9 @@ app.get('/api/leads/:id/timeline', async (req, res) => {
         );
 
         // 2. Fetch Lead History (Audit Logs)
-        // Assuming created_at exists. If not, we might need to rely on typical timestamp columns or handle error.
-        // We'll try to select created_at, if it fails, the user will notify us (or we can inspect db, but we can't).
-        // Based on other tables, 'createdAt' or 'created_at'. SQL typically uses snake_case defaults or camelCase if defined.
-        // 'leads' table has 'createdAt'. 'interactions' has 'date'.
-        // Let's guess 'created_at' for history table standard.
+        // Corrected column name to 'createdAt' per user database schema
         const [history] = await pool.query(
-            'SELECT id, action_type, details, status, created_at as date, "history" as source FROM leads_history WHERE lead_id = ?',
+            'SELECT id, action_type, details, status, createdAt as date, "history" as source FROM leads_history WHERE lead_id = ?',
             [id]
         );
 
@@ -522,7 +519,7 @@ app.get('/api/leads/:id/timeline', async (req, res) => {
                 return {
                     id: `hist-${h.id}`,
                     type: h.action_type, // 'INTERACTION_UPDATE'
-                    date: h.date, // mapped from created_at
+                    date: h.date, // mapped from createdAt
                     notes: noteContent,
                     status: h.status,
                     source: 'history'
