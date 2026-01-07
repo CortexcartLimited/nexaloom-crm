@@ -129,7 +129,15 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
     e.preventDefault();
     alert('Contact View Button Triggered');
 
-    if (!selectedContact) return;
+    if (!selectedContact) {
+      console.error('No selected contact!');
+      return;
+    }
+
+    const targetUrl = `/api/leads/${selectedContact.id}/email`;
+    console.log('Target URL:', targetUrl);
+    console.log('Payload Body:', { subject: emailSubject, body: emailBody });
+
     setIsSending(true);
     try {
       const token = localStorage.getItem('token');
