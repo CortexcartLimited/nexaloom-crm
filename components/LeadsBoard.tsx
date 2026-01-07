@@ -114,6 +114,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
   };
 
   const handleSendEmail = async () => {
+    alert('Button Clicked!');
     if (!selectedLead || !aiDraft || !emailSubject) return;
     setIsSending(true);
     try {
@@ -382,6 +383,7 @@ export const LeadsBoard: React.FC<LeadsBoardProps> = ({
             <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
               <button onClick={() => setSelectedLead(null)} className="px-4 py-2 text-gray-500 hover:text-gray-700 font-medium">Cancel</button>
               <button
+                type="button"
                 onClick={handleSendEmail}
                 disabled={isSending || !aiDraft}
                 className="px-6 py-2 bg-green-600 text-white text-sm font-bold rounded-lg transition-colors flex items-center gap-2 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
