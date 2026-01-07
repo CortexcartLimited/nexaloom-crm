@@ -312,13 +312,18 @@ app.patch('/api/interactions/:id', async (req, res) => {
             if (interaction.leadId) {
                 // Use newStatus (safe value) or default
                 const statusForHistory = newStatus || 'SCHEDULED';
-                const historyParams = [interaction.leadId, actionType, details, historyId, statusForHistory];
+                const historyParams = [String(interaction.leadId), actionType, details, String(historyId), statusForHistory];
                 console.log("History Log Params:", historyParams);
 
-                await pool.query(
-                    'INSERT INTO leads_history (lead_id, action_type, details, event_id, status) VALUES (?, ?, ?, ?, ?)',
-                    historyParams
-                );
+                try {
+                    await pool.query(
+                        'INSERT INTO leads_history (lead_id, action_type, details, event_id, status) VALUES (?, ?, ?, ?, ?)',
+                        historyParams
+                    );
+                } catch (historyErr) {
+                    console.error("HISTORY LOG ERROR (Non-Critical):", historyErr.message);
+                    // Do NOT crash the response, just log it.
+                }
             }
         }
 
