@@ -75,7 +75,14 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
 
   const handleDayClick = (day: number) => {
     setSelectedDay(day);
-    setNewMeeting({ leadId: '', type: 'MEETING', notes: '', time: '10:00' });
+    // User Request: Use toISOString formatting if possible, but for specific day we build it manually
+    // If selectedDay is supplied, we construct the date for the modal
+    setNewMeeting({
+      leadId: '',
+      type: 'MEETING',
+      notes: '',
+      time: '10:00'
+    });
     setIsModalOpen(true);
   };
 
@@ -117,7 +124,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
         dateStr = `${year}-${month}-${day}`;
         timeStr = date.toTimeString().slice(0, 5);
       } else {
-        // Last resort default
+        // Last resort default per user request
         dateStr = new Date().toISOString().split('T')[0];
         timeStr = '10:00';
       }

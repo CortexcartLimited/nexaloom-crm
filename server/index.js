@@ -230,15 +230,20 @@ app.post('/api/interactions', async (req, res) => {
 
     // DEBUG: Log params to catch undefined values
     // Verify params match PLACEHOLDERS exactly
+    // VALIDATION: Strict Lead ID Check
+    if (typeof leadId !== 'string' || leadId.length < 10) {
+        return res.status(400).send('Invalid Lead ID: Must be a string UUID.');
+    }
+
     const query = `INSERT INTO interactions (id, tenantId, leadId, userId, type, notes, date, metadata, productId, status) 
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     const params = [
-        id || uuidv4(),
-        tenantId,
-        leadId, // Fixed: Added leadId
-        userId, // Fixed: Added userId
-        type,
-        notes,
+        String(id || uuidv4()),
+        String(tenantId),
+        String(leadId), // Explicit String Cast
+        String(userId),
+        String(type),
+        String(notes || ''),
         mysqlDate,
         JSON.stringify(metadata || {}),
         productId || null,
