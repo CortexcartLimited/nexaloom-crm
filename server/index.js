@@ -255,18 +255,22 @@ app.patch('/api/interactions/:id', async (req, res) => {
     const { id } = req.params;
     const { date, notes, status, type, metadata } = req.body;
 
+    // VALIDATION: Ensure ID is present
+    if (!id) return res.status(400).json({ error: "Interaction ID is required" });
+
     try {
-        // 1. Fetch current state to get leadId and ensure existence
+        // 1. Fetch current state
         const [current] = await pool.query('SELECT * FROM interactions WHERE id = ?', [id]);
         if (current.length === 0) return res.status(404).json({ error: 'Interaction not found' });
         const interaction = current[0];
 
-        // 2. Prepare Updates (Explicit Columns)
-        // If a field is undefined in body, keep existing value. if explicitly null/empty, update it.
-        // We use || interaction.field to keep existing if not provided.
+        // 2. Prepare Safe Values
+        // Explicitly fallback to existing value or NULL if completely missing
+        // Also ensure NO undefined values are passed to Params
 
+        // Date Check
         let newDate = interaction.date;
-        if (date) {
+        if (date !== undefined && date !== null) {
             newDate = new Date(date).toISOString().slice(0, 19).replace('T', ' ');
         }
 
@@ -275,7 +279,7 @@ app.patch('/api/interactions/:id', async (req, res) => {
         const newType = type !== undefined ? type : interaction.type;
         const newMetadata = metadata !== undefined ? JSON.stringify(metadata) : interaction.metadata;
 
-        // Explicit UPDATE query
+        // 3. Execute Explicit UPDATE
         await pool.query(
             `UPDATE interactions 
              SET date = ?, notes = ?, status = ?, type = ?, metadata = ?
@@ -283,12 +287,12 @@ app.patch('/api/interactions/:id', async (req, res) => {
             [newDate, newNotes, newStatus, newType, newMetadata, id]
         );
 
-        // 3. Log to History if Date Changed (Rescheduling) or Status Changed (Cancel)
-        // We only log if it's a significant change to avoid spam
+        // 4. History Logging (Safe Insert)
         if (date || status) {
             const historyId = uuidv4();
             const actionType = 'INTERACTION_UPDATE';
-            // Create a safe details object
+
+            // Construct details object safely
             const detailsObj = {
                 date: date || 'unchanged',
                 status: status || 'unchanged',
@@ -296,11 +300,13 @@ app.patch('/api/interactions/:id', async (req, res) => {
             };
             const details = JSON.stringify(detailsObj);
 
-            // Explicit INSERT into leads_history
-            await pool.query(
-                'INSERT INTO leads_history (lead_id, action_type, details, event_id) VALUES (?, ?, ?, ?)',
-                [interaction.leadId, actionType, details, historyId]
-            );
+            // Guarantee lead_id is not undefined.
+            if (interaction.leadId) {
+                await pool.query(
+                    'INSERT INTO leads_history (lead_id, action_type, details, event_id) VALUES (?, ?, ?, ?)',
+                    [interaction.leadId, actionType, details, historyId]
+                );
+            }
         }
 
         res.json({ success: true, message: 'Interaction updated successfully' });
