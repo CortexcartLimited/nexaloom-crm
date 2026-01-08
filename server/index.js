@@ -438,7 +438,9 @@ app.get('/crm/nexaloom-crm/api/interactions', async (req, res) => {
             ...row,
             start: row.start_date ? new Date(row.start_date).toISOString().split('.')[0] : null,
             date: row.start_date ? new Date(row.start_date).toISOString().split('.')[0] : null, // Helper for Modal
-            leadName: row.leadName || 'Unknown Lead'
+            leadName: row.leadName || 'Unknown Lead',
+            description: row.description || '',
+            notes: row.description || ''
         })).filter(row => row.start);
 
 
