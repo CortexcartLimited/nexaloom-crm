@@ -422,7 +422,9 @@ app.get('/crm/nexaloom-crm/api/interactions', async (req, res) => {
         return res.status(400).json({ error: 'tenantId is required' });
     }
 
-    let query = 'SELECT * FROM interactions WHERE tenantId = ?';
+    // FIX: Match DB schema columns and aliases as requested
+    // "event_type" is the actual column name. We alias it to 'title' (for Calendar) and 'type' (for logic).
+    let query = 'SELECT *, event_type AS title, event_type AS type, date AS start FROM interactions WHERE tenantId = ?';
     const params = [tenantId];
 
     // FIX: Ensure leadId is strictly handled and not 'undefined' string
@@ -432,14 +434,11 @@ app.get('/crm/nexaloom-crm/api/interactions', async (req, res) => {
     }
 
     // Optional date filtering for Calendar
-    // Ensure we don't accidentally filter out valid dates. 
-    // If startDate/endDate are present, they are applied.
     if (startDate) {
         query += ' AND date >= ?';
         params.push(startDate);
     }
     if (endDate) {
-        // If endDate is just a date "YYYY-MM-DD", appending time ensures we get the full day
         let effectiveEndDate = endDate;
         if (endDate.length === 10) { // Simple check for YYYY-MM-DD
             effectiveEndDate += ' 23:59:59';
