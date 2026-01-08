@@ -3,6 +3,7 @@ import { Lead, Interaction, Document, KnowledgeBaseArticle, User } from '../type
 import { generateEmailDraft } from '../services/geminiService';
 import { Phone, Mail, Building, Calendar, User as UserIcon, X, MessageSquare, Clock, MapPin, Upload, FileSpreadsheet, ArrowRight, CheckCircle, AlertCircle, ArrowLeft, Plus, Inbox, LayoutGrid, List, MoreHorizontal, Send, Wand2, Paperclip, File, Search, ClipboardList, Save, History, BookOpen, Edit, Coins } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
+import { api } from '../services/api';
 
 interface ContactsViewProps {
   contacts: Lead[];
@@ -114,10 +115,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
       const tenantId = localStorage.getItem('nexaloom_tenant_id') || user.tenantId;
       console.log("Fetching timeline for tenant:", tenantId);
 
-      fetch(`/crm/nexaloom-crm/api/leads/${selectedContact.id}/timeline?tenantId=${tenantId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-        .then(res => res.json())
+      api.getTimeline(selectedContact.id, tenantId)
         .then(data => {
           if (Array.isArray(data)) {
             setTimelineItems(data);

@@ -135,6 +135,11 @@ export const api = {
     if (!response.ok) throw new Error('Failed to fetch interactions');
     return response.json();
   },
+  getTimeline: async (leadId: string, tenantId: string) => {
+    const response = await req(`/leads/${leadId}/timeline?tenantId=${tenantId}`);
+    if (!response.ok) return [];
+    return response.json();
+  },
   createInteraction: async (interaction: any) => {
     const response = await req(`/interactions`, {
       method: 'POST',
