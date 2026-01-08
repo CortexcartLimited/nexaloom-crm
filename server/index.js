@@ -505,10 +505,13 @@ app.get('/api/leads/:id/timeline', async (req, res) => {
         );
 
         // 2. Fetch Lead History (Audit Logs)
-        // FIX: Explicitly use created_at AS date per user instruction.
+        // FIX: Use JOIN to verify tenantId via leads table (since leads_history lacks tenantId)
         const [history] = await pool.query(
-            'SELECT id, action_type, details, status, created_at AS date, "history" as source FROM leads_history WHERE lead_id = ?',
-            [leadId]
+            `SELECT h.id, h.action_type, h.details, h.status, h.created_at AS date, "history" as source 
+             FROM leads_history h 
+             JOIN leads l ON h.lead_id = l.id 
+             WHERE h.lead_id = ? AND l.tenantId = ?`,
+            [leadId, tenantId]
         );
 
         // 3. Fetch Email History
