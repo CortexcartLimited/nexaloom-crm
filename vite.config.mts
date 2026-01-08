@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       proxy: {
         '/crm/nexaloom-crm/api': {
-          target: 'http://localhost:5000',
+          target: 'http://localhost:3006',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/crm\/nexaloom-crm\/api/, '/api')
         }
