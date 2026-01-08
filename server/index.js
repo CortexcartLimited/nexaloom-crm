@@ -430,13 +430,15 @@ app.get('/crm/nexaloom-crm/api/interactions', async (req, res) => {
 
     try {
         const [rows] = await pool.query(
-            'SELECT id, title, start_date, description FROM events WHERE tenantId = ? ORDER BY start_date DESC',
+            'SELECT e.*, l.name as leadName FROM events e LEFT JOIN leads l ON e.leadId = l.id WHERE e.tenantId = ? ORDER BY e.start_date DESC',
             [tenantId]
         );
 
         const formattedRows = rows.map(row => ({
             ...row,
-            start: row.start_date ? new Date(row.start_date).toISOString().split('.')[0] : null
+            start: row.start_date ? new Date(row.start_date).toISOString().split('.')[0] : null,
+            date: row.start_date ? new Date(row.start_date).toISOString().split('.')[0] : null, // Helper for Modal
+            leadName: row.leadName || 'Unknown Lead'
         })).filter(row => row.start);
 
 

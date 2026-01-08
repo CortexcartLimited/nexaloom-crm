@@ -487,7 +487,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
                           className={`px-2 py-0.5 rounded text-[10px] font-medium border truncate flex items-center gap-1 shadow-sm transition-all hover:scale-[1.02] ${getEventStyle(event)}`}
                         >
                           {getEventIcon(event.type)}
-                          {event.type === 'MEETING' ? 'Meeting' : event.type === 'CALL' ? 'Call' : 'Email'}: {leads.find(l => l.id === event.leadId)?.name || 'Lead'}
+                          {event.type === 'MEETING' ? 'Meeting' : event.type === 'CALL' ? 'Call' : 'Email'}: {(event as any).leadName || leads.find(l => l.id === event.leadId)?.name || 'Lead'}
                         </div>
                       ))}
                       {dayEvents.length > 3 && (
@@ -568,7 +568,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
                       <div className="w-1 h-10 rounded-full bg-blue-200 dark:bg-blue-800"></div>
                       <div>
                         <h4 className="font-bold text-gray-800 dark:text-white text-base">
-                          {leads.find(l => l.id === event.leadId)?.name || 'Unknown Lead'}
+                          {(event as any).leadName || leads.find(l => l.id === event.leadId)?.name || 'Unknown Lead'}
                         </h4>
                         <p className="text-sm text-gray-500 truncate max-w-md">{event.notes || 'No description'}</p>
                       </div>
@@ -729,7 +729,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold truncate">
-                          {leads.find(l => l.id === event.leadId)?.name || 'Unknown Lead'}
+                          {(event as any).leadName || leads.find(l => l.id === event.leadId)?.name || 'Unknown Lead'}
                         </p>
                         <p className="text-xs opacity-80 truncate">
                           {new Date(event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {event.type}
@@ -779,7 +779,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
                     </div>
                     <div>
                       <p className="font-bold text-gray-900 dark:text-white text-lg">
-                        {leads.find(l => l.id === selectedInteraction.leadId)?.name || 'Unknown Lead'}
+                        {(selectedInteraction as any).leadName || leads.find(l => l.id === selectedInteraction.leadId)?.name || 'Unknown Lead'}
                       </p>
                       <p className="text-sm text-gray-500">
                         {leads.find(l => l.id === selectedInteraction.leadId)?.company || 'No Company'}
