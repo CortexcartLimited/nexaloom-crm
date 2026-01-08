@@ -97,7 +97,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
       if (d.getFullYear() === year && d.getMonth() === month) {
         const day = d.getDate();
         if (!map[day]) map[day] = [];
-        map[day].push({ ...int, type: titleVal } as Interaction); // Ensure type reflects title for display logic
+        map[day].push({ ...int, type: titleVal.toUpperCase() } as Interaction); // Ensure type reflects title for display logic
       }
     });
     return map;

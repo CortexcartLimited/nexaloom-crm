@@ -423,11 +423,9 @@ app.get('/crm/nexaloom-crm/api/interactions', async (req, res) => {
         return res.status(400).json({ error: 'tenantId is required' });
     }
 
-    // FIX: Exact SQL aliases for Calendar as requested
-    // SELECT * ensures we get all fields (id, leadId, notes, etc)
-    // event_type AS title -> for Calendar display
-    // date AS start -> for Calendar placement
-    let query = 'SELECT *, event_type AS title, date AS start FROM interactions WHERE tenantId = ?';
+    // FIX: Switch to 'events' table for Calendar as requested
+    // Query now selects from 'events' table
+    let query = 'SELECT id, title, start_date AS start, description FROM events WHERE tenantId = ?';
     const params = [tenantId];
 
     // FIX: Ensure leadId is strictly handled and not 'undefined' string
@@ -436,9 +434,9 @@ app.get('/crm/nexaloom-crm/api/interactions', async (req, res) => {
         params.push(String(leadId));
     }
 
-    // Optional date filtering for Calendar
+    // Optional date filtering for Calendar using start_date
     if (startDate) {
-        query += ' AND date >= ?';
+        query += ' AND start_date >= ?';
         params.push(startDate);
     }
     if (endDate) {
@@ -446,29 +444,23 @@ app.get('/crm/nexaloom-crm/api/interactions', async (req, res) => {
         if (endDate.length === 10) { // Simple check for YYYY-MM-DD
             effectiveEndDate += ' 23:59:59';
         }
-        query += ' AND date <= ?';
+        query += ' AND start_date <= ?';
         params.push(effectiveEndDate);
     }
 
-    query += ' ORDER BY date DESC';
+    query += ' ORDER BY start_date DESC';
 
     try {
         const [rows] = await pool.query(query, params);
 
-        // FIX: Ensure dates are ISO strings to prevent "Pattern Mismatch"
+        // Ensure start date is ISO string for frontend compatibility
+        // The SQL alias 'start' holds the date value
         const formattedRows = rows.map(row => ({
             ...row,
-            date: row.date ? new Date(row.date).toISOString() : null,
-            // Ensure we don't crash if created_at is missing or different
-            created_at: row.created_at ? new Date(row.created_at).toISOString() : undefined
+            start: row.start ? new Date(row.start).toISOString() : null
         }));
 
-        // FIX: Map start/title for Calendar component as requested
-        res.json(formattedRows.map(row => ({
-            ...row,
-            start: row.date, // Already ISO from formattedRows
-            title: row.type
-        })));
+        res.json(formattedRows);
     } catch (err) {
         console.error("GET /interactions Error:", err);
         res.status(500).json({ error: err.message });
