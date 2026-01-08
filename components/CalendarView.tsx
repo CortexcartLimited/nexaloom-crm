@@ -391,6 +391,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
   };
 
 
+  // DEBUG: Check data flow as requested
+  console.log('Props interactions:', interactions);
+  console.log('Fetched interactions:', fetchedInteractions);
+  console.log('Events being passed to Calendar (interactionsByDay):', interactionsByDay);
+
   return (
     <div className="p-6 h-full flex flex-col animate-fade-in">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
