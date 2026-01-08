@@ -102,14 +102,16 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
 
       // Filter by 'title' (mapped from event_type) or 'type'
       const titleVal = (int as any).title || int.type;
-      const allowedTypes = ['MEETING', 'CALL', 'EVENT']; // Ensure your DB event_types match these or update logic
-      // If DB has "Meeting" (Title Case), touppercase handles it.
-      if (!titleVal || !allowedTypes.includes(titleVal.toUpperCase())) return;
+
+      // FIX: Removed strict type filter. Allow all events from backend to render.
+      // Default to 'EVENT' for styling if needed, but 'titleVal' preserves the display text.
 
       if (d.getFullYear() === year && d.getMonth() === month) {
         const day = d.getDate();
         if (!map[day]) map[day] = [];
-        map[day].push({ ...int, type: titleVal.toUpperCase() } as Interaction); // Ensure type reflects title for display logic
+        // Pass titleVal as 'type' so it shows up in the UI text (as 'Meeting' vs 'Call' logic uses type)
+        // Note: Generic icons will be used for unknown types
+        map[day].push({ ...int, type: titleVal } as Interaction);
       }
     });
     return map;
