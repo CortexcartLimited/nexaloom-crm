@@ -12,9 +12,11 @@ console.log('DB Config Check:', {
     db: process.env.DB_NAME
 });
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-id']
+}));
 
 const pool = mysql.createPool({
     host: 'localhost',
