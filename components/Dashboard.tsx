@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Lead, LeadStatus, Interaction } from '../types';
 import { User, Calendar, ArrowUpRight, AlertCircle, Clock, Video, Phone } from 'lucide-react';
@@ -46,11 +45,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ leads, interactions, onNav
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5);
 
-  const now = new Date();
-  const upcomingAppointments = interactions
-    .filter(int => (int.type === 'MEETING' || int.type === 'CALL') && new Date(int.date) >= now)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 5);
+  // NEW: Fetch upcoming appointments from API
+  const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchUpcoming = async () => {
+      const tenantId = localStorage.getItem('nexaloom_tenant_id');
+      const token = localStorage.getItem('nexaloom_token');
+      if (!tenantId || !token) return;
+
+      try {
+        const res = await fetch(`/crm/nexaloom-crm/api/interactions/upcoming?tenantId=${tenantId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUpcomingAppointments(data);
+        }
+      } catch (error) {
+        console.error("Dashboard fetch error:", error);
+      }
+    };
+    fetchUpcoming();
+  }, []);
 
   return (
     <div className="p-6 space-y-6 animate-fade-in text-gray-900 dark:text-gray-100">
@@ -256,23 +273,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ leads, interactions, onNav
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {upcomingAppointments.length > 0 ? (
-                  upcomingAppointments.map(int => {
-                    const lead = leads.find(l => l.id === int.leadId);
+                  upcomingAppointments.map((int: any) => {
+                    // Lead lookup no longer needed, using leadName from API
                     return (
                       <tr key={int.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2 font-medium text-gray-900 dark:text-white">
                             {int.type === 'MEETING' ? <Video size={14} className="text-blue-500" /> : <Phone size={14} className="text-green-500" />}
-                            <span className="capitalize">{int.type.toLowerCase()}</span>
+                            <span className="capitalize">{int.type ? int.type.toLowerCase() : 'Event'}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
-                          {lead?.name || 'Unknown Contact'}
+                          {int.leadName || 'Unknown Contact'}
                         </td>
                         <td className="px-6 py-4 text-gray-500 dark:text-gray-400">
                           <div className="flex items-center gap-1">
                             <Clock size={12} className="opacity-50" />
-                            {new Date(int.date).toLocaleDateString()} at {new Date(int.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(int.start).toLocaleDateString()} at {new Date(int.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </td>
                       </tr>
@@ -283,7 +300,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ leads, interactions, onNav
                     <td colSpan={3} className="px-6 py-12 text-center text-gray-400 dark:text-gray-500">
                       <div className="flex flex-col items-center gap-2">
                         <Clock className="w-8 h-8 opacity-20" />
-                        <p className="text-xs">No upcoming appointments scheduled.</p>
+                        <p className="text-xs">No upcoming calls or meetings</p>
                       </div>
                     </td>
                   </tr>
