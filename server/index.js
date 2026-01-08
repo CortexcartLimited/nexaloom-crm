@@ -422,6 +422,40 @@ app.delete('/crm/nexaloom-crm/api/discounts/:id', async (req, res) => {
     }
 });
 
+// ROUTE: Get Upcoming Events for Dashboard
+app.get('/crm/nexaloom-crm/api/interactions/upcoming', async (req, res) => {
+    const { tenantId } = req.query;
+
+    if (!tenantId) return res.status(400).json({ error: 'tenantId is required' });
+
+    try {
+        const [rows] = await pool.query(
+            `SELECT e.*, l.name as leadName 
+             FROM events e 
+             LEFT JOIN leads l ON e.leadId = l.id 
+             WHERE e.tenantId = ? 
+             AND e.start_date >= NOW() 
+             AND UPPER(e.title) IN ('MEETING', 'CALL') 
+             ORDER BY e.start_date ASC 
+             LIMIT 5`,
+            [tenantId]
+        );
+
+        const formattedRows = rows.map(row => ({
+            id: row.id,
+            title: row.title,
+            start: row.start_date ? new Date(row.start_date).toISOString().split('.')[0] : null,
+            leadName: row.leadName || 'Unknown Lead',
+            type: row.title.toUpperCase()
+        })).filter(row => row.start);
+
+        res.json(formattedRows);
+    } catch (err) {
+        console.error("Dashboard Upcoming Fetch Error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // --- INTERACTIONS ROUTES ---
 app.get('/crm/nexaloom-crm/api/interactions', async (req, res) => {
     const { tenantId } = req.query;
