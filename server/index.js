@@ -27,6 +27,10 @@ const pool = mysql.createPool({
     database: process.env.DB_NAME,
 });
 
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // --- AUTH ROUTES ---
 app.use('/crm/nexaloom-crm/api/auth', require('./routes/auth')(pool));
 
@@ -430,21 +434,11 @@ app.get('/crm/nexaloom-crm/api/interactions', async (req, res) => {
             [tenantId]
         );
 
-        const formattedRows = rows.map(row => {
-            if (!row.start_date) return null;
+        const formattedRows = rows.map(row => ({
+            ...row,
+            start: row.start_date ? new Date(row.start_date).toISOString().split('.')[0] : null
+        })).filter(row => row.start);
 
-            // This creates a format like 2026-01-08T15:00:00
-            // which Safari accepts 100% of the time.
-            const d = new Date(row.start_date);
-            const iso = d.toISOString().split('.')[0];
-
-            return {
-                id: row.id,
-                title: row.title || 'Event',
-                description: row.description || '',
-                start: iso
-            };
-        }).filter(r => r !== null);
 
         res.json(formattedRows);
     } catch (err) {
