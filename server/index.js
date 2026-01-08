@@ -223,42 +223,46 @@ app.get('/crm/nexaloom-crm/api/leads/:id/email-history', async (req, res) => {
 
 // ROUTE: Create Interaction (Save Notes/Emails)
 app.post('/crm/nexaloom-crm/api/interactions', async (req, res) => {
-    const { id, tenantId, leadId, userId, type, notes, date, metadata, productId } = req.body;
+    const { tenantId, leadId, type, notes, date, status } = req.body;
 
-    // Convert ISO string to MySQL format per user request
-    const mysqlDate = new Date(req.body.date || new Date()).toISOString().slice(0, 19).replace('T', ' ');
-
-    // DEBUG: Log params to catch undefined values
-    // Verify params match PLACEHOLDERS exactly
-    // VALIDATION: Strict Lead ID Check
-    if (typeof leadId !== 'string' || leadId.length < 10) {
-        return res.status(400).send('Invalid Lead ID: Must be a string UUID.');
+    // 1. Validation
+    if (!tenantId || !leadId) {
+        return res.status(400).json({ error: "tenantId and leadId are required" });
     }
 
+    // 2. Format Date for MySQL
+    const mysqlDate = new Date(date || new Date()).toISOString().slice(0, 19).replace('T', ' ');
+    const id = uuidv4();
+
+    // 3. TARGET: events table (7 columns)
     const query = `INSERT INTO events (id, tenantId, leadId, title, description, start_date, status) 
-               VALUES (?, ?, ?, ?, ?, ?, ?)`;
+                   VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
     const params = [
-        String(id || uuidv4()),             // id
-        String(tenantId),                   // tenantId
-        String(leadId),                     // leadId
-        String(type || 'Meeting'),          // title (mapping 'type' to 'title')
-        String(notes || ''),                // description (mapping 'notes' to 'description')
-        mysqlDate,                          // start_date
-        req.body.status || 'SCHEDULED'      // status
+        id,
+        String(tenantId),
+        String(leadId),
+        String(type || 'Meeting'),     // Maps 'type' to 'title'
+        String(notes || ''),           // Maps 'notes' to 'description'
+        mysqlDate,                     // start_date
+        status || 'SCHEDULED'          // status
     ];
-
-    console.log("POST /api/events Params (Targeting Events Table):", params);
 
     try {
         await pool.query(query, params);
-        res.status(201).json({ success: true });
+
+        // OPTIONAL: Still log to interactions so the timeline works
+        await pool.query(
+            'INSERT INTO interactions (id, tenantId, leadId, type, notes, date) VALUES (?, ?, ?, ?, ?, NOW())',
+            [uuidv4(), tenantId, leadId, type, notes]
+        );
+
+        res.status(201).json({ success: true, id });
     } catch (err) {
-        console.error("SQL ERROR in POST /events", err.message);
+        console.error("SQL ERROR in POST /interactions:", err.message);
         res.status(500).json({ error: err.message });
     }
 });
-
 // ROUTE: Update Interaction (e.g. Status Change / Cancel / Reschedule)
 app.patch('/crm/nexaloom-crm/api/interactions/:id', async (req, res) => {
     const { id } = req.params;
