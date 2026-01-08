@@ -51,32 +51,45 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
   const goToToday = () => setCurrentDate(new Date());
 
+  // FIX: Explicitly map interactions to events with start/title
+  // avoiding any "Pattern Mismatch" by parsing ISO strings immediately
+  const mappedEvents = useMemo(() => {
+    return interactions.map(int => {
+      const dateVal = (int as any).start || int.date;
+      const titleVal = (int as any).title || int.type;
+
+      let dateObj: Date | null = null;
+      if (dateVal) {
+        dateObj = new Date(dateVal);
+      }
+      return {
+        ...int,
+        start: dateObj,
+        title: titleVal,
+        // Ensure original date field is also synced if needed for other logic
+        date: dateVal
+      };
+    }).filter(ev => ev.start && !isNaN(ev.start.getTime()));
+  }, [interactions]);
+
   const interactionsByDay = useMemo(() => {
     const map: Record<number, Interaction[]> = {};
-    interactions.forEach(int => {
-      // 1. Data Check: Ensure valid start_datetime
-      // FIX: Use 'start' field from API if available (backend maps date -> start)
-      const dateStr = (int as any).start || int.date;
-      if (!dateStr) return;
+    mappedEvents.forEach(evt => {
+      const d = evt.start as Date; // filtered above
 
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return;
-
-      // 2. Filter by Type: Only 'MEETING', 'CALL', 'EVENT'
-      // Exclude 'NOTE', 'EMAIL', 'LOG' etc.
-      // Use 'title' if available, as it maps to type
-      const typeStr = (int as any).title || int.type;
+      // 2. Filter by Type (using mapped title/type)
+      const typeStr = evt.title || evt.type;
       const allowedTypes = ['MEETING', 'CALL', 'EVENT'];
       if (!allowedTypes.includes(typeStr.toUpperCase())) return;
 
       if (d.getFullYear() === year && d.getMonth() === month) {
         const day = d.getDate();
         if (!map[day]) map[day] = [];
-        map[day].push(int);
+        map[day].push(evt as any);
       }
     });
     return map;
-  }, [interactions, year, month]);
+  }, [mappedEvents, year, month]);
 
   const handleDayClick = (day: number) => {
     setSelectedDay(day);
@@ -236,7 +249,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
     // CREATE NEW EVENT
     const interaction: Interaction = {
       id: `int-${Date.now()}`,
-      tenantId: user.tenantId,
+      tenantId: localStorage.getItem('nexaloom_tenant_id') || user.tenantId, // FIX: Use localStorage first
       leadId: newMeeting.leadId,
       type: newMeeting.type,
       notes: newMeeting.notes,
