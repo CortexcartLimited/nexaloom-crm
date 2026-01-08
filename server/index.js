@@ -418,35 +418,29 @@ app.delete('/crm/nexaloom-crm/api/discounts/:id', async (req, res) => {
 
 // --- INTERACTIONS ROUTES ---
 app.get('/crm/nexaloom-crm/api/interactions', async (req, res) => {
-    const { leadId, tenantId } = req.query;
+    const { tenantId } = req.query;
 
-    if (!tenantId) {
-        return res.status(400).json({ error: 'tenantId is required' });
-    }
-
-    // TARGET: the NEW events table
-    let query = 'SELECT id, title, start_date AS start, description, status FROM events WHERE tenantId = ?';
-    const params = [tenantId];
-
-    if (leadId && leadId !== 'undefined' && leadId !== 'null') {
-        query += ' AND leadId = ?';
-        params.push(String(leadId));
-    }
-
-    query += ' ORDER BY start_date DESC';
+    if (!tenantId) return res.status(400).json({ error: 'tenantId is required' });
 
     try {
-        const [rows] = await pool.query(query, params);
+        // 1. Pull from the events table
+        const [rows] = await pool.query(
+            'SELECT id, title, start_date, description FROM events WHERE tenantId = ? ORDER BY start_date DESC',
+            [tenantId]
+        );
 
-        // Ensure the date is in a format the Calendar loves
+        // 2. Format dates specifically for Safari/WebKit compatibility
         const formattedRows = rows.map(row => ({
-            ...row,
-            start: row.start ? new Date(row.start).toISOString() : null
+            id: row.id,
+            title: row.title,
+            description: row.description,
+            // Convert "2026-01-08 14:00:00" to "2026-01-08T14:00:00Z"
+            start: row.start_date ? new Date(row.start_date).toISOString() : null
         }));
 
         res.json(formattedRows);
     } catch (err) {
-        console.error("GET /interactions Error:", err);
+        console.error("Calendar Fetch Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
