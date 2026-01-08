@@ -248,13 +248,13 @@ app.post('/crm/nexaloom-crm/api/interactions', async (req, res) => {
         req.body.status || 'SCHEDULED'      // status
     ];
 
-    console.log("POST /api/interactions Params (Targeting Events Table):", params);
+    console.log("POST /api/events Params (Targeting Events Table):", params);
 
     try {
         await pool.query(query, params);
         res.status(201).json({ success: true });
     } catch (err) {
-        console.error("SQL ERROR in POST /interactions:", err.message);
+        console.error("SQL ERROR in POST /events", err.message);
         res.status(500).json({ error: err.message });
     }
 });
