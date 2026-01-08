@@ -422,9 +422,11 @@ app.get('/crm/nexaloom-crm/api/interactions', async (req, res) => {
         return res.status(400).json({ error: 'tenantId is required' });
     }
 
-    // FIX: Match DB schema columns and aliases as requested
-    // "event_type" is the actual column name. We alias it to 'title' (for Calendar) and 'type' (for logic).
-    let query = 'SELECT *, event_type AS title, event_type AS type, date AS start FROM interactions WHERE tenantId = ?';
+    // FIX: Exact SQL aliases for Calendar as requested
+    // SELECT * ensures we get all fields (id, leadId, notes, etc)
+    // event_type AS title -> for Calendar display
+    // date AS start -> for Calendar placement
+    let query = 'SELECT *, event_type AS title, date AS start FROM interactions WHERE tenantId = ?';
     const params = [tenantId];
 
     // FIX: Ensure leadId is strictly handled and not 'undefined' string

@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Phone, Video, Mail, MessageSquare, X, User as UserIcon, Clock, Building, ArrowRight, Check, List } from 'lucide-react';
 import { Interaction, Lead, User } from '../types';
 import { formatToMysql } from '../utils/formatDate';
@@ -51,45 +51,51 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
   const goToToday = () => setCurrentDate(new Date());
 
-  // FIX: Explicitly map interactions to events with start/title
-  // avoiding any "Pattern Mismatch" by parsing ISO strings immediately
-  const mappedEvents = useMemo(() => {
-    return interactions.map(int => {
-      const dateVal = (int as any).start || int.date;
-      const titleVal = (int as any).title || int.type;
+  // FIX: Fetch latest interactions directly using localStorage tenant ID as requested
+  const [fetchedInteractions, setFetchedInteractions] = useState<Interaction[]>([]);
 
-      let dateObj: Date | null = null;
-      if (dateVal) {
-        dateObj = new Date(dateVal);
-      }
-      return {
-        ...int,
-        start: dateObj,
-        title: titleVal,
-        // Ensure original date field is also synced if needed for other logic
-        date: dateVal
-      };
-    }).filter(ev => ev.start && !isNaN(ev.start.getTime()));
-  }, [interactions]);
+  useEffect(() => {
+    const tenantId = localStorage.getItem('nexaloom_tenant_id') || user.tenantId;
+    if (!tenantId) return;
+
+    fetch(`/crm/nexaloom-crm/api/interactions?tenantId=${tenantId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          console.log("Calendar fetched interactions:", data.length);
+          setFetchedInteractions(data);
+        }
+      })
+      .catch(err => console.error("Calendar Fetch Error:", err));
+  }, [user.tenantId]);
+
+  // Use fetched data if available, otherwise fall back to props
+  const displayEvents = fetchedInteractions.length > 0 ? fetchedInteractions : interactions;
 
   const interactionsByDay = useMemo(() => {
     const map: Record<number, Interaction[]> = {};
-    mappedEvents.forEach(evt => {
-      const d = evt.start as Date; // filtered above
+    displayEvents.forEach(int => {
+      // FIX: Use 'start' and 'title' directly from JSON as requested
+      const dateVal = (int as any).start || int.date;
+      if (!dateVal) return;
 
-      // 2. Filter by Type (using mapped title/type)
-      const typeStr = evt.title || evt.type;
-      const allowedTypes = ['MEETING', 'CALL', 'EVENT'];
-      if (!allowedTypes.includes(typeStr.toUpperCase())) return;
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return;
+
+      // Filter by 'title' (mapped from event_type) or 'type'
+      const titleVal = (int as any).title || int.type;
+      const allowedTypes = ['MEETING', 'CALL', 'EVENT']; // Ensure your DB event_types match these or update logic
+      // If DB has "Meeting" (Title Case), touppercase handles it.
+      if (!titleVal || !allowedTypes.includes(titleVal.toUpperCase())) return;
 
       if (d.getFullYear() === year && d.getMonth() === month) {
         const day = d.getDate();
         if (!map[day]) map[day] = [];
-        map[day].push(evt as any);
+        map[day].push({ ...int, type: titleVal } as Interaction); // Ensure type reflects title for display logic
       }
     });
     return map;
-  }, [mappedEvents, year, month]);
+  }, [displayEvents, year, month]);
 
   const handleDayClick = (day: number) => {
     setSelectedDay(day);
