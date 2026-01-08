@@ -412,38 +412,19 @@ app.delete('/crm/nexaloom-crm/api/discounts/:id', async (req, res) => {
 
 // --- INTERACTIONS ROUTES ---
 app.get('/crm/nexaloom-crm/api/interactions', async (req, res) => {
-    const { leadId, tenantId, startDate, endDate } = req.query;
-
-    console.log(`GET /api/interactions - Tenant: ${tenantId}, Lead: ${leadId}, Range: ${startDate} to ${endDate}`);
-    console.log('User Token Received:', req.headers['authorization']);
+    const { leadId, tenantId } = req.query;
 
     if (!tenantId) {
         return res.status(400).json({ error: 'tenantId is required' });
     }
 
-    // FIX: Switch to 'events' table for Calendar as requested
-    // Query now selects from 'events' table
-    let query = 'SELECT id, title, start_date AS start, description FROM events WHERE tenantId = ?';
+    // TARGET: the NEW events table
+    let query = 'SELECT id, title, start_date AS start, description, status FROM events WHERE tenantId = ?';
     const params = [tenantId];
 
-    // FIX: Ensure leadId is strictly handled and not 'undefined' string
     if (leadId && leadId !== 'undefined' && leadId !== 'null') {
         query += ' AND leadId = ?';
         params.push(String(leadId));
-    }
-
-    // Optional date filtering for Calendar using start_date
-    if (startDate) {
-        query += ' AND start_date >= ?';
-        params.push(startDate);
-    }
-    if (endDate) {
-        let effectiveEndDate = endDate;
-        if (endDate.length === 10) { // Simple check for YYYY-MM-DD
-            effectiveEndDate += ' 23:59:59';
-        }
-        query += ' AND start_date <= ?';
-        params.push(effectiveEndDate);
     }
 
     query += ' ORDER BY start_date DESC';
@@ -451,8 +432,7 @@ app.get('/crm/nexaloom-crm/api/interactions', async (req, res) => {
     try {
         const [rows] = await pool.query(query, params);
 
-        // Ensure start date is ISO string for frontend compatibility
-        // The SQL alias 'start' holds the date value
+        // Ensure the date is in a format the Calendar loves
         const formattedRows = rows.map(row => ({
             ...row,
             start: row.start ? new Date(row.start).toISOString() : null
