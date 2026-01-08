@@ -235,22 +235,20 @@ app.post('/crm/nexaloom-crm/api/interactions', async (req, res) => {
         return res.status(400).send('Invalid Lead ID: Must be a string UUID.');
     }
 
-    const query = `INSERT INTO interactions (id, tenantId, leadId, userId, type, notes, date, metadata, productId, status) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const query = `INSERT INTO events (id, tenantId, leadId, title, description, start_date, status) 
+               VALUES (?, ?, ?, ?, ?, ?, ?)`;
+
     const params = [
-        String(id || uuidv4()),
-        String(tenantId),
-        String(leadId), // Explicit String Cast
-        String(userId),
-        String(type),
-        String(notes || ''),
-        mysqlDate,
-        JSON.stringify(metadata || {}),
-        productId || null,
-        req.body.status || 'SCHEDULED'
+        String(id || uuidv4()),             // id
+        String(tenantId),                   // tenantId
+        String(leadId),                     // leadId
+        String(type || 'Meeting'),          // title (mapping 'type' to 'title')
+        String(notes || ''),                // description (mapping 'notes' to 'description')
+        mysqlDate,                          // start_date
+        req.body.status || 'SCHEDULED'      // status
     ];
 
-    console.log("POST /api/interactions Params:", params);
+    console.log("POST /api/interactions Params (Targeting Events Table):", params);
 
     try {
         await pool.query(query, params);
