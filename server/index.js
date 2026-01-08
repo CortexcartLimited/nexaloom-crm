@@ -560,6 +560,9 @@ app.get('/api/leads/:id/timeline', async (req, res) => {
         // 5. Sort by Date Descending
         timeline.sort((a, b) => new Date(b.date) - new Date(a.date));
 
+        console.log('Timeline Data Found:', timeline.length);
+        console.log(`Debug Counts - Interactions: ${interactions.length}, History: ${history.length}, Emails: ${emails.length}`);
+
         res.json(timeline);
     } catch (err) {
         console.error("TIMELINE FETCH ERROR:", err);
