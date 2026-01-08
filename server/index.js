@@ -475,6 +475,27 @@ app.get('/crm/nexaloom-crm/api/interactions', async (req, res) => {
     }
 });
 
+// ROUTE: Create New Event (Calendar)
+app.post('/crm/nexaloom-crm/api/events', async (req, res) => {
+    const { tenantId, leadId, title, description, start_date } = req.body;
+
+    if (!tenantId || !title || !start_date) {
+        return res.status(400).json({ error: 'Missing required fields (tenantId, title, start_date)' });
+    }
+
+    const id = uuidv4();
+    try {
+        await pool.query(
+            'INSERT INTO events (id, tenantId, leadId, title, description, start_date, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [id, tenantId, leadId, title, description || '', start_date, 'SCHEDULED']
+        );
+        res.status(201).json({ success: true, id, message: 'Event created' });
+    } catch (err) {
+        console.error('Error creating event:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // --- TASKS ROUTES ---
 app.use('/crm/nexaloom-crm/api/tasks', require('./routes/tasks')(pool));
 

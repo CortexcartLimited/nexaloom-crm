@@ -257,43 +257,71 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
     const scheduledTimeMysql = formatToMysql(date);
     const scheduledTime = date.toISOString(); // Keep ISO for local logic if needed
 
-    // 1. Create the Primary Event Interaction
-    // CREATE NEW EVENT
-    const interaction: Interaction = {
-      id: `int-${Date.now()}`,
-      tenantId: localStorage.getItem('nexaloom_tenant_id') || user.tenantId, // FIX: Use localStorage first
+    // 1. Create Event Interaction (New Table)
+    const tenantId = localStorage.getItem('nexaloom_tenant_id') || user.tenantId;
+    const eventPayload = {
+      tenantId,
       leadId: newMeeting.leadId,
-      type: newMeeting.type,
-      notes: newMeeting.notes,
-      date: scheduledTimeMysql, // Send MySQL format to API
+      title: newMeeting.type,
+      description: newMeeting.notes,
+      start_date: scheduledTimeMysql,
       status: 'SCHEDULED'
     };
 
-    const now = new Date();
-    const auditTimestamp = now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const eventDateDisplay = date.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    setIsSaving(true);
+    try {
+      const token = localStorage.getItem('nexaloom_token');
+      // Request 1: Save to Events Table
+      const eventRes = await fetch('/crm/nexaloom-crm/api/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(eventPayload)
+      });
 
-    let auditNote = `EVENT BOOKED: ${user.name} - ${auditTimestamp}\n`;
-    auditNote += `Action: New ${newMeeting.type} Scheduled\n`;
-    auditNote += `Scheduled For: ${eventDateDisplay} at ${newMeeting.time}\n`;
-    auditNote += `------------------------------------------------\n`;
-    auditNote += `Agenda/Notes: ${newMeeting.notes || 'None provided'}\n`;
-    auditNote += `Status: CALENDAR_SYNCED`;
+      if (!eventRes.ok) throw new Error("Failed to save event to calendar.");
 
-    const auditInteraction: Interaction = {
-      id: `int-log-${Date.now()}`,
-      tenantId: user.tenantId,
-      leadId: newMeeting.leadId,
-      type: 'NOTE',
-      notes: auditNote,
-      date: formatToMysql(now)
-    };
+      // Request 2: Log to Timeline
+      const logPayload = {
+        tenantId,
+        leadId: eventPayload.leadId,
+        userId: user.id,
+        type: 'NOTE',
+        notes: `Event Scheduled: ${newMeeting.type} on ${date.toLocaleDateString()} at ${newMeeting.time}.\nDetails: ${newMeeting.notes}`,
+        date: formatToMysql(new Date())
+      };
 
-    await onAddInteraction(interaction);
-    await onAddInteraction(auditInteraction);
+      await fetch('/crm/nexaloom-crm/api/interactions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(logPayload)
+      });
 
-    setIsModalOpen(false);
-    setNewMeeting({ leadId: '', type: 'MEETING', notes: '', time: '10:00' });
+      // Add to local state for instant feedback
+      const newLocalEvent = {
+        id: `temp-${Date.now()}`,
+        ...eventPayload,
+        type: eventPayload.title,
+        start: new Date(scheduledTimeMysql), // Ensure start date object for Cal view
+        date: eventPayload.start_date,
+        userId: user.id
+      } as any;
+      setFetchedInteractions(prev => [...prev, newLocalEvent]);
+
+      setIsModalOpen(false);
+      setNewMeeting({ leadId: '', type: 'MEETING', notes: '', time: '10:00' });
+
+    } catch (error) {
+      console.error("Scheduling Error:", error);
+      alert("Failed to schedule meeting. changes not saved.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getEventStyle = (interaction: Interaction) => {
