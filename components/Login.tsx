@@ -20,6 +20,10 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         try {
             const { token, user } = await api.login({ email, password });
             if (token) {
+                // USER REQUEST FIX: Save tenantId to localStorage for other components
+                if (user.tenantId) {
+                    localStorage.setItem('nexaloom_tenant_id', user.tenantId);
+                }
                 onLoginSuccess(token, user);
             } else {
                 throw new Error("No token received");

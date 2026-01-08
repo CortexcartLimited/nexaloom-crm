@@ -111,7 +111,10 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
         .catch(err => console.error("Failed to fetch history:", err));
 
       // 2. Fetch Unified Timeline
-      fetch(`/crm/nexaloom-crm/api/leads/${selectedContact.id}/timeline?tenantId=${user.tenantId}`, {
+      const tenantId = localStorage.getItem('nexaloom_tenant_id') || user.tenantId;
+      console.log("Fetching timeline for tenant:", tenantId);
+
+      fetch(`/crm/nexaloom-crm/api/leads/${selectedContact.id}/timeline?tenantId=${tenantId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
         .then(res => res.json())

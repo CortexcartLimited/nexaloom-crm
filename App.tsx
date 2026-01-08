@@ -91,8 +91,15 @@ const App: React.FC = () => {
       if (token) {
         try {
           const user = await api.getMe();
+
+          // USER REQUEST FIX: Prioritize localStorage or fall back to user object
+          const storedTenant = localStorage.getItem('nexaloom_tenant_id');
+          const finalTenantId = storedTenant || user.tenantId;
+
+          if (!finalTenantId) console.warn("No Tenant ID found in storage or user profile.");
+
           // Fetch tenant info - assuming user object has tenantId or we fetch settings
-          const settings = await api.getSettings(user.tenantId).catch(() => ({ id: user.tenantId, name: 'My Company' }));
+          const settings = await api.getSettings(finalTenantId).catch(() => ({ id: finalTenantId, name: 'My Company' }));
 
           setAuth({
             user,
@@ -112,7 +119,7 @@ const App: React.FC = () => {
           }
 
           // Load Data
-          await loadData(user.tenantId);
+          await loadData(finalTenantId);
 
           // Set initial tab based on role
           const allowed = getTabsForRole(user.role);
