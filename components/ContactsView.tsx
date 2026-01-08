@@ -69,6 +69,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   const [editFormData, setEditFormData] = useState<Partial<Lead>>({});
   const [isNotesSidebarOpen, setIsNotesSidebarOpen] = useState(false);
   const [newNoteText, setNewNoteText] = useState('');
+  const [interactionType, setInteractionType] = useState<'NOTE' | 'MEETING' | 'CALL' | 'EMAIL'>('NOTE');
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [isKbSearchOpen, setIsKbSearchOpen] = useState(false);
   const [kbSearchQuery, setKbSearchQuery] = useState('');
@@ -172,7 +173,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
         tenantId: user.tenantId,
         leadId: selectedContact.id,
         userId: user.id, // Ensure this is passed
-        type: 'NOTE',
+        type: interactionType,
         notes: newNoteText,
         date: new Date().toISOString()
         // productId: someValue // You can add this if the note is about a specific product
@@ -517,7 +518,19 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
             <div className="p-6 flex flex-col h-full">
               <form onSubmit={handleAddNote} className="flex flex-col flex-1">
                 <div className="flex justify-between items-center mb-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase">Interaction Note</label>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase">Type:</label>
+                    <select
+                      className="text-xs font-bold text-gray-700 dark:text-gray-300 bg-transparent border border-gray-200 dark:border-gray-600 rounded px-1 py-0.5 outline-none uppercase cursor-pointer"
+                      value={interactionType}
+                      onChange={(e) => setInteractionType(e.target.value as any)}
+                    >
+                      <option value="NOTE">Note</option>
+                      <option value="MEETING">Meeting</option>
+                      <option value="CALL">Call</option>
+                      <option value="EMAIL">Email</option>
+                    </select>
+                  </div>
                   <button type="button" onClick={() => setIsKbSearchOpen(!isKbSearchOpen)} className="text-xs text-blue-600 flex items-center gap-1 hover:underline"><BookOpen size={12} /> Reference KB</button>
                 </div>
 

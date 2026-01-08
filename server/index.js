@@ -250,7 +250,7 @@ app.post('/crm/nexaloom-crm/api/interactions', async (req, res) => {
         id,
         String(tenantId),
         String(leadId),
-        String(type || 'Meeting'),     // Maps 'type' to 'title'
+        String(type ? type.toUpperCase() : 'NOTE'),     // Maps 'type' to 'title'
         String(notes || ''),           // Maps 'notes' to 'description'
         mysqlDate,                     // start_date
         status || 'SCHEDULED'          // status
@@ -435,7 +435,7 @@ app.get('/crm/nexaloom-crm/api/interactions/upcoming', async (req, res) => {
              LEFT JOIN leads l ON e.leadId = l.id 
              WHERE e.tenantId = ? 
              AND e.start_date >= NOW() 
-             AND UPPER(e.title) IN ('MEETING', 'CALL') 
+             AND UPPER(e.title) IN ('MEETING', 'CALL', 'EMAIL') 
              ORDER BY e.start_date ASC 
              LIMIT 5`,
             [tenantId]
