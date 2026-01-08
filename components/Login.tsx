@@ -19,7 +19,11 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
         try {
             const { token, user } = await api.login({ email, password });
-            onLoginSuccess(token, user);
+            if (token) {
+                onLoginSuccess(token, user);
+            } else {
+                throw new Error("No token received");
+            }
         } catch (err: any) {
             setError(err.message || 'Login failed. Please check your credentials.');
         } finally {

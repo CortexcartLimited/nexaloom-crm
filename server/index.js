@@ -546,7 +546,7 @@ app.get('/api/leads/:id/timeline', async (req, res) => {
     }
 });
 
-const PORT = 3006; // Hardcoded to match your Nginx/Vite proxy
+const PORT = 5000; // Hardcoded to match HestiaCP/Nginx configuration
 app.listen(PORT, () => {
     console.log(`--- SERVER STARTING ON PORT ${PORT} ---`);
 });

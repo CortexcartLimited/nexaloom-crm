@@ -16,12 +16,12 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       proxy: {
         '/crm/nexaloom-crm/api': {
-          target: 'http://127.0.0.1:3006',
+          target: 'http://127.0.0.1:5000',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/crm\/nexaloom-crm\/api/, '/api')
         },
         '/api': {
-          target: 'http://127.0.0.1:3006',
+          target: 'http://127.0.0.1:5000',
           changeOrigin: true,
           secure: false,
         }
