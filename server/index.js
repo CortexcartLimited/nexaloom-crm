@@ -417,6 +417,7 @@ app.get('/crm/nexaloom-crm/api/interactions', async (req, res) => {
     const { leadId, tenantId, startDate, endDate } = req.query;
 
     console.log(`GET /api/interactions - Tenant: ${tenantId}, Lead: ${leadId}, Range: ${startDate} to ${endDate}`);
+    console.log('User Token Received:', req.headers['authorization']);
 
     if (!tenantId) {
         return res.status(400).json({ error: 'tenantId is required' });

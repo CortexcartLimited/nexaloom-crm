@@ -56,9 +56,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
 
   useEffect(() => {
     const tenantId = localStorage.getItem('nexaloom_tenant_id') || user.tenantId;
-    if (!tenantId) return;
+    const token = localStorage.getItem('nexaloom_token');
 
-    fetch(`/crm/nexaloom-crm/api/interactions?tenantId=${tenantId}`)
+    if (!tenantId || !token) return;
+
+    fetch(`/crm/nexaloom-crm/api/interactions?tenantId=${tenantId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
