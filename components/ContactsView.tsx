@@ -478,7 +478,14 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                               <span className={`font-bold uppercase ${item.source === 'history' ? 'text-gray-500' : 'text-blue-600'}`}>
                                 {isOutreach ? 'OUTREACH' : item.type}
                               </span>
-                              <span className="text-gray-400">{new Date(item.date).toLocaleDateString()} {new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              <span className="text-gray-400">
+                                {(() => {
+                                  try {
+                                    const d = new Date(item.date);
+                                    return isNaN(d.getTime()) ? 'Invalid Date' : d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                  } catch (e) { return 'Invalid Date'; }
+                                })()}
+                              </span>
                             </div>
                             <p className="text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{displayNotes}</p>
                           </div>
