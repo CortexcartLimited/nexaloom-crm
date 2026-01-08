@@ -399,7 +399,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
   console.log('Events being passed to Calendar (interactionsByDay):', interactionsByDay);
 
   return (
-    <div className="p-6 h-full flex flex-col animate-fade-in">
+    <div className="p-6 h-full min-h-[600px] flex flex-col animate-fade-in">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div className="flex items-center gap-4">
           <h2 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
