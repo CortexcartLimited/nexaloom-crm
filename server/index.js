@@ -414,7 +414,10 @@ app.delete('/api/discounts/:id', async (req, res) => {
 
 // --- INTERACTIONS ROUTES ---
 app.get('/api/interactions', async (req, res) => {
-    const { leadId, tenantId } = req.query;
+    const { leadId, tenantId, startDate, endDate } = req.query;
+
+    console.log(`GET /api/interactions - Tenant: ${tenantId}, Lead: ${leadId}, Range: ${startDate} to ${endDate}`);
+
     if (!tenantId) {
         return res.status(400).json({ error: 'tenantId is required' });
     }
@@ -429,14 +432,20 @@ app.get('/api/interactions', async (req, res) => {
     }
 
     // Optional date filtering for Calendar
-    const { startDate, endDate } = req.query;
+    // Ensure we don't accidentally filter out valid dates. 
+    // If startDate/endDate are present, they are applied.
     if (startDate) {
         query += ' AND date >= ?';
         params.push(startDate);
     }
     if (endDate) {
+        // If endDate is just a date "YYYY-MM-DD", appending time ensures we get the full day
+        let effectiveEndDate = endDate;
+        if (endDate.length === 10) { // Simple check for YYYY-MM-DD
+            effectiveEndDate += ' 23:59:59';
+        }
         query += ' AND date <= ?';
-        params.push(endDate);
+        params.push(effectiveEndDate);
     }
 
     query += ' ORDER BY date DESC';
@@ -448,11 +457,13 @@ app.get('/api/interactions', async (req, res) => {
         const formattedRows = rows.map(row => ({
             ...row,
             date: row.date ? new Date(row.date).toISOString() : null,
-            created_at: row.created_at ? new Date(row.created_at).toISOString() : undefined // Handle strict checks if column exists
+            // Ensure we don't crash if created_at is missing or different
+            created_at: row.created_at ? new Date(row.created_at).toISOString() : undefined
         }));
 
         res.json(formattedRows);
     } catch (err) {
+        console.error("GET /interactions Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -494,9 +505,9 @@ app.get('/api/leads/:id/timeline', async (req, res) => {
         );
 
         // 2. Fetch Lead History (Audit Logs)
-        // FIX: Ensure uses createdAt (CamelCase)
+        // FIX: Explicitly use created_at AS date per user instruction.
         const [history] = await pool.query(
-            'SELECT id, action_type, details, status, createdAt as date, "history" as source FROM leads_history WHERE lead_id = ?',
+            'SELECT id, action_type, details, status, created_at AS date, "history" as source FROM leads_history WHERE lead_id = ?',
             [leadId]
         );
 
