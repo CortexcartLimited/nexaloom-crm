@@ -12,6 +12,8 @@ console.log('DB Config Check:', {
     db: process.env.DB_NAME
 });
 
+const app = express();
+
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -423,20 +425,26 @@ app.get('/crm/nexaloom-crm/api/interactions', async (req, res) => {
     if (!tenantId) return res.status(400).json({ error: 'tenantId is required' });
 
     try {
-        // 1. Pull from the events table
         const [rows] = await pool.query(
             'SELECT id, title, start_date, description FROM events WHERE tenantId = ? ORDER BY start_date DESC',
             [tenantId]
         );
 
-        // 2. Format dates specifically for Safari/WebKit compatibility
-        const formattedRows = rows.map(row => ({
-            id: row.id,
-            title: row.title,
-            description: row.description,
-            // Convert "2026-01-08 14:00:00" to "2026-01-08T14:00:00Z"
-            start: row.start_date ? new Date(row.start_date).toISOString() : null
-        }));
+        const formattedRows = rows.map(row => {
+            if (!row.start_date) return null;
+
+            // This creates a format like 2026-01-08T15:00:00
+            // which Safari accepts 100% of the time.
+            const d = new Date(row.start_date);
+            const iso = d.toISOString().split('.')[0];
+
+            return {
+                id: row.id,
+                title: row.title || 'Event',
+                description: row.description || '',
+                start: iso
+            };
+        }).filter(r => r !== null);
 
         res.json(formattedRows);
     } catch (err) {
