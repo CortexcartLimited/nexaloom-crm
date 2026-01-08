@@ -55,14 +55,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
     const map: Record<number, Interaction[]> = {};
     interactions.forEach(int => {
       // 1. Data Check: Ensure valid start_datetime
-      if (!int.date) return;
-      const d = new Date(int.date);
+      // FIX: Use 'start' field from API if available (backend maps date -> start)
+      const dateStr = (int as any).start || int.date;
+      if (!dateStr) return;
+
+      const d = new Date(dateStr);
       if (isNaN(d.getTime())) return;
 
-      // 2. Filter by Type: Only 'MEETING', 'CALL', or 'EVENT'
+      // 2. Filter by Type: Only 'MEETING', 'CALL', 'EVENT'
       // Exclude 'NOTE', 'EMAIL', 'LOG' etc.
+      // Use 'title' if available, as it maps to type
+      const typeStr = (int as any).title || int.type;
       const allowedTypes = ['MEETING', 'CALL', 'EVENT'];
-      if (!allowedTypes.includes(int.type.toUpperCase())) return;
+      if (!allowedTypes.includes(typeStr.toUpperCase())) return;
 
       if (d.getFullYear() === year && d.getMonth() === month) {
         const day = d.getDate();

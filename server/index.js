@@ -461,7 +461,12 @@ app.get('/crm/nexaloom-crm/api/interactions', async (req, res) => {
             created_at: row.created_at ? new Date(row.created_at).toISOString() : undefined
         }));
 
-        res.json(formattedRows);
+        // FIX: Map start/title for Calendar component as requested
+        res.json(formattedRows.map(row => ({
+            ...row,
+            start: row.date, // Already ISO from formattedRows
+            title: row.type
+        })));
     } catch (err) {
         console.error("GET /interactions Error:", err);
         res.status(500).json({ error: err.message });
