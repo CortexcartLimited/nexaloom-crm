@@ -422,9 +422,10 @@ app.get('/api/interactions', async (req, res) => {
     let query = 'SELECT * FROM interactions WHERE tenantId = ?';
     const params = [tenantId];
 
-    if (leadId) {
+    // FIX: Ensure leadId is strictly handled and not 'undefined' string
+    if (leadId && leadId !== 'undefined' && leadId !== 'null') {
         query += ' AND leadId = ?';
-        params.push(leadId);
+        params.push(String(leadId));
     }
 
     // Optional date filtering for Calendar
@@ -442,7 +443,15 @@ app.get('/api/interactions', async (req, res) => {
 
     try {
         const [rows] = await pool.query(query, params);
-        res.json(rows);
+
+        // FIX: Ensure dates are ISO strings to prevent "Pattern Mismatch"
+        const formattedRows = rows.map(row => ({
+            ...row,
+            date: row.date ? new Date(row.date).toISOString() : null,
+            created_at: row.created_at ? new Date(row.created_at).toISOString() : undefined // Handle strict checks if column exists
+        }));
+
+        res.json(formattedRows);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -452,7 +461,6 @@ app.get('/api/interactions', async (req, res) => {
 app.use('/api/tasks', require('./routes/tasks')(pool));
 
 // --- DOCUMENTS ROUTES ---
-app.use('/api/documents', require('./routes/documents')(pool));
 app.use('/api/documents', require('./routes/documents')(pool));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
@@ -476,23 +484,26 @@ app.get('/api/leads/:id/timeline', async (req, res) => {
     const { tenantId } = req.query;
 
     try {
+        // FIX: Ensure ID is String
+        const leadId = String(id);
+
         // 1. Fetch Interactions (Calendar Items + Notes)
         const [interactions] = await pool.query(
             'SELECT id, type, notes, date, status, "interaction" as source FROM interactions WHERE leadId = ? AND tenantId = ?',
-            [id, tenantId]
+            [leadId, tenantId]
         );
 
         // 2. Fetch Lead History (Audit Logs)
-        // Corrected column name to 'createdAt' per user database schema
+        // FIX: Ensure uses createdAt (CamelCase)
         const [history] = await pool.query(
             'SELECT id, action_type, details, status, createdAt as date, "history" as source FROM leads_history WHERE lead_id = ?',
-            [id]
+            [leadId]
         );
 
         // 3. Fetch Email History
         const [emails] = await pool.query(
             'SELECT id, type, subject, sentAt as date, "email" as source FROM email_history WHERE leadId = ?',
-            [id]
+            [leadId]
         );
 
         // 4. Merge and Format
@@ -500,7 +511,7 @@ app.get('/api/leads/:id/timeline', async (req, res) => {
             ...interactions.map(i => ({
                 id: i.id,
                 type: i.type, // 'MEETING', 'CALL', 'NOTE'
-                date: i.date,
+                date: i.date ? new Date(i.date).toISOString() : null, // FIX: ISO String
                 notes: i.notes,
                 status: i.status || 'COMPLETED',
                 source: 'interaction'
@@ -519,7 +530,7 @@ app.get('/api/leads/:id/timeline', async (req, res) => {
                 return {
                     id: `hist-${h.id}`,
                     type: h.action_type, // 'INTERACTION_UPDATE'
-                    date: h.date, // mapped from createdAt
+                    date: h.date ? new Date(h.date).toISOString() : null, // FIX: ISO String
                     notes: noteContent,
                     status: h.status,
                     source: 'history'
@@ -528,7 +539,7 @@ app.get('/api/leads/:id/timeline', async (req, res) => {
             ...emails.map(e => ({
                 id: `email-${e.id}`,
                 type: 'EMAIL',
-                date: e.date, // mapped from sentAt
+                date: e.date ? new Date(e.date).toISOString() : null, // FIX: ISO String
                 notes: `Subject: ${e.subject}`,
                 status: 'SENT',
                 source: 'email'
