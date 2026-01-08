@@ -24,17 +24,17 @@ const pool = mysql.createPool({
 });
 
 // --- AUTH ROUTES ---
-app.use('/api/auth', require('./routes/auth')(pool));
+app.use('/crm/nexaloom-crm/api/auth', require('./routes/auth')(pool));
 
 // Apply Auth Middleware to all API routes below
 // NOTE: We exclude /api/auth (defined above) and maybe public endpoints if any.
 // For now, protecting everything else.
-app.use('/api', authenticateToken);
+app.use('/crm/nexaloom-crm/api', authenticateToken);
 
 // --- LEADS ROUTES ---
 
 // Get all leads for a tenant
-app.get('/api/leads', async (req, res) => {
+app.get('/crm/nexaloom-crm/api/leads', async (req, res) => {
     const { tenantId } = req.query;
     if (!tenantId) return res.status(400).json({ error: "tenantId is required" });
 
@@ -50,7 +50,7 @@ app.get('/api/leads', async (req, res) => {
 });
 
 // Add a new lead
-app.post('/api/leads', async (req, res) => {
+app.post('/crm/nexaloom-crm/api/leads', async (req, res) => {
     const { tenantId, name, company, email, phone, value, status, currency, country } = req.body;
     const id = uuidv4();
     const allowedFields = ['name', 'company', 'email', 'phone', 'value', 'status', 'currency', 'country', 'taxId'];
@@ -73,7 +73,7 @@ app.post('/api/leads', async (req, res) => {
 });
 
 // Update lead status
-app.patch('/api/leads/:id/status', async (req, res) => {
+app.patch('/crm/nexaloom-crm/api/leads/:id/status', async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
     try {
@@ -91,7 +91,7 @@ app.patch('/api/leads/:id/status', async (req, res) => {
 });
 
 // --- PRODUCTS ROUTES ---
-app.get('/api/products', async (req, res) => {
+app.get('/crm/nexaloom-crm/api/products', async (req, res) => {
     const { tenantId } = req.query;
     if (!tenantId) {
         return res.status(400).json({ error: 'tenantId is required' });
@@ -104,7 +104,7 @@ app.get('/api/products', async (req, res) => {
     }
 });
 
-app.post('/api/products', async (req, res) => {
+app.post('/crm/nexaloom-crm/api/products', async (req, res) => {
     const { tenantId, name, description, price, category } = req.body;
     const id = uuidv4();
     try {
@@ -119,7 +119,7 @@ app.post('/api/products', async (req, res) => {
 });
 // ROUTE: Send Email Outreach to Lead
 // ROUTE: Send Email Outreach to Lead
-app.post('/api/leads/:id/email', async (req, res) => {
+app.post('/crm/nexaloom-crm/api/leads/:id/email', async (req, res) => {
     const { id } = req.params;
     const { subject, body } = req.body;
     console.log(`Starting Outreach Send for Lead ID: ${id}`);
@@ -176,7 +176,7 @@ app.post('/api/leads/:id/email', async (req, res) => {
 });
 
 // ROUTE: Update Lead (Edit Profile)
-app.patch('/api/leads/:id', async (req, res) => {
+app.patch('/crm/nexaloom-crm/api/leads/:id', async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
 
@@ -207,7 +207,7 @@ app.patch('/api/leads/:id', async (req, res) => {
 });
 
 // ROUTE: Get Email History for a Lead
-app.get('/api/leads/:id/email-history', async (req, res) => {
+app.get('/crm/nexaloom-crm/api/leads/:id/email-history', async (req, res) => {
     const { id } = req.params;
     try {
         const [rows] = await pool.query(
@@ -222,7 +222,7 @@ app.get('/api/leads/:id/email-history', async (req, res) => {
 });
 
 // ROUTE: Create Interaction (Save Notes/Emails)
-app.post('/api/interactions', async (req, res) => {
+app.post('/crm/nexaloom-crm/api/interactions', async (req, res) => {
     const { id, tenantId, leadId, userId, type, notes, date, metadata, productId } = req.body;
 
     // Convert ISO string to MySQL format per user request
@@ -262,7 +262,7 @@ app.post('/api/interactions', async (req, res) => {
 });
 
 // ROUTE: Update Interaction (e.g. Status Change / Cancel / Reschedule)
-app.patch('/api/interactions/:id', async (req, res) => {
+app.patch('/crm/nexaloom-crm/api/interactions/:id', async (req, res) => {
     const { id } = req.params;
     const { date, notes, status, type, metadata } = req.body;
 
@@ -340,7 +340,7 @@ app.patch('/api/interactions/:id', async (req, res) => {
     }
 });
 // --- DISCOUNTS ROUTES ---
-app.get('/api/discounts', async (req, res) => {
+app.get('/crm/nexaloom-crm/api/discounts', async (req, res) => {
     const { tenantId } = req.query;
     try {
         const [rows] = await pool.query('SELECT * FROM discounts WHERE tenantId = ?', [tenantId]);
@@ -358,7 +358,7 @@ app.get('/api/discounts', async (req, res) => {
     }
 });
 
-app.post('/api/discounts', async (req, res) => {
+app.post('/crm/nexaloom-crm/api/discounts', async (req, res) => {
     const { id, tenantId, name, code, type, value, applicableProductIds, expiresAt, contractTerm, isManagerOnly } = req.body;
 
     try {
@@ -395,7 +395,7 @@ app.post('/api/discounts', async (req, res) => {
     }
 });
 
-app.delete('/api/discounts/:id', async (req, res) => {
+app.delete('/crm/nexaloom-crm/api/discounts/:id', async (req, res) => {
     const { id } = req.params;
     const tenantId = req.headers['x-tenant-id'];
 
@@ -413,7 +413,7 @@ app.delete('/api/discounts/:id', async (req, res) => {
 });
 
 // --- INTERACTIONS ROUTES ---
-app.get('/api/interactions', async (req, res) => {
+app.get('/crm/nexaloom-crm/api/interactions', async (req, res) => {
     const { leadId, tenantId, startDate, endDate } = req.query;
 
     console.log(`GET /api/interactions - Tenant: ${tenantId}, Lead: ${leadId}, Range: ${startDate} to ${endDate}`);
@@ -469,28 +469,28 @@ app.get('/api/interactions', async (req, res) => {
 });
 
 // --- TASKS ROUTES ---
-app.use('/api/tasks', require('./routes/tasks')(pool));
+app.use('/crm/nexaloom-crm/api/tasks', require('./routes/tasks')(pool));
 
 // --- DOCUMENTS ROUTES ---
-app.use('/api/documents', require('./routes/documents')(pool));
+app.use('/crm/nexaloom-crm/api/documents', require('./routes/documents')(pool));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // --- PROPOSALS ROUTES ---
-app.use('/api/proposals', require('./routes/proposals')(pool));
+app.use('/crm/nexaloom-crm/api/proposals', require('./routes/proposals')(pool));
 
 // --- KNOWLEDGE BASE ROUTES ---
-app.use('/api/knowledge-base', require('./routes/knowledge-base')(pool));
+app.use('/crm/nexaloom-crm/api/knowledge-base', require('./routes/knowledge-base')(pool));
 
 // --- TICKETS ROUTES ---
-app.use('/api/tickets', require('./routes/tickets')(pool));
+app.use('/crm/nexaloom-crm/api/tickets', require('./routes/tickets')(pool));
 
 // --- USERS ROUTES ---
-app.use('/api/users', require('./routes/users')(pool));
+app.use('/crm/nexaloom-crm/api/users', require('./routes/users')(pool));
 
 // --- SETTINGS ROUTES ---
-app.use('/api/settings', require('./routes/settings')(pool));
+app.use('/crm/nexaloom-crm/api/settings', require('./routes/settings')(pool));
 
-app.get('/api/leads/:id/timeline', async (req, res) => {
+app.get('/crm/nexaloom-crm/api/leads/:id/timeline', async (req, res) => {
     const { id } = req.params;
     const { tenantId } = req.query;
 
