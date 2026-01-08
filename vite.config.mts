@@ -19,6 +19,11 @@ export default defineConfig(({ mode }) => {
           target: 'http://localhost:3006',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/crm\/nexaloom-crm\/api/, '/api')
+        },
+        '/api': {
+          target: 'http://localhost:3006',
+          changeOrigin: true,
+          secure: false,
         }
       }
     },
