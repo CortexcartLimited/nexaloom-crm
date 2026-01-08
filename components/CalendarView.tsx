@@ -54,10 +54,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
   // FIX: Fetch latest interactions directly using localStorage tenant ID as requested
   const [fetchedInteractions, setFetchedInteractions] = useState<Interaction[]>([]);
 
-  useEffect(() => {
-    const tenantId = localStorage.getItem('nexaloom_tenant_id') || user.tenantId;
-    const token = localStorage.getItem('nexaloom_token');
+  // FIX: Manual Trigger - Check storage immediately on render cycle
+  const storedTenantId = localStorage.getItem('nexaloom_tenant_id');
+  const storedToken = localStorage.getItem('nexaloom_token');
 
+  useEffect(() => {
+    const tenantId = storedTenantId || user.tenantId;
+    const token = storedToken;
+
+    // FIX: Guard clause to prevent 401s
     if (!tenantId || !token) return;
 
     fetch(`/crm/nexaloom-crm/api/interactions?tenantId=${tenantId}`, {
@@ -73,7 +78,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ interactions, leads,
         }
       })
       .catch(err => console.error("Calendar Fetch Error:", err));
-  }, [user.tenantId]);
+  }, [storedTenantId, storedToken, user.tenantId]);
 
   // Use fetched data if available, otherwise fall back to props
   const displayEvents = fetchedInteractions.length > 0 ? fetchedInteractions : interactions;
