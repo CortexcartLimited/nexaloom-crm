@@ -506,11 +506,10 @@ app.get('/api/leads/:id/timeline', async (req, res) => {
 
         // 2. Fetch Lead History (Audit Logs)
         // FIX: Use JOIN to verify tenantId via leads table (since leads_history lacks tenantId)
+        // 2. Fetch Lead History (Audit Logs)
+        // FIX: Exact SQL per user request (JOIN + ORDER BY + h.*)
         const [history] = await pool.query(
-            `SELECT h.id, h.action_type, h.details, h.status, h.created_at AS date, "history" as source 
-             FROM leads_history h 
-             JOIN leads l ON h.lead_id = l.id 
-             WHERE h.lead_id = ? AND l.tenantId = ?`,
+            `SELECT h.*, h.created_at AS date FROM leads_history h JOIN leads l ON h.lead_id = l.id WHERE h.lead_id = ? AND l.tenantId = ? ORDER BY h.created_at DESC`,
             [leadId, tenantId]
         );
 
