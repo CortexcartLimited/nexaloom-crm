@@ -137,8 +137,20 @@ export const DemoAccountsView: React.FC<DemoAccountsViewProps> = ({ demoAccounts
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 font-mono text-xs text-gray-500 dark:text-gray-400">
-                                            {account.username}
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <span className="font-mono text-xs text-indigo-600 dark:text-indigo-400 font-bold">PORT: {account.port || '---'}</span>
+                                                {!isExpired && account.port && (
+                                                    <a
+                                                        href={`http://35.208.82.250:${account.port}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-[10px] text-gray-400 hover:text-indigo-500 flex items-center gap-1 mt-1 transition-colors"
+                                                    >
+                                                        Visit Environment <ExternalLink size={10} />
+                                                    </a>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             {isExpired ? (
@@ -172,9 +184,25 @@ export const DemoAccountsView: React.FC<DemoAccountsViewProps> = ({ demoAccounts
                                                 >
                                                     <Monitor size={14} /> {isExpired ? 'Disabled' : 'Launch Demo'}
                                                 </button>
+                                                {!isExpired && (
+                                                    <button
+                                                        onClick={() => handleTerminate(account.id, account.leadId)}
+                                                        disabled={terminatingId === account.id}
+                                                        className="flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors disabled:opacity-50"
+                                                        title="Kill container on VM"
+                                                    >
+                                                        {terminatingId === account.id ? (
+                                                            <Clock size={14} className="animate-spin" />
+                                                        ) : (
+                                                            <Shield size={14} />
+                                                        )}
+                                                        Terminate
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={() => onDeleteDemo(account.id)}
                                                     className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded-md transition-colors"
+                                                    title="Remove from Nexaloom list"
                                                 >
                                                     <Trash2 size={16} />
                                                 </button>

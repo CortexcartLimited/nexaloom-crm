@@ -16,15 +16,15 @@ module.exports = (pool) => {
             const port = await getNextAvailablePort(pool);
 
             // 2. Fetch GCP Agent
-            const gcpResponse = await fetch(`http://${GCP_IP}:5001/provision`, {
+            const gcpResponse = await fetch(`http://${GCP_IP}:5001/deploy`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    leadId,
-                    port,
-                    secret: SECRET_KEY
+                    repo_url: "https://github.com/CortexcartLimited/cortex-insight-demo.git",
+                    project_name: `demo-${leadId}`,
+                    port: port
                 })
             });
 
@@ -86,8 +86,7 @@ module.exports = (pool) => {
                 },
                 body: JSON.stringify({
                     leadId,
-                    port,
-                    secret: SECRET_KEY
+                    port
                 })
             });
 

@@ -43,6 +43,7 @@ export interface DemoAccount {
   leadName: string;
   username: string;
   passwordHash: string;
+  port?: number;
   status: 'ACTIVE' | 'EXPIRED' | 'PENDING';
   expiresAt: string;
   createdAt: string;

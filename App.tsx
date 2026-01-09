@@ -179,8 +179,9 @@ const App: React.FC = () => {
         tenantId: l.tenantId,
         leadId: l.id,
         leadName: l.name,
-        username: `port-${l.demo_port || 'pending'}`,
+        username: `demo_${l.id.substring(0, 4)}`,
         passwordHash: '********',
+        port: l.demo_port,
         status: (l.demo_status === 'ACTIVE' ? 'ACTIVE' : 'EXPIRED') as any,
         expiresAt: new Date(new Date(l.demo_last_launched || Date.now()).getTime() + 86400000 * 7).toISOString(),
         createdAt: l.demo_last_launched || new Date().toISOString()
