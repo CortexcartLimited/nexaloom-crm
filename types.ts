@@ -99,6 +99,9 @@ export interface Lead {
   currency?: string;
   taxId?: string;
   country?: string;
+  demo_port?: number;
+  demo_status?: string;
+  demo_last_launched?: string;
 }
 
 export interface Interaction {

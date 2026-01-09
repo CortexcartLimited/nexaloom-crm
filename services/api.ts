@@ -380,5 +380,16 @@ export const api = {
       throw new Error(errorData.error || 'Failed to provision demo');
     }
     return response.json();
+  },
+  terminateDemo: async (leadId: string) => {
+    const response = await req(`/demos/terminate`, {
+      method: 'POST',
+      body: JSON.stringify({ leadId }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to terminate demo');
+    }
+    return response.json();
   }
 };

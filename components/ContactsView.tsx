@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Lead, Interaction, Document, KnowledgeBaseArticle, User } from '../types';
 import { generateEmailDraft } from '../services/geminiService';
-import { Phone, Mail, Building, Calendar, User as UserIcon, X, MessageSquare, Clock, MapPin, Upload, FileSpreadsheet, ArrowRight, CheckCircle, AlertCircle, ArrowLeft, Plus, Inbox, LayoutGrid, List, MoreHorizontal, Send, Wand2, Paperclip, File, Search, ClipboardList, Save, History, BookOpen, Edit, Coins, Sparkles } from 'lucide-react';
+import { Phone, Mail, Building, Calendar, User as UserIcon, X, MessageSquare, Clock, MapPin, Upload, FileSpreadsheet, ArrowRight, CheckCircle, AlertCircle, ArrowLeft, Plus, Inbox, LayoutGrid, List, MoreHorizontal, Send, Wand2, Paperclip, File, Search, ClipboardList, Save, History, BookOpen, Edit, Coins, Sparkles, Terminal, ExternalLink } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
 import { api } from '../services/api';
 
@@ -81,6 +81,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
   const [isProvisioning, setIsProvisioning] = useState(false);
+  const [isTerminating, setIsTerminating] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState('');
   const [selectedAttachments, setSelectedAttachments] = useState<Document[]>([]);
   const [commHistory, setCommHistory] = useState<any[]>([]);
@@ -366,32 +367,6 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                     <button onClick={handleOpenEmail} className="text-xs bg-blue-600 text-white px-3 py-1 rounded-md font-medium flex items-center gap-1"><Send size={12} /> Email</button>
                     <button onClick={() => setIsNotesSidebarOpen(true)} className="text-xs bg-white dark:bg-gray-700 border border-gray-200 px-2 py-1 rounded-md" title="Notes & Logs"><ClipboardList size={14} /></button>
 
-                    {/* Demo Provisioning Button */}
-                    {(user.role === 'ADMIN') && (
-                      <button
-                        onClick={async () => {
-                          if (!selectedContact) return;
-                          setIsProvisioning(true);
-                          try {
-                            const result = await api.provisionDemo(selectedContact.id);
-                            window.open(result.demoUrl, '_blank');
-                          } catch (err) {
-                            alert(err instanceof Error ? err.message : 'Failed to provision demo');
-                          } finally {
-                            setIsProvisioning(false);
-                          }
-                        }}
-                        disabled={isProvisioning}
-                        className="text-xs bg-purple-600 text-white px-3 py-1 rounded-md font-medium flex items-center gap-1 hover:bg-purple-700 transition-colors disabled:opacity-50"
-                      >
-                        {isProvisioning ? (
-                          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <Sparkles size={12} />
-                        )}
-                        Launch Demo
-                      </button>
-                    )}
                   </div>
                 </div>
               </div>
@@ -459,6 +434,98 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                       )}
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Products Demo Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Products Demo</h3>
+                  {selectedContact.demo_status === 'ACTIVE' && (
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded-full border border-green-100 dark:border-green-800">
+                      <div className="w-1.5 h-1.5 bg-green-600 rounded-full animate-pulse" />
+                      ACTIVE
+                    </span>
+                  )}
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+                  {selectedContact.demo_status === 'ACTIVE' ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] text-gray-500 uppercase">Host Port</p>
+                          <p className="text-lg font-mono font-bold text-purple-600">:{selectedContact.demo_port}</p>
+                        </div>
+                        <button
+                          onClick={() => window.open(`http://demo.cortexcart.com:${selectedContact.demo_port}`, '_blank')}
+                          className="p-2 bg-white dark:bg-gray-600 text-purple-600 rounded-lg shadow-sm border border-purple-100 dark:border-purple-800 hover:bg-purple-50 transition-colors"
+                        >
+                          <ExternalLink size={18} />
+                        </button>
+                      </div>
+
+                      <div className="pt-2 border-t border-gray-200 dark:border-gray-600 flex gap-2">
+                        <button
+                          onClick={async () => {
+                            if (!window.confirm('Are you sure you want to terminate this demo? Any unsaved work in the demo environment will be lost.')) return;
+                            setIsTerminating(true);
+                            try {
+                              await api.terminateDemo(selectedContact.id);
+                              await onUpdateLead(selectedContact.id, { demo_status: 'INACTIVE', demo_port: undefined });
+                              // Local update to reflect in sidebar immediately
+                              setSelectedContact({ ...selectedContact, demo_status: 'INACTIVE', demo_port: undefined });
+                            } catch (err) {
+                              alert(err instanceof Error ? err.message : 'Failed to terminate demo');
+                            } finally {
+                              setIsTerminating(false);
+                            }
+                          }}
+                          disabled={isTerminating}
+                          className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-lg text-sm font-bold border border-red-100 dark:border-red-800 hover:bg-red-100 transition-colors disabled:opacity-50"
+                        >
+                          {isTerminating ? <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" /> : <Terminal size={14} />}
+                          Terminate Now
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-2 space-y-3">
+                      <div className="flex flex-col items-center gap-1">
+                        <Sparkles size={24} className="text-gray-300" />
+                        <p className="text-sm text-gray-500 font-medium">No Active Demo</p>
+                      </div>
+
+                      {user.role === 'ADMIN' && (
+                        <button
+                          onClick={async () => {
+                            setIsProvisioning(true);
+                            try {
+                              const result = await api.provisionDemo(selectedContact.id);
+                              // The provision call updates DB, so we should refresh the lead data.
+                              const port = parseInt(result.demoUrl.split(':').pop() || '8080');
+                              await onUpdateLead(selectedContact.id, { demo_status: 'ACTIVE', demo_port: port });
+                              setSelectedContact({ ...selectedContact, demo_status: 'ACTIVE', demo_port: port });
+                              window.open(result.demoUrl, '_blank');
+                            } catch (err) {
+                              alert(err instanceof Error ? err.message : 'Failed to provision demo');
+                            } finally {
+                              setIsProvisioning(false);
+                            }
+                          }}
+                          disabled={isProvisioning}
+                          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-purple-600 text-white rounded-lg text-sm font-bold shadow-lg shadow-purple-200 dark:shadow-none hover:bg-purple-700 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                        >
+                          {isProvisioning ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Sparkles size={16} />
+                          )}
+                          Launch New Demo
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

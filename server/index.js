@@ -529,7 +529,9 @@ app.use('/crm/nexaloom-crm/api/users', require('./routes/users')(pool));
 app.use('/crm/nexaloom-crm/api/settings', require('./routes/settings')(pool));
 
 // --- DEMO PROVISIONING ROUTE ---
-app.post('/crm/nexaloom-crm/api/demos/provision', require('./routes/demos')(pool));
+const demoRoutes = require('./routes/demos')(pool);
+app.post('/crm/nexaloom-crm/api/demos/provision', demoRoutes.provision);
+app.post('/crm/nexaloom-crm/api/demos/terminate', demoRoutes.terminate);
 
 app.get('/crm/nexaloom-crm/api/leads/:id/timeline', async (req, res) => {
     const { id } = req.params;
