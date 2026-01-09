@@ -369,5 +369,16 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ id, name }),
     });
+  },
+  provisionDemo: async (leadId: string) => {
+    const response = await req(`/demos/provision`, {
+      method: 'POST',
+      body: JSON.stringify({ leadId }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to provision demo');
+    }
+    return response.json();
   }
 };

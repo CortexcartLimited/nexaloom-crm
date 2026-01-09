@@ -11,6 +11,9 @@ CREATE TABLE IF NOT EXISTS leads (
     currency VARCHAR(10) DEFAULT 'GBP',
     taxId VARCHAR(50),
     country VARCHAR(100),
+    demo_port INT,
+    demo_status VARCHAR(50) DEFAULT 'INACTIVE',
+    demo_last_launched DATETIME,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     lastInteraction DATETIME
 );

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Lead, Interaction, Document, KnowledgeBaseArticle, User } from '../types';
 import { generateEmailDraft } from '../services/geminiService';
-import { Phone, Mail, Building, Calendar, User as UserIcon, X, MessageSquare, Clock, MapPin, Upload, FileSpreadsheet, ArrowRight, CheckCircle, AlertCircle, ArrowLeft, Plus, Inbox, LayoutGrid, List, MoreHorizontal, Send, Wand2, Paperclip, File, Search, ClipboardList, Save, History, BookOpen, Edit, Coins } from 'lucide-react';
+import { Phone, Mail, Building, Calendar, User as UserIcon, X, MessageSquare, Clock, MapPin, Upload, FileSpreadsheet, ArrowRight, CheckCircle, AlertCircle, ArrowLeft, Plus, Inbox, LayoutGrid, List, MoreHorizontal, Send, Wand2, Paperclip, File, Search, ClipboardList, Save, History, BookOpen, Edit, Coins, Sparkles } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
 import { api } from '../services/api';
 
@@ -80,6 +80,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   const [emailBody, setEmailBody] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
+  const [isProvisioning, setIsProvisioning] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState('');
   const [selectedAttachments, setSelectedAttachments] = useState<Document[]>([]);
   const [commHistory, setCommHistory] = useState<any[]>([]);
@@ -356,7 +357,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                 <div>
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selectedContact.name}</h2>
                   <p className="text-gray-500 dark:text-gray-400 text-sm flex items-center gap-1 mt-1"><Building size={14} />{selectedContact.company}</p>
-                  <div className="mt-3 flex gap-2">
+                  <div className="mt-3 flex flex-wrap gap-2">
                     {isEditing ? (
                       <button onClick={handleSaveContactUpdates} className="text-xs bg-green-600 text-white px-3 py-1 rounded-md font-medium flex items-center gap-1"><Save size={12} /> Save</button>
                     ) : (
@@ -364,6 +365,33 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                     )}
                     <button onClick={handleOpenEmail} className="text-xs bg-blue-600 text-white px-3 py-1 rounded-md font-medium flex items-center gap-1"><Send size={12} /> Email</button>
                     <button onClick={() => setIsNotesSidebarOpen(true)} className="text-xs bg-white dark:bg-gray-700 border border-gray-200 px-2 py-1 rounded-md" title="Notes & Logs"><ClipboardList size={14} /></button>
+
+                    {/* Demo Provisioning Button */}
+                    {(user.role === 'ADMIN') && (
+                      <button
+                        onClick={async () => {
+                          if (!selectedContact) return;
+                          setIsProvisioning(true);
+                          try {
+                            const result = await api.provisionDemo(selectedContact.id);
+                            window.open(result.demoUrl, '_blank');
+                          } catch (err) {
+                            alert(err instanceof Error ? err.message : 'Failed to provision demo');
+                          } finally {
+                            setIsProvisioning(false);
+                          }
+                        }}
+                        disabled={isProvisioning}
+                        className="text-xs bg-purple-600 text-white px-3 py-1 rounded-md font-medium flex items-center gap-1 hover:bg-purple-700 transition-colors disabled:opacity-50"
+                      >
+                        {isProvisioning ? (
+                          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Sparkles size={12} />
+                        )}
+                        Launch Demo
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

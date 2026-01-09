@@ -528,6 +528,9 @@ app.use('/crm/nexaloom-crm/api/users', require('./routes/users')(pool));
 // --- SETTINGS ROUTES ---
 app.use('/crm/nexaloom-crm/api/settings', require('./routes/settings')(pool));
 
+// --- DEMO PROVISIONING ROUTE ---
+app.post('/crm/nexaloom-crm/api/demos/provision', require('./routes/demos')(pool));
+
 app.get('/crm/nexaloom-crm/api/leads/:id/timeline', async (req, res) => {
     const { id } = req.params;
     const { tenantId } = req.query;

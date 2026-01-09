@@ -1,0 +1,4 @@
+ALTER TABLE leads 
+ADD COLUMN demo_port INT,
+ADD COLUMN demo_status VARCHAR(50) DEFAULT 'INACTIVE',
+ADD COLUMN demo_last_launched DATETIME;
