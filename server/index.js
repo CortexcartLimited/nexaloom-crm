@@ -27,6 +27,12 @@ const pool = mysql.createPool({
     database: process.env.DB_NAME,
 });
 
+// --- DEMO PROVISIONING ROUTE ---
+const demoRoutes = require('./routes/demos')(pool);
+app.post('/api/demos/provision', demoRoutes.provision);
+app.post('/api/demos/terminate', demoRoutes.terminate);
+
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -528,10 +534,7 @@ app.use('/crm/nexaloom-crm/api/users', require('./routes/users')(pool));
 // --- SETTINGS ROUTES ---
 app.use('/crm/nexaloom-crm/api/settings', require('./routes/settings')(pool));
 
-// --- DEMO PROVISIONING ROUTE ---
-const demoRoutes = require('./routes/demos')(pool);
-app.post('/crm/nexaloom-crm/api/demos/provision', demoRoutes.provision);
-app.post('/crm/nexaloom-crm/api/demos/terminate', demoRoutes.terminate);
+
 
 app.get('/crm/nexaloom-crm/api/leads/:id/timeline', async (req, res) => {
     const { id } = req.params;
