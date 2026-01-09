@@ -170,6 +170,22 @@ const App: React.FC = () => {
     setTickets(fetchedTickets);
     setUsers(fetchedUsers);
     setDocuments(fetchedDocuments);
+
+    // Derive Demo Accounts from Leads
+    const activeDemos = fetchedLeads
+      .filter(l => l.demo_status === 'ACTIVE' || l.demo_port)
+      .map(l => ({
+        id: `demo-${l.id}`,
+        tenantId: l.tenantId,
+        leadId: l.id,
+        leadName: l.name,
+        username: `port-${l.demo_port || 'pending'}`,
+        passwordHash: '********',
+        status: (l.demo_status === 'ACTIVE' ? 'ACTIVE' : 'EXPIRED') as any,
+        expiresAt: new Date(new Date(l.demo_last_launched || Date.now()).getTime() + 86400000 * 7).toISOString(),
+        createdAt: l.demo_last_launched || new Date().toISOString()
+      }));
+    setDemoAccounts(activeDemos);
   };
 
   const handleLoginSuccess = async (token: string, user: any) => {
@@ -512,19 +528,16 @@ const App: React.FC = () => {
 
   const handleAddDemo = async (demoData: Omit<DemoAccount, 'id' | 'tenantId' | 'createdAt' | 'status'>) => {
     if (!auth.tenant) return;
-    const newDemo: DemoAccount = {
-      ...demoData,
-      id: `demo-${Date.now()}`,
-      tenantId: auth.tenant.id,
-      createdAt: new Date().toISOString(),
-      status: 'ACTIVE'
-    };
-    setDemoAccounts(prev => [newDemo, ...prev]);
+    // The DemoAccountsView now calls the API directly, so we just refresh everything
+    await loadData(auth.tenant.id);
   };
 
   const handleDeleteDemo = async (id: string) => {
-    setDemoAccounts(prev => prev.filter(d => d.id !== id));
+    if (!auth.tenant) return;
+    // The DemoAccountsView now calls the API directly, so we just refresh everything
+    await loadData(auth.tenant.id);
   };
+
 
   const handleAddProposal = async (proposal: Proposal) => {
     if (!auth.tenant) throw new Error("Tenant ID missing"); // Throwing allows caller to catch

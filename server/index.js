@@ -35,14 +35,15 @@ const pool = mysql.createPool({
 app.use('/crm/nexaloom-crm/api/auth', require('./routes/auth')(pool));
 
 // Apply Auth Middleware to all API routes below
-// NOTE: We exclude /api/auth (defined above) and maybe public endpoints if any.
-// For now, protecting everything else.
-app.use('/crm/nexaloom-crm/api', authenticateToken);
+// NOTE: We catch both the original and rewritten paths from the proxy
+app.use(['/api', '/crm/nexaloom-crm/api'], authenticateToken);
 
 // --- DEMO PROVISIONING ROUTE ---
 const demoRoutes = require('./routes/demos')(pool);
-app.post('/crm/nexaloom-crm/api/demos/provision', demoRoutes.provision);
-app.post('/crm/nexaloom-crm/api/demos/terminate', demoRoutes.terminate);
+// Mount on both paths to be safe
+app.post(['/api/demos/provision', '/crm/nexaloom-crm/api/demos/provision'], demoRoutes.provision);
+app.post(['/api/demos/terminate', '/crm/nexaloom-crm/api/demos/terminate'], demoRoutes.terminate);
+
 
 
 // --- LEADS ROUTES ---
