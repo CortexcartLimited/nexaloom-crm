@@ -20,6 +20,9 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-id']
 }));
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 const pool = mysql.createPool({
     host: 'localhost',
     user: process.env.DB_USER,
@@ -27,15 +30,6 @@ const pool = mysql.createPool({
     database: process.env.DB_NAME,
 });
 
-// --- DEMO PROVISIONING ROUTE ---
-const demoRoutes = require('./routes/demos')(pool);
-app.post('/api/demos/provision', demoRoutes.provision);
-app.post('/api/demos/terminate', demoRoutes.terminate);
-
-
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // --- AUTH ROUTES ---
 app.use('/crm/nexaloom-crm/api/auth', require('./routes/auth')(pool));
@@ -44,6 +38,12 @@ app.use('/crm/nexaloom-crm/api/auth', require('./routes/auth')(pool));
 // NOTE: We exclude /api/auth (defined above) and maybe public endpoints if any.
 // For now, protecting everything else.
 app.use('/crm/nexaloom-crm/api', authenticateToken);
+
+// --- DEMO PROVISIONING ROUTE ---
+const demoRoutes = require('./routes/demos')(pool);
+app.post('/crm/nexaloom-crm/api/demos/provision', demoRoutes.provision);
+app.post('/crm/nexaloom-crm/api/demos/terminate', demoRoutes.terminate);
+
 
 // --- LEADS ROUTES ---
 
