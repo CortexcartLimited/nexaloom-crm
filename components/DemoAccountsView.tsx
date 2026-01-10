@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DemoAccount, Lead, User, Interaction } from '../types';
-import { Rocket, ExternalLink, Shield, Trash2, Clock, CheckCircle, User as UserIcon, X, Wand2, Monitor, AlertTriangle, Calendar, RefreshCw, ArrowRight } from 'lucide-react';
+import { Rocket, ExternalLink, Shield, Trash2, Clock, CheckCircle, User as UserIcon, X, Wand2, Monitor, AlertTriangle, Calendar, RefreshCw, ArrowRight, Loader2 } from 'lucide-react';
 import { api } from '../services/api';
 
 interface DemoAccountsViewProps {
@@ -16,11 +16,13 @@ interface DemoAccountsViewProps {
 interface AgentDemo {
     project_name: string;
     port: number;
-    status?: string;
+    status: 'ACTIVE' | 'PROVISIONING' | 'ERROR';
+    leadId?: string; // Optional linking ID
 }
 
-export const DemoAccountsView: React.FC<DemoAccountsViewProps> = ({ demoAccounts, leads, user, onAddDemo, onDeleteDemo, onAddInteraction }) => {
-    const [liveDemos, setLiveDemos] = useState<AgentDemo[]>([]);
+export const DemoAccountsView: React.FC<DemoAccountsViewProps> = ({ demoAccounts, leads: initialLeads, user, onAddDemo, onDeleteDemo, onAddInteraction }) => {
+    const [leads, setLeads] = useState<Lead[]>(initialLeads);
+    const [agentDemos, setAgentDemos] = useState<AgentDemo[]>([]);
     const [isLoadingDemos, setIsLoadingDemos] = useState(true);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -35,7 +37,11 @@ export const DemoAccountsView: React.FC<DemoAccountsViewProps> = ({ demoAccounts
     const [selectedLeadId, setSelectedLeadId] = useState('');
     const defaultExpiry = new Date();
     defaultExpiry.setDate(defaultExpiry.getDate() + 7);
-    const [expiryDate, setExpiryDate] = useState(defaultExpiry.toISOString().split('T')[0]);
+
+    // Sync leads state when props change
+    useEffect(() => {
+        setLeads(initialLeads);
+    }, [initialLeads]);
 
     // FETCH DATA FROM AGENT
     useEffect(() => {
@@ -43,20 +49,18 @@ export const DemoAccountsView: React.FC<DemoAccountsViewProps> = ({ demoAccounts
             setIsLoadingDemos(true);
             try {
                 // Fetch directly from the agent
-                // Note: Direct browser-to-VM request. 
-                // Ensure CORS is allowed on the agent or this might need a proxy.
-                // Assuming internal network or appropriate CORS headers on the agent.
                 const response = await fetch('http://35.208.82.250:5001/list-demos');
                 if (!response.ok) throw new Error('Failed to fetch demos from agent');
 
                 const data = await response.json();
-                // Adjusting based on common patterns, assuming array or { demos: [] }
-                const list = Array.isArray(data) ? data : (data.demos || []);
-                setLiveDemos(list);
+                const list = (Array.isArray(data) ? data : (data.demos || [])).map((d: any) => ({
+                    ...d,
+                    status: 'ACTIVE'
+                }));
+                setAgentDemos(list);
             } catch (error) {
                 console.error("Agent Fetch Error:", error);
-                // Fallback to empty or show error state if needed
-                // For now, keeping liveDemos empty implies "No Active Demos" or error
+                // On error, we rely on DB status
             } finally {
                 setIsLoadingDemos(false);
             }
@@ -64,6 +68,44 @@ export const DemoAccountsView: React.FC<DemoAccountsViewProps> = ({ demoAccounts
 
         fetchDemos();
     }, [refreshTrigger]);
+
+    // POLLING MECHANISM
+    useEffect(() => {
+        // Poll if there are any provisioning leads
+        const provisioningLeads = leads.filter(l => l.demo_status === 'PROVISIONING');
+        if (provisioningLeads.length === 0) return;
+
+        const interval = setInterval(async () => {
+            console.log("Polling for updates...", provisioningLeads.length, "pending");
+            try {
+                // We need to refresh leads to check status
+                // We use user.tenantId if available, roughly matching the App.tsx pattern
+                if (!user?.tenantId) return;
+
+                const updatedLeads = await api.getLeads(user.tenantId);
+
+                // If any transitioned to ACTIVE, duplicate logic might remove them from "Provisioning" bucket
+                // and they might appear in "Agent" bucket if we refresh that too.
+                const anyFinished = updatedLeads.some(ul => {
+                    const old = leads.find(l => l.id === ul.id);
+                    return old?.demo_status === 'PROVISIONING' && ul.demo_status === 'ACTIVE';
+                });
+
+                // Update local leads state
+                setLeads(updatedLeads);
+
+                if (anyFinished) {
+                    setRefreshTrigger(prev => prev + 1); // Refresh agent list too
+                }
+
+            } catch (e) {
+                console.error("Polling error", e);
+            }
+        }, 10000); // 10 seconds
+
+        return () => clearInterval(interval);
+    }, [leads, user?.tenantId]);
+
 
     const handleProvision = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -73,12 +115,17 @@ export const DemoAccountsView: React.FC<DemoAccountsViewProps> = ({ demoAccounts
         setProvisioning(true);
         try {
             const result = await api.provisionDemo(lead.id);
-            // After successful provision, refresh the list
-            setTimeout(() => setRefreshTrigger(prev => prev + 1), 2000); // Give it a moment to appear
+            // Result should contain { success: true, status: 'PROVISIONING', ... }
+
+            // Immediate UI update to show provisioning card
+            // We manually update local state so the specific card shows "Building..." immediately
+            setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, demo_status: 'PROVISIONING', demo_port: 0 } : l));
 
             setProvisioning(false);
             setIsProvisionModalOpen(false);
             setSelectedLeadId('');
+
+            // Trigger poll immediately effectively by state change above logic (useEffect dependency)
         } catch (err: any) {
             alert(err.message || 'Failed to provision demo');
             setProvisioning(false);
@@ -96,7 +143,7 @@ export const DemoAccountsView: React.FC<DemoAccountsViewProps> = ({ demoAccounts
         // Optimistic UI updates
         setIsTerminateModalOpen(false);
 
-        // Toast notification (Custom simplified implementation)
+        // Toast notification
         const toast = document.createElement('div');
         toast.className = 'fixed bottom-4 right-4 bg-gray-900 text-white px-6 py-3 rounded-lg shadow-xl z-[200] flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2';
         toast.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-loader-2 animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> <div><p class="font-bold text-sm">Termination Started</p><p class="text-xs text-gray-400">We will notify you when resources are cleared.</p></div>`;
@@ -105,26 +152,64 @@ export const DemoAccountsView: React.FC<DemoAccountsViewProps> = ({ demoAccounts
 
         try {
             // Send DELETE request to agent
-            const response = await fetch('http://35.208.82.250:5001/deploy', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ port: demoToTerminate.port })
-            });
+            // Strategy: Try using Backend API first for DB sync, else direct agent
 
-            if (response.ok) {
-                // Success
-                alert(`Success: Demo ${demoToTerminate.project_name} has been fully terminated.`);
-                setRefreshTrigger(prev => prev + 1); // Refresh list
-            } else {
-                const errText = await response.text();
-                throw new Error(errText || 'Agent responded with error');
+            let targetLeadId = demoToTerminate.leadId;
+            if (!targetLeadId && demoToTerminate.project_name.startsWith('demo-')) {
+                targetLeadId = demoToTerminate.project_name.replace('demo-', '');
             }
+
+            // If we have leadId, use backend to ensure DB sync
+            if (targetLeadId) {
+                await api.terminateDemo(targetLeadId); // This calls fetch(backend -> terminate)
+            } else {
+                // Fallback to direct agent delete if we can't find leadId
+                const response = await fetch('http://35.208.82.250:5001/deploy', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ port: demoToTerminate.port })
+                });
+                if (!response.ok) throw new Error(await response.text());
+            }
+
+            alert(`Success: Demo ${demoToTerminate.project_name} has been fully terminated.`);
+
+            // Refresh logic
+            if (user?.tenantId) {
+                const updatedLeads = await api.getLeads(user.tenantId);
+                setLeads(updatedLeads);
+            }
+            setRefreshTrigger(prev => prev + 1);
+
         } catch (error) {
             console.error("Termination Failed:", error);
-            // In case of error, we might want to alert the user
             alert(`Termination Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     };
+
+    // MERGE LISTS
+    // 1. provisioningLeads
+    const provisioningDemos: AgentDemo[] = leads
+        .filter(l => l.demo_status === 'PROVISIONING')
+        .map(l => ({
+            project_name: `demo-${l.id}`, // Construction assumption
+            port: l.demo_port || 0,
+            status: 'PROVISIONING',
+            leadId: l.id
+        }));
+
+    // 2. Combine with agentDemos (deduplicating if any overlapping)
+    // Preference to Agent Demos if they exist because they have real ports.
+    const mergedDemos = [...agentDemos];
+
+    provisioningDemos.forEach(pd => {
+        // If not already in agent list (by name or port)
+        const exists = mergedDemos.find(m => m.project_name === pd.project_name || (m.port !== 0 && m.port === pd.port));
+        if (!exists) {
+            mergedDemos.push(pd);
+        }
+    });
+
 
     return (
         <div className="p-8 h-full flex flex-col bg-gray-50/50 dark:bg-gray-900/50">
@@ -151,13 +236,12 @@ export const DemoAccountsView: React.FC<DemoAccountsViewProps> = ({ demoAccounts
                 </div>
             </div>
 
-            {isLoadingDemos ? (
+            {isLoadingDemos && mergedDemos.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-gray-400 animate-pulse">
                     <div className="w-16 h-16 bg-gray-200 dark:bg-gray-800 rounded-full mb-4"></div>
                     <div className="h-4 w-48 bg-gray-200 dark:bg-gray-800 rounded mb-2"></div>
-                    <div className="h-3 w-32 bg-gray-200 dark:bg-gray-800 rounded"></div>
                 </div>
-            ) : liveDemos.length === 0 ? (
+            ) : mergedDemos.length === 0 ? (
                 /* Empty State */
                 <div className="flex-1 flex flex-col items-center justify-center p-12 text-center rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/50">
                     <div className="w-24 h-24 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center mb-6">
@@ -165,7 +249,7 @@ export const DemoAccountsView: React.FC<DemoAccountsViewProps> = ({ demoAccounts
                     </div>
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Active Demos</h3>
                     <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-8">
-                        There are no demo instances currently running on the server. You can provision a new one or check back later.
+                        There are no demo instances currently running. Launch one to get started.
                     </p>
                     <button
                         onClick={() => setIsProvisionModalOpen(true)}
@@ -177,53 +261,74 @@ export const DemoAccountsView: React.FC<DemoAccountsViewProps> = ({ demoAccounts
             ) : (
                 /* Cards Grid */
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 overflow-y-auto pb-20 custom-scrollbar">
-                    {liveDemos.map((demo, idx) => (
-                        <div key={`${demo.project_name}-${idx}`} className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col">
+                    {mergedDemos.map((demo, idx) => {
+                        const isProvisioning = demo.status === 'PROVISIONING';
+                        return (
+                            <div key={`${demo.project_name}-${idx}`} className={`bg-white dark:bg-gray-800 rounded-2xl p-6 border ${isProvisioning ? 'border-indigo-200 dark:border-indigo-900 ring-2 ring-indigo-50 dark:ring-indigo-900/20' : 'border-gray-100 dark:border-gray-700'} shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col relative overflow-hidden`}>
 
-                            <div className="flex justify-between items-start mb-6">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 flex items-center justify-center shrink-0">
-                                        <Monitor size={24} />
-                                    </div>
-                                    <div className="overflow-hidden">
-                                        <h3 className="font-bold text-gray-900 dark:text-white text-lg truncate" title={demo.project_name}>
-                                            {demo.project_name}
-                                        </h3>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-bold uppercase tracking-wide border border-green-200 dark:border-green-800">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                                                Running
-                                            </span>
-                                            <span className="text-[10px] text-gray-400 font-mono">ID: {idx + 1}</span>
+                                <div className="flex justify-between items-start mb-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-12 h-12 rounded-xl ${isProvisioning ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-500 animate-pulse' : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600'} flex items-center justify-center shrink-0`}>
+                                            <Monitor size={24} />
+                                        </div>
+                                        <div className="overflow-hidden">
+                                            <h3 className="font-bold text-gray-900 dark:text-white text-lg truncate" title={demo.project_name}>
+                                                {demo.project_name}
+                                            </h3>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                {isProvisioning ? (
+                                                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-wide border border-indigo-200 dark:border-indigo-800">
+                                                        <Loader2 size={10} className="animate-spin" />
+                                                        Building...
+                                                    </span>
+                                                ) : (
+                                                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-bold uppercase tracking-wide border border-green-200 dark:border-green-800">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                                                        Running
+                                                    </span>
+                                                )}
+                                                <span className="text-[10px] text-gray-400 font-mono">ID: {idx + 1}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="flex-1 bg-gray-50 dark:bg-gray-900/50 rounded-xl p-6 mb-6 flex flex-col items-center justify-center border border-dashed border-gray-200 dark:border-gray-700 group-hover:border-indigo-200 dark:group-hover:border-indigo-900/50 transition-colors">
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Running on Port</span>
-                                <span className="text-5xl font-black text-gray-900 dark:text-white font-mono tracking-tighter">
-                                    {demo.port}
-                                </span>
-                            </div>
+                                <div className="flex-1 bg-gray-50 dark:bg-gray-900/50 rounded-xl p-6 mb-6 flex flex-col items-center justify-center border border-dashed border-gray-200 dark:border-gray-700 group-hover:border-indigo-200 dark:group-hover:border-indigo-900/50 transition-colors">
+                                    {isProvisioning ? (
+                                        <div className="text-center">
+                                            <div className="w-full bg-gray-200 rounded-full h-1.5 mb-2 dark:bg-gray-700 w-32 mx-auto">
+                                                <div className="bg-indigo-600 h-1.5 rounded-full animate-[loading_2s_ease-in-out_infinite]" style={{ width: '60%' }}></div>
+                                            </div>
+                                            <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium animate-pulse">Assigning Port...</span>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Running on Port</span>
+                                            <span className="text-5xl font-black text-gray-900 dark:text-white font-mono tracking-tighter">
+                                                {demo.port}
+                                            </span>
+                                        </>
+                                    )}
+                                </div>
 
-                            <div className="space-y-3 mt-auto">
-                                <button
-                                    onClick={() => window.open(`http://35.208.82.250:${demo.port}`, '_blank')}
-                                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-transform hover:scale-[1.02]"
-                                >
-                                    Enter Demo Environment <ExternalLink size={16} />
-                                </button>
-                                <button
-                                    onClick={() => confirmDecommission(demo)}
-                                    className="w-full py-2.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors opacity-80 hover:opacity-100"
-                                >
-                                    <Trash2 size={16} />
-                                    Decommission Demo
-                                </button>
+                                <div className="space-y-3 mt-auto">
+                                    <button
+                                        onClick={() => window.open(`http://35.208.82.250:${demo.port}`, '_blank')}
+                                        className={`w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] ${isProvisioning ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
+                                    >
+                                        Enter Demo Environment <ExternalLink size={16} />
+                                    </button>
+                                    <button
+                                        onClick={() => confirmDecommission(demo)}
+                                        className={`w-full py-2.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors opacity-80 hover:opacity-100 ${isProvisioning ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
+                                    >
+                                        <Trash2 size={16} />
+                                        Decommission Demo
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
