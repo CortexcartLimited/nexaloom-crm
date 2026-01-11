@@ -1,4 +1,9 @@
 import React from 'react';
+// Polyfill for Twilio Voice SDK in Vite
+if (typeof global === 'undefined') {
+  (window as any).global = window;
+}
+
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 

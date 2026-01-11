@@ -574,6 +574,9 @@ app.use('/crm/nexaloom-crm/api/users', require('./routes/users')(pool));
 // --- SETTINGS ROUTES ---
 app.use('/crm/nexaloom-crm/api/settings', require('./routes/settings')(pool));
 
+// --- TWILIO VOICE ROUTES ---
+app.use('/crm/nexaloom-crm/api/voice', require('./routes/voice'));
+
 
 
 app.get('/crm/nexaloom-crm/api/leads/:id/timeline', async (req, res) => {
