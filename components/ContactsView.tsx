@@ -147,6 +147,12 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
             }
             return prev;
           });
+
+          // Polling for Timeline Updates (Call Logs, etc.)
+          const timelineData = await api.getTimeline(selectedContact.id, tenantId);
+          if (Array.isArray(timelineData)) {
+            setTimelineItems(timelineData);
+          }
         } catch (err) {
           console.error("Polling error:", err);
         }
