@@ -476,17 +476,17 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                         <div className="flex-1 mr-4 overflow-hidden">
                           <p className="text-[10px] text-gray-500 uppercase mb-1">Live Demo URL</p>
                           <a
-                            href={`http://demo.cortexcart.com:${selectedContact.demo_port}`}
+                            href={`http://demo.cortexcart.com:${selectedContact.demo_port || 8080}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-sm font-mono font-bold text-purple-600 hover:text-purple-700 hover:underline truncate block"
-                            title={`http://demo.cortexcart.com:${selectedContact.demo_port}`}
+                            title={`http://demo.cortexcart.com:${selectedContact.demo_port || 8080}`}
                           >
-                            https://demo.cortexcart.com:{selectedContact.demo_port}
+                            https://demo.cortexcart.com:{selectedContact.demo_port || 8080}
                           </a>
                         </div>
                         <button
-                          onClick={() => window.open(`http://demo.cortexcart.com:${selectedContact.demo_port}`, '_blank')}
+                          onClick={() => window.open(`http://demo.cortexcart.com:${selectedContact.demo_port || 8080}`, '_blank')}
                           className="p-2 bg-white dark:bg-gray-600 text-purple-600 rounded-lg shadow-sm border border-purple-100 dark:border-purple-800 hover:bg-purple-50 transition-colors shrink-0"
                         >
                           <ExternalLink size={18} />
@@ -534,14 +534,14 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                               const result = await api.provisionDemo(selectedContact.id);
 
                               // 1. Immediate UI update: PROVISIONING
-                              await onUpdateLead(selectedContact.id, { demo_status: 'PROVISIONING', demo_port: 0 });
-                              setSelectedContact({ ...selectedContact, demo_status: 'PROVISIONING', demo_port: 0 });
+                              await onUpdateLead(selectedContact.id, { demo_status: 'PROVISIONING', demo_port: 8080 });
+                              setSelectedContact({ ...selectedContact, demo_status: 'PROVISIONING', demo_port: 8080 });
 
                               // 2. Wait 60 seconds (Frontend Timer)
                               setTimeout(async () => {
                                 // 3. Assume active after timeout
                                 // Extract port from initial result or default (since initial result usually has it)
-                                const port = parseInt(result.demoUrl.split(':').pop() || '0');
+                                const port = parseInt(result.demoUrl.split(':').pop() || '8080') || 8080;
 
                                 // Update Backend to ACTIVE
                                 await api.updateLeadStatus(selectedContact.id, 'ACTIVE');
