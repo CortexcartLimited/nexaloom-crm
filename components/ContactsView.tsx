@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Lead, Interaction, Document, KnowledgeBaseArticle, User } from '../types';
 import { generateEmailDraft } from '../services/geminiService';
-import { Phone, Mail, Building, Calendar, User as UserIcon, X, MessageSquare, Clock, MapPin, Upload, FileSpreadsheet, ArrowRight, CheckCircle, AlertCircle, ArrowLeft, Plus, Inbox, LayoutGrid, List, MoreHorizontal, Send, Wand2, Paperclip, File, Search, ClipboardList, Save, History, BookOpen, Edit, Coins, Sparkles, Terminal, ExternalLink } from 'lucide-react';
+import { Phone, Mail, Building, Calendar, User as UserIcon, X, MessageSquare, Clock, MapPin, Upload, FileSpreadsheet, ArrowRight, CheckCircle, AlertCircle, ArrowLeft, Plus, Inbox, LayoutGrid, List, MoreHorizontal, Send, Wand2, Paperclip, File, Search, ClipboardList, Save, History, BookOpen, Edit, Coins, Sparkles, Terminal, ExternalLink, Monitor, Loader2 } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
 import { api } from '../services/api';
 
@@ -449,17 +449,45 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                   )}
                 </div>
 
-                <div className="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-                  {selectedContact.demo_status === 'ACTIVE' ? (
+                {selectedContact.demo_status === 'PROVISIONING' ? (
+                  <div className="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-6 border border-indigo-100 dark:border-indigo-900 ring-1 ring-indigo-50 dark:ring-indigo-900/20 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="relative">
+                        <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/40 text-indigo-500 flex items-center justify-center">
+                          <Monitor size={24} />
+                        </div>
+                        <div className="absolute -bottom-1 -right-1 bg-white dark:bg-gray-800 rounded-full p-0.5">
+                          <Loader2 size={14} className="text-indigo-600 animate-spin" />
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-gray-900 dark:text-white">Provisioning Environment...</h4>
+                        <p className="text-xs text-gray-500 mt-1 max-w-[200px] mx-auto">Please wait while we spin up your dedicated demo instance.</p>
+                      </div>
+                      <div className="w-full max-w-[160px] bg-gray-200 rounded-full h-1 mt-2 dark:bg-gray-600 overflow-hidden">
+                        <div className="bg-indigo-600 h-1 rounded-full animate-[loading_1.5s_ease-in-out_infinite]" style={{ width: '60%' }}></div>
+                      </div>
+                    </div>
+                  </div>
+                ) : selectedContact.demo_status === 'ACTIVE' ? (
+                  <div className="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-[10px] text-gray-500 uppercase">Host Port</p>
-                          <p className="text-lg font-mono font-bold text-purple-600">:{selectedContact.demo_port}</p>
+                        <div className="flex-1 mr-4 overflow-hidden">
+                          <p className="text-[10px] text-gray-500 uppercase mb-1">Live Demo URL</p>
+                          <a
+                            href={`http://demo.cortexcart.com:${selectedContact.demo_port}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-mono font-bold text-purple-600 hover:text-purple-700 hover:underline truncate block"
+                            title={`http://demo.cortexcart.com:${selectedContact.demo_port}`}
+                          >
+                            https://demo.cortexcart.com:{selectedContact.demo_port}
+                          </a>
                         </div>
                         <button
                           onClick={() => window.open(`http://demo.cortexcart.com:${selectedContact.demo_port}`, '_blank')}
-                          className="p-2 bg-white dark:bg-gray-600 text-purple-600 rounded-lg shadow-sm border border-purple-100 dark:border-purple-800 hover:bg-purple-50 transition-colors"
+                          className="p-2 bg-white dark:bg-gray-600 text-purple-600 rounded-lg shadow-sm border border-purple-100 dark:border-purple-800 hover:bg-purple-50 transition-colors shrink-0"
                         >
                           <ExternalLink size={18} />
                         </button>
@@ -489,7 +517,9 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                         </button>
                       </div>
                     </div>
-                  ) : (
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
                     <div className="text-center py-2 space-y-3">
                       <div className="flex flex-col items-center gap-1">
                         <Sparkles size={24} className="text-gray-300" />
@@ -502,11 +532,10 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                             setIsProvisioning(true);
                             try {
                               const result = await api.provisionDemo(selectedContact.id);
-                              // The provision call updates DB, so we should refresh the lead data.
-                              const port = parseInt(result.demoUrl.split(':').pop() || '8080');
-                              await onUpdateLead(selectedContact.id, { demo_status: 'ACTIVE', demo_port: port });
-                              setSelectedContact({ ...selectedContact, demo_status: 'ACTIVE', demo_port: port });
-                              window.open(result.demoUrl, '_blank');
+                              // The provision now returns immediately with 'PROVISIONING' status
+                              // logic updated to handle async provisioning flow
+                              await onUpdateLead(selectedContact.id, { demo_status: 'PROVISIONING', demo_port: 0 }); // update local view
+                              setSelectedContact({ ...selectedContact, demo_status: 'PROVISIONING', demo_port: 0 });
                             } catch (err) {
                               alert(err instanceof Error ? err.message : 'Failed to provision demo');
                             } finally {
@@ -525,8 +554,8 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                         </button>
                       )}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* Communication History Section */}
