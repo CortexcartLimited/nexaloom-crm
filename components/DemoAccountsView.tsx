@@ -71,6 +71,19 @@ export const DemoAccountsView: React.FC<DemoAccountsViewProps> = ({
         }
     };
 
+    const handleSync = async () => {
+        setIsRefreshing(true);
+        try {
+            const result = await api.syncDemos();
+            console.log(result.message);
+            await refreshLeads(); // Refresh data after sync
+        } catch (error) {
+            alert('Sync failed: ' + (error instanceof Error ? error.message : String(error)));
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
     return (
         <div className="p-8 h-full flex flex-col bg-gray-50/50 dark:bg-gray-900/50">
             {/* Header */}
@@ -84,6 +97,15 @@ export const DemoAccountsView: React.FC<DemoAccountsViewProps> = ({
                         <Loader2 size={12} className={isRefreshing ? "animate-spin text-blue-500" : "text-gray-300"} />
                         Auto-refresh (30s)
                     </span>
+                    <div className="h-4 w-px bg-gray-200 dark:bg-gray-700"></div>
+                    <button
+                        onClick={handleSync}
+                        className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded text-xs font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors flex items-center gap-1"
+                        title="Force Sync with VM"
+                    >
+                        <RefreshCw size={12} className={isRefreshing ? "animate-spin" : ""} />
+                        Sync Status
+                    </button>
                     <div className="h-4 w-px bg-gray-200 dark:bg-gray-700"></div>
                     <button
                         onClick={refreshLeads}

@@ -391,5 +391,15 @@ export const api = {
       throw new Error(errorData.error || 'Failed to terminate demo');
     }
     return response.json();
+  },
+  syncDemos: async () => {
+    const response = await req(`/demos/sync`, {
+      method: 'POST'
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to sync demos');
+    }
+    return response.json();
   }
 };
