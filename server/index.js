@@ -5,7 +5,9 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
 const { authenticateToken } = require('./middleware/authMiddleware');
-require('dotenv').config({ path: path.join(__dirname, '..', '.env.production') })
+const dotenv = require('dotenv');
+dotenv.config({ path: path.join(__dirname, '..', '.env.production') });
+dotenv.config({ path: path.join(__dirname, '..', '.env') }); // Load local .env as override/fallback
 console.log('DB Config Check:', {
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
