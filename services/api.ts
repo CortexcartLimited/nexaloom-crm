@@ -73,6 +73,11 @@ export const api = {
     if (!response.ok) return [];
     return response.json();
   },
+  getLead: async (id: string) => {
+    const response = await req(`/leads/${id}`);
+    if (!response.ok) throw new Error('Failed to fetch lead');
+    return response.json();
+  },
   createLead: async (lead: any) => {
     const response = await req(`/leads`, {
       method: 'POST',

@@ -65,6 +65,18 @@ app.get('/crm/nexaloom-crm/api/leads', async (req, res) => {
     }
 });
 
+// Get single lead
+app.get('/crm/nexaloom-crm/api/leads/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [rows] = await pool.query('SELECT * FROM leads WHERE id = ?', [id]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Lead not found' });
+        res.json(rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Add a new lead
 app.post('/crm/nexaloom-crm/api/leads', async (req, res) => {
     const { tenantId, name, company, email, phone, value, status, currency, country } = req.body;

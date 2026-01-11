@@ -85,6 +85,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   const [emailSuccess, setEmailSuccess] = useState('');
   const [selectedAttachments, setSelectedAttachments] = useState<Document[]>([]);
   const [commHistory, setCommHistory] = useState<any[]>([]);
+  const [provisioningTimeLeft, setProvisioningTimeLeft] = useState(300); // 5 minutes default
 
 
 
@@ -104,6 +105,13 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
 
   useEffect(() => {
     if (selectedContact) {
+      // Reset timer if we open a contact in provisioning state
+      if (selectedContact.demo_status === 'PROVISIONING') {
+        // Optionally we could calculate remaining time if we stored start time, but for now reset to 5m or keep existing if same contact
+      } else {
+        setProvisioningTimeLeft(300);
+      }
+
       const token = localStorage.getItem('nexaloom_token');
 
       // 1. Fetch Email History (Legacy Support - keeping for now if used elsewhere)
@@ -116,7 +124,6 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
 
       // 2. Fetch Unified Timeline
       const tenantId = localStorage.getItem('nexaloom_tenant_id') || user.tenantId;
-      console.log("Fetching timeline for tenant:", tenantId);
 
       api.getTimeline(selectedContact.id, tenantId)
         .then(data => {
@@ -126,11 +133,55 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
         })
         .catch(err => console.error("Failed to fetch timeline:", err));
 
+      // 3. Polling for Status Sync (Every 10 seconds)
+      const pollInterval = setInterval(async () => {
+        try {
+          // Polling for Demo Status Updates
+          const freshData = await api.getLead(selectedContact.id);
+          setSelectedContact(prev => {
+            // Only update if something changed to avoid re-renders or conflicts
+            if (!prev) return null;
+            // Merge relevant fields (status, port)
+            if (freshData.demo_status !== prev.demo_status || freshData.demo_port !== prev.demo_port) {
+              return { ...prev, ...freshData };
+            }
+            return prev;
+          });
+        } catch (err) {
+          console.error("Polling error:", err);
+        }
+      }, 10000);
+
+      return () => clearInterval(pollInterval);
+
     } else {
       setCommHistory([]);
       setTimelineItems([]);
+      setProvisioningTimeLeft(300);
     }
-  }, [selectedContact, user.tenantId]);
+  }, [selectedContact?.id, user.tenantId]); // Depend on ID, not full object to avoid poll loops
+
+  // 4. Countdown Timer Effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (selectedContact?.demo_status === 'PROVISIONING' && provisioningTimeLeft > 0) {
+      interval = setInterval(() => {
+        setProvisioningTimeLeft(prev => prev - 1);
+      }, 1000);
+    } else if (selectedContact?.demo_status === 'PROVISIONING' && provisioningTimeLeft <= 0) {
+      // Time's up! Force Active.
+      (async () => {
+        try {
+          await api.updateLeadStatus(selectedContact.id, 'ACTIVE');
+          const fresh = await api.getLead(selectedContact.id);
+          setSelectedContact(prev => prev ? { ...prev, demo_status: 'ACTIVE', demo_port: fresh.demo_port || 8080 } : null);
+        } catch (e) {
+          console.error("Auto-activation failed", e);
+        }
+      })();
+    }
+    return () => clearInterval(interval);
+  }, [selectedContact?.demo_status, provisioningTimeLeft, selectedContact?.id]);
 
   const contactInteractions = useMemo(() => {
     if (!selectedContact || !interactions) return [];
@@ -462,10 +513,16 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                       </div>
                       <div>
                         <h4 className="text-sm font-bold text-gray-900 dark:text-white">Provisioning Environment...</h4>
-                        <p className="text-xs text-gray-500 mt-1 max-w-[200px] mx-auto">Please wait while we spin up your dedicated demo instance.</p>
+                        <p className="text-xs text-gray-500 mt-1 max-w-[200px] mx-auto">
+                          Est. Remaining: {Math.floor(provisioningTimeLeft / 60)}m {provisioningTimeLeft % 60}s
+                        </p>
                       </div>
-                      <div className="w-full max-w-[160px] bg-gray-200 rounded-full h-1 mt-2 dark:bg-gray-600 overflow-hidden">
-                        <div className="bg-indigo-600 h-1 rounded-full animate-[loading_1.5s_ease-in-out_infinite]" style={{ width: '60%' }}></div>
+                      <div className="w-full max-w-[200px] bg-gray-200 rounded-full h-1.5 mt-2 dark:bg-gray-600 overflow-hidden relative">
+                        {/* 300s total. width % = (300 - left) / 300 * 100 */}
+                        <div
+                          className="bg-indigo-600 h-full rounded-full transition-all duration-1000 ease-linear"
+                          style={{ width: `${((300 - provisioningTimeLeft) / 300) * 100}%` }}
+                        ></div>
                       </div>
                     </div>
                   </div>
@@ -537,23 +594,10 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                               await onUpdateLead(selectedContact.id, { demo_status: 'PROVISIONING', demo_port: 8080 });
                               setSelectedContact({ ...selectedContact, demo_status: 'PROVISIONING', demo_port: 8080 });
 
-                              // 2. Wait 5 Minutes (Frontend Timer)
-                              setTimeout(async () => {
-                                // 3. Assume active after timeout
-                                // Extract port from initial result or default (since initial result usually has it)
-                                const port = parseInt(result.demoUrl.split(':').pop() || '8080') || 8080;
-
-                                // Update Backend to ACTIVE
-                                await api.updateLeadStatus(selectedContact.id, 'ACTIVE');
-
-                                // Update UI to ACTIVE
-                                await onUpdateLead(selectedContact.id, { demo_status: 'ACTIVE', demo_port: port });
-                                setSelectedContact(prev => prev ? { ...prev, demo_status: 'ACTIVE', demo_port: port } : null);
-
-                                setIsProvisioning(false);
-                                alert("Demo is ready! Click the link to view.");
-                              }, 300000); // 5 minutes
-
+                              // 2. Reset Timer & Polling State
+                              setProvisioningTimeLeft(300);
+                              setIsProvisioning(false);
+                              // The effects (countdown & polling) will handle the rest
                             } catch (err) {
                               alert(err instanceof Error ? err.message : 'Failed to provision demo');
                               setIsProvisioning(false);
