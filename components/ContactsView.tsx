@@ -496,7 +496,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                       <div className="pt-2 border-t border-gray-200 dark:border-gray-600 flex gap-2">
                         <button
                           onClick={async () => {
-                            if (!window.confirm('Are you sure you want to terminate this demo? Any unsaved work in the demo environment will be lost.')) return;
+                            // Instant termination (No Confirmation)
                             setIsTerminating(true);
                             try {
                               await api.terminateDemo(selectedContact.id);
@@ -537,7 +537,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                               await onUpdateLead(selectedContact.id, { demo_status: 'PROVISIONING', demo_port: 8080 });
                               setSelectedContact({ ...selectedContact, demo_status: 'PROVISIONING', demo_port: 8080 });
 
-                              // 2. Wait 60 seconds (Frontend Timer)
+                              // 2. Wait 5 Minutes (Frontend Timer)
                               setTimeout(async () => {
                                 // 3. Assume active after timeout
                                 // Extract port from initial result or default (since initial result usually has it)
@@ -545,9 +545,6 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
 
                                 // Update Backend to ACTIVE
                                 await api.updateLeadStatus(selectedContact.id, 'ACTIVE');
-                                // Note: We might need a specific endpoint to set port if updateLeadStatus doesn't
-                                // But usually provision sets port in DB immediately. 
-                                // If provision set it to PROVISIONING, we just need to flip status.
 
                                 // Update UI to ACTIVE
                                 await onUpdateLead(selectedContact.id, { demo_status: 'ACTIVE', demo_port: port });
@@ -555,7 +552,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
 
                                 setIsProvisioning(false);
                                 alert("Demo is ready! Click the link to view.");
-                              }, 60000); // 60 seconds
+                              }, 300000); // 5 minutes
 
                             } catch (err) {
                               alert(err instanceof Error ? err.message : 'Failed to provision demo');
