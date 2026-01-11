@@ -44,6 +44,7 @@ const demoRoutes = require('./routes/demos')(pool);
 app.post(['/api/demos/provision', '/crm/nexaloom-crm/api/demos/provision'], demoRoutes.provision);
 app.post(['/api/demos/terminate', '/crm/nexaloom-crm/api/demos/terminate'], demoRoutes.terminate);
 app.post(['/api/demos/sync', '/crm/nexaloom-crm/api/demos/sync'], demoRoutes.sync);
+app.post('/api/update-demo-status', demoRoutes.updateStatus);
 
 
 // --- LEADS ROUTES ---

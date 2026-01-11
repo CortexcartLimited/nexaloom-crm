@@ -207,5 +207,32 @@ module.exports = (pool) => {
         }
     };
 
-    return { provision, terminate, sync };
+    const updateStatus = async (req, res) => {
+        const { leadId, status } = req.body;
+
+        if (!leadId || !status) {
+            return res.status(400).json({ error: 'leadId and status are required' });
+        }
+
+        try {
+            // Update Lead
+            await pool.query(
+                'UPDATE leads SET demo_status = ?, demo_last_launched = NOW() WHERE id = ?',
+                [status, leadId]
+            );
+
+            // Log Interaction
+            await pool.query(
+                'INSERT INTO interactions (id, tenantId, leadId, type, notes, date) SELECT ?, tenantId, ?, "NOTE", ?, NOW() FROM leads WHERE id = ?',
+                [uuidv4(), leadId, `Demo status manually updated to ${status}`, leadId]
+            );
+
+            res.json({ success: true, message: `Lead ${leadId} status updated to ${status}` });
+        } catch (err) {
+            console.error('Update Status Error:', err);
+            res.status(500).json({ error: err.message });
+        }
+    };
+
+    return { provision, terminate, sync, updateStatus };
 };

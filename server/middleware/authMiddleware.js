@@ -3,6 +3,17 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_development_only';
 
 const authenticateToken = (req, res, next) => {
+    // 1. API Key Authentication (For Python Agents / External Scripts)
+    const apiKey = req.headers['x-api-key'];
+    const VALID_API_KEY = process.env.NEXALOOM_API_KEY || 'nexaloom_agent_secret_key_v1';
+
+    if (apiKey && apiKey === VALID_API_KEY) {
+        // Bypass JWT check, assign Admin role
+        req.user = { role: 'ADMIN', source: 'API_AGENT' };
+        return next();
+    }
+
+    // 2. JWT Authentication (Standard Web App)
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
