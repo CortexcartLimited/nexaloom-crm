@@ -442,6 +442,32 @@ app.delete('/crm/nexaloom-crm/api/discounts/:id', async (req, res) => {
     }
 });
 
+// ROUTE: Get Dashboard Stats (Conversion Rate)
+app.get('/crm/nexaloom-crm/api/dashboard/stats', async (req, res) => {
+    const { tenantId } = req.query;
+    if (!tenantId) return res.status(400).json({ error: 'tenantId is required' });
+
+    try {
+        const [rows] = await pool.query(
+            `SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'WON' THEN 1 ELSE 0 END) as won
+             FROM leads 
+             WHERE tenantId = ?`,
+            [tenantId]
+        );
+
+        const total = rows[0].total || 0;
+        const won = rows[0].won || 0;
+        const conversionRate = total > 0 ? (won / total) * 100 : 0;
+
+        res.json({ conversionRate, total, won });
+    } catch (err) {
+        console.error("Dashboard Stats Error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ROUTE: Get Upcoming Events for Dashboard
 app.get('/crm/nexaloom-crm/api/interactions/upcoming', async (req, res) => {
     const { tenantId } = req.query;

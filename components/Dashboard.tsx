@@ -47,6 +47,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ leads, interactions, onNav
 
   // NEW: Fetch upcoming appointments from API
   const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
+  const [conversionRate, setConversionRate] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchUpcoming = async () => {
@@ -62,6 +63,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ leads, interactions, onNav
           const data = await res.json();
           setUpcomingAppointments(data);
         }
+
+        // Fetch Stats
+        const statsRes = await fetch(`/crm/nexaloom-crm/api/dashboard/stats?tenantId=${tenantId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (statsRes.ok) {
+          const stats = await statsRes.json();
+          setConversionRate(stats.conversionRate);
+        }
+
       } catch (error) {
         console.error("Dashboard fetch error:", error);
       }
@@ -99,9 +110,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ leads, interactions, onNav
           </p>
         </div>
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
-          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Conversion Rate (Mock)</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Conversion Rate</p>
           <p className="text-3xl font-bold text-green-500 dark:text-green-400 mt-2">
-            18.5%
+            {conversionRate !== null ? `${conversionRate.toFixed(1)}%` : '...'}
           </p>
         </div>
       </div>
