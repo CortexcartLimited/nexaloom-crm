@@ -4,7 +4,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_development_on
 
 const authenticateToken = (req, res, next) => {
     // 1. API Key Authentication (For Python Agents / External Scripts)
-    const apiKey = req.headers['x-api-key'];
+    const apiKey = req.headers['x_api_key'];
     const VALID_API_KEY = process.env.NEXALOOM_API_KEY || 'nexaloom_agent_secret_key_v1';
 
     if (apiKey && apiKey === VALID_API_KEY) {
