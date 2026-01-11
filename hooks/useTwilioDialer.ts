@@ -15,12 +15,15 @@ export const useTwilioDialer = () => {
         const initDevice = async () => {
             try {
                 // 1. Fetch Capability Token
-                const res = await fetch('/crm/nexaloom-crm/api/voice/token');
-                if (!res.ok) throw new Error("Failed to fetch voice token");
-                const { token } = await res.json();
+                const token = localStorage.getItem('nexaloom_token');
+                const res = await fetch('/crm/nexaloom-crm/api/voice/token', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error("Failed to fetch voice token: " + res.statusText);
+                const { token: twilioToken } = await res.json();
 
                 // 2. Setup Device
-                const newDevice = new Device(token, {
+                const newDevice = new Device(twilioToken, {
                     logLevel: 1,
                     codecPreferences: ['opus', 'pcmu'] as any[]
                 });
