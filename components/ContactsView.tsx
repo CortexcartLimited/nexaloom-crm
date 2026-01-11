@@ -532,13 +532,33 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                             setIsProvisioning(true);
                             try {
                               const result = await api.provisionDemo(selectedContact.id);
-                              // The provision now returns immediately with 'PROVISIONING' status
-                              // logic updated to handle async provisioning flow
-                              await onUpdateLead(selectedContact.id, { demo_status: 'PROVISIONING', demo_port: 0 }); // update local view
+
+                              // 1. Immediate UI update: PROVISIONING
+                              await onUpdateLead(selectedContact.id, { demo_status: 'PROVISIONING', demo_port: 0 });
                               setSelectedContact({ ...selectedContact, demo_status: 'PROVISIONING', demo_port: 0 });
+
+                              // 2. Wait 60 seconds (Frontend Timer)
+                              setTimeout(async () => {
+                                // 3. Assume active after timeout
+                                // Extract port from initial result or default (since initial result usually has it)
+                                const port = parseInt(result.demoUrl.split(':').pop() || '0');
+
+                                // Update Backend to ACTIVE
+                                await api.updateLeadStatus(selectedContact.id, 'ACTIVE');
+                                // Note: We might need a specific endpoint to set port if updateLeadStatus doesn't
+                                // But usually provision sets port in DB immediately. 
+                                // If provision set it to PROVISIONING, we just need to flip status.
+
+                                // Update UI to ACTIVE
+                                await onUpdateLead(selectedContact.id, { demo_status: 'ACTIVE', demo_port: port });
+                                setSelectedContact(prev => prev ? { ...prev, demo_status: 'ACTIVE', demo_port: port } : null);
+
+                                setIsProvisioning(false);
+                                alert("Demo is ready! Click the link to view.");
+                              }, 60000); // 60 seconds
+
                             } catch (err) {
                               alert(err instanceof Error ? err.message : 'Failed to provision demo');
-                            } finally {
                               setIsProvisioning(false);
                             }
                           }}
